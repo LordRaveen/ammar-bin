@@ -1,8 +1,7 @@
 "use client"
 
-import * as React from "react"
+import type * as React from "react"
 import {
-  IconBook,
   IconBuildingBank,
   IconChartBar,
   IconClipboardCheck,
@@ -16,8 +15,8 @@ import {
   IconUsersGroup,
 } from "@tabler/icons-react"
 
-import { NavMain } from '@/components/nav-main'
-import { NavUser } from '@/components/nav-user'
+import { NavMain } from "@/components/nav-main"
+import { NavUser } from "@/components/nav-user"
 import {
   Sidebar,
   SidebarContent,
@@ -26,7 +25,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from '@/components/ui/sidebar'
+} from "@/components/ui/sidebar"
 import type { UserRole } from "@/lib/types/database"
 
 const getNavigationByRole = (role: UserRole) => {
@@ -82,7 +81,7 @@ const getNavigationByRole = (role: UserRole) => {
     },
     {
       title: "Settings",
-      url: "/settings/school",
+      url: "/settings",
       icon: IconSettings,
     },
   ]
@@ -145,14 +144,14 @@ const getNavigationByRole = (role: UserRole) => {
   ]
 
   switch (role) {
-    case 'super_admin':
-    case 'admin':
+    case "super_admin":
+    case "admin":
       return adminNav
-    case 'teacher':
+    case "teacher":
       return teacherNav
-    case 'accountant':
+    case "accountant":
       return accountantNav
-    case 'parent':
+    case "parent":
       return parentNav
     default:
       return baseNav
@@ -176,11 +175,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              size="lg"
-              className="data-[slot=sidebar-menu-button]:!p-1.5"
-            >
+            <SidebarMenuButton asChild size="lg" className="data-[slot=sidebar-menu-button]:!p-1.5">
               <a href="/dashboard">
                 <div className="bg-primary text-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
                   <IconSchool className="size-4" />
