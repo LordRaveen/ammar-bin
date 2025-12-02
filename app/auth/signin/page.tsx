@@ -1,53 +1,53 @@
-"use client";
+"use client"
 
-import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useRouter } from 'next/navigation';
-import { useState } from "react";
-import { devLog } from "@/lib/logger";
+import type React from "react"
+
+import { createClient } from "@/lib/supabase/client"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { devLog } from "@/lib/logger"
 
 export default function SignInPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const router = useRouter()
 
   const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const supabase = createClient();
-    setIsLoading(true);
-    setError(null);
+    e.preventDefault()
+    const supabase = createClient()
+    setIsLoading(true)
+    setError(null)
 
-    devLog.debug("Attempting sign in for:", email);
+    devLog.debug("Attempting sign in for:", email)
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
-      });
+      })
 
-      if (error) throw error;
+      if (error) throw error
 
-      devLog.debug("Sign in successful, redirecting to dashboard");
-      router.push("/dashboard");
-      router.refresh();
+      const { data: userData } = await supabase.from("users").select("role").eq("id", data.user.id).single()
+
+      const dashboardUrl = userData?.role === "teacher" ? "/teacher-dashboard" : "/dashboard"
+
+      devLog.debug("Sign in successful, redirecting to", dashboardUrl)
+      router.push(dashboardUrl)
+      router.refresh()
     } catch (error: any) {
-      devLog.error("Sign in error:", error);
-      setError(error.message || "Failed to sign in. Please check your credentials.");
+      devLog.error("Sign in error:", error)
+      setError(error.message || "Failed to sign in. Please check your credentials.")
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center p-6 md:p-10 bg-muted/40">
@@ -57,13 +57,11 @@ export default function SignInPage() {
             <h1 className="text-2xl font-bold">Ammar Bin Yasir Institute</h1>
             <p className="text-sm text-muted-foreground">معهد عمار بن ياسر</p>
           </div>
-          
+
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl">Sign In</CardTitle>
-              <CardDescription>
-                Enter your credentials to access the school management system
-              </CardDescription>
+              <CardDescription>Enter your credentials to access the school management system</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSignIn}>
@@ -101,7 +99,7 @@ export default function SignInPage() {
                   </Button>
                 </div>
               </form>
-              
+
               <div className="mt-4 text-center text-sm text-muted-foreground">
                 <p>Contact the administrator if you need access credentials.</p>
               </div>
@@ -110,5 +108,5 @@ export default function SignInPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }

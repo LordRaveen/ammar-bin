@@ -1,102 +1,91 @@
-import { requireAuth } from '@/lib/auth/get-user'
-import { createClient } from '@/lib/supabase/server'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Users, GraduationCap, BookOpen, DollarSign, TrendingUp, UserCheck } from 'lucide-react'
+import { requireAuth } from "@/lib/auth/get-user"
+import { createClient } from "@/lib/supabase/server"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Users, GraduationCap, BookOpen, DollarSign, TrendingUp, UserCheck } from "lucide-react"
+import { redirect } from "next/navigation"
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
 
 export default async function DashboardPage() {
   const user = await requireAuth()
+
+  if (user.role === "teacher") {
+    redirect("/teacher-dashboard")
+  }
+
   const supabase = await createClient()
 
   // Get statistics
   const { count: totalStudents } = await supabase
-    .from('students')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'Active')
+    .from("students")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "Active")
 
   const { count: totalTeachers } = await supabase
-    .from('teachers')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'Active')
+    .from("teachers")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "Active")
 
-  const { count: totalGuardians } = await supabase
-    .from('guardians')
-    .select('*', { count: 'exact', head: true })
+  const { count: totalGuardians } = await supabase.from("guardians").select("*", { count: "exact", head: true })
 
-  const { data: payments } = await supabase
-    .from('payments')
-    .select('amount')
+  const { data: payments } = await supabase.from("payments").select("amount")
 
-  const totalRevenue = payments?.reduce((sum, p) => sum + parseFloat(p.amount), 0) || 0
+  const totalRevenue = payments?.reduce((sum, p) => sum + Number.parseFloat(p.amount), 0) || 0
 
-  const { data: invoices } = await supabase
-    .from('invoices')
-    .select('balance, status')
+  const { data: invoices } = await supabase.from("invoices").select("balance, status")
 
-  const totalOutstanding = invoices?.reduce((sum, i) => sum + parseFloat(i.balance), 0) || 0
+  const totalOutstanding = invoices?.reduce((sum, i) => sum + Number.parseFloat(i.balance), 0) || 0
   const collectionRate = invoices?.length
-    ? ((invoices.filter(i => i.status === 'Paid').length / invoices.length) * 100).toFixed(1)
+    ? ((invoices.filter((i) => i.status === "Paid").length / invoices.length) * 100).toFixed(1)
     : 0
 
   // Get active session
   const { data: activeSession } = await supabase
-    .from('sessions')
-    .select('*, terms(*)')
-    .eq('is_active', true)
+    .from("sessions")
+    .select("*, terms(*)")
+    .eq("is_active", true)
     .maybeSingle()
 
   const activeTerm = activeSession?.terms?.find((t: any) => t.is_active)
 
   // Get students by section
-  const { data: sections } = await supabase
-    .from('sections')
-    .select('id, name')
-    .eq('is_active', true)
+  const { data: sections } = await supabase.from("sections").select("id, name").eq("is_active", true)
 
   const sectionStats = await Promise.all(
     (sections || []).map(async (section: any) => {
       const { data: classes } = await supabase
-        .from('classes')
-        .select('id')
-        .eq('section_id', section.id)
-        .eq('is_active', true)
+        .from("classes")
+        .select("id")
+        .eq("section_id", section.id)
+        .eq("is_active", true)
 
-      const classIds = classes?.map(c => c.id) || []
-      
+      const classIds = classes?.map((c) => c.id) || []
+
       if (classIds.length === 0) return { section: section.name, count: 0 }
 
       const { count } = await supabase
-        .from('student_enrollments')
-        .select('*', { count: 'exact', head: true })
-        .in('class_id', classIds)
-        .eq('is_active', true)
+        .from("student_enrollments")
+        .select("*", { count: "exact", head: true })
+        .in("class_id", classIds)
+        .eq("is_active", true)
 
       return { section: section.name, count: count || 0 }
-    })
+    }),
   )
 
   // Get recent activities (last 5 students registered)
   const { data: recentStudents } = await supabase
-    .from('students')
-    .select('id, student_id, first_name, last_name, created_at')
-    .order('created_at', { ascending: false })
+    .from("students")
+    .select("id, student_id, first_name, last_name, created_at")
+    .order("created_at", { ascending: false })
     .limit(5)
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">
-          Dashboard
-        </h1>
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground">
-          Welcome back, {user.role === 'super_admin' ? 'Super Admin' : user.role === 'admin' ? 'Admin' : 'User'}
+          Welcome back, {user.role === "super_admin" ? "Super Admin" : user.role === "admin" ? "Admin" : "User"}
         </p>
       </div>
 
@@ -104,16 +93,14 @@ export default async function DashboardPage() {
         <Card className="bg-primary text-primary-foreground">
           <CardHeader>
             <CardTitle>Active Session</CardTitle>
-            <CardDescription className="text-primary-foreground/80">
-              Current academic period
-            </CardDescription>
+            <CardDescription className="text-primary-foreground/80">Current academic period</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
               <p className="text-2xl font-bold">{activeSession.name}</p>
               <p className="text-lg">{activeTerm.name}</p>
               <p className="text-sm text-primary-foreground/80">
-                {new Date(activeTerm.start_date).toLocaleDateString()} -{' '}
+                {new Date(activeTerm.start_date).toLocaleDateString()} -{" "}
                 {new Date(activeTerm.end_date).toLocaleDateString()}
               </p>
             </div>
@@ -129,9 +116,7 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalStudents || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Active enrollments
-            </p>
+            <p className="text-xs text-muted-foreground">Active enrollments</p>
           </CardContent>
         </Card>
 
@@ -142,9 +127,7 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalTeachers || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Teaching staff
-            </p>
+            <p className="text-xs text-muted-foreground">Teaching staff</p>
           </CardContent>
         </Card>
 
@@ -155,9 +138,7 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalGuardians || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Registered parents
-            </p>
+            <p className="text-xs text-muted-foreground">Registered parents</p>
           </CardContent>
         </Card>
 
@@ -167,12 +148,8 @@ export default async function DashboardPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              ₦{totalRevenue.toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {payments?.length || 0} payment(s)
-            </p>
+            <div className="text-2xl font-bold">₦{totalRevenue.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">{payments?.length || 0} payment(s)</p>
           </CardContent>
         </Card>
       </div>
@@ -187,18 +164,14 @@ export default async function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold">
-                  ₦{totalRevenue.toLocaleString()}
-                </p>
+                <p className="text-2xl font-bold">₦{totalRevenue.toLocaleString()}</p>
               </div>
               <TrendingUp className="h-8 w-8 text-green-600" />
             </div>
             <div className="flex items-center justify-between pt-4 border-t">
               <div>
                 <p className="text-sm text-muted-foreground">Outstanding Fees</p>
-                <p className="text-2xl font-bold text-orange-600">
-                  ₦{totalOutstanding.toLocaleString()}
-                </p>
+                <p className="text-2xl font-bold text-orange-600">₦{totalOutstanding.toLocaleString()}</p>
               </div>
             </div>
             <div className="flex items-center justify-between pt-4 border-t">
@@ -240,27 +213,18 @@ export default async function DashboardPage() {
           <div className="space-y-3">
             {recentStudents && recentStudents.length > 0 ? (
               recentStudents.map((student: any) => (
-                <div
-                  key={student.id}
-                  className="flex items-center justify-between p-3 rounded-lg border"
-                >
+                <div key={student.id} className="flex items-center justify-between p-3 rounded-lg border">
                   <div>
                     <p className="font-medium">
                       {student.first_name} {student.last_name}
                     </p>
-                    <p className="text-sm text-muted-foreground">
-                      {student.student_id}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{student.student_id}</p>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(student.created_at).toLocaleDateString()}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{new Date(student.created_at).toLocaleDateString()}</p>
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No recent registrations
-              </p>
+              <p className="text-sm text-muted-foreground text-center py-4">No recent registrations</p>
             )}
           </div>
         </CardContent>
