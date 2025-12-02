@@ -1,0 +1,205 @@
+"use client"
+
+import * as React from "react"
+import {
+  IconBook,
+  IconBuildingBank,
+  IconChartBar,
+  IconClipboardCheck,
+  IconCoin,
+  IconDashboard,
+  IconFileText,
+  IconSchool,
+  IconSettings,
+  IconUser,
+  IconUsers,
+  IconUsersGroup,
+} from "@tabler/icons-react"
+
+import { NavMain } from '@/components/nav-main'
+import { NavUser } from '@/components/nav-user'
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from '@/components/ui/sidebar'
+import type { UserRole } from "@/lib/types/database"
+
+const getNavigationByRole = (role: UserRole) => {
+  const baseNav = [
+    {
+      title: "Dashboard",
+      url: "/dashboard",
+      icon: IconDashboard,
+    },
+  ]
+
+  const adminNav = [
+    ...baseNav,
+    {
+      title: "Classes",
+      url: "/classes",
+      icon: IconSchool,
+    },
+    {
+      title: "Students",
+      url: "/students",
+      icon: IconUsers,
+    },
+    {
+      title: "Teachers",
+      url: "/teachers",
+      icon: IconUsersGroup,
+    },
+    {
+      title: "Guardians",
+      url: "/guardians",
+      icon: IconUser,
+    },
+    {
+      title: "Assessments",
+      url: "/assessments",
+      icon: IconClipboardCheck,
+    },
+    {
+      title: "Results",
+      url: "/assessments/results",
+      icon: IconChartBar,
+    },
+    {
+      title: "Finance",
+      url: "/finance",
+      icon: IconCoin,
+    },
+    {
+      title: "Reports",
+      url: "/reports",
+      icon: IconFileText,
+    },
+    {
+      title: "Settings",
+      url: "/settings/school",
+      icon: IconSettings,
+    },
+  ]
+
+  const teacherNav = [
+    ...baseNav,
+    {
+      title: "Students",
+      url: "/students",
+      icon: IconUsers,
+    },
+    {
+      title: "Assessments",
+      url: "/assessments",
+      icon: IconClipboardCheck,
+    },
+    {
+      title: "Results",
+      url: "/assessments/results",
+      icon: IconChartBar,
+    },
+  ]
+
+  const accountantNav = [
+    ...baseNav,
+    {
+      title: "Students",
+      url: "/students",
+      icon: IconUsers,
+    },
+    {
+      title: "Finance",
+      url: "/finance",
+      icon: IconCoin,
+    },
+    {
+      title: "Reports",
+      url: "/reports",
+      icon: IconFileText,
+    },
+  ]
+
+  const parentNav = [
+    ...baseNav,
+    {
+      title: "My Children",
+      url: "/parent/children",
+      icon: IconUsers,
+    },
+    {
+      title: "Payments",
+      url: "/parent/payments",
+      icon: IconBuildingBank,
+    },
+    {
+      title: "Results",
+      url: "/parent/results",
+      icon: IconChartBar,
+    },
+  ]
+
+  switch (role) {
+    case 'super_admin':
+    case 'admin':
+      return adminNav
+    case 'teacher':
+      return teacherNav
+    case 'accountant':
+      return accountantNav
+    case 'parent':
+      return parentNav
+    default:
+      return baseNav
+  }
+}
+
+interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
+  user: {
+    id: string
+    email: string
+    name?: string
+    role: UserRole
+  }
+}
+
+export function AppSidebar({ user, ...props }: AppSidebarProps) {
+  const navigationItems = getNavigationByRole(user.role)
+
+  return (
+    <Sidebar collapsible="icon" {...props}>
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              size="lg"
+              className="data-[slot=sidebar-menu-button]:!p-1.5"
+            >
+              <a href="/dashboard">
+                <div className="bg-primary text-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
+                  <IconSchool className="size-4" />
+                </div>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-semibold">Ammar Bin Yasir</span>
+                  <span className="text-muted-foreground truncate text-xs">Institute</span>
+                </div>
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+      <SidebarContent>
+        <NavMain items={navigationItems} />
+      </SidebarContent>
+      <SidebarFooter>
+        <NavUser user={user} />
+      </SidebarFooter>
+    </Sidebar>
+  )
+}
