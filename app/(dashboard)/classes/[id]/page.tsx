@@ -1,27 +1,23 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useParams, useRouter } from 'next/navigation'
-import { IconArrowLeft, IconUsers, IconBook, IconChartBar, IconPlus, IconTrash, IconEdit, IconUserPlus } from "@tabler/icons-react"
+import { useParams, useRouter } from "next/navigation"
+import {
+  IconArrowLeft,
+  IconUsers,
+  IconBook,
+  IconChartBar,
+  IconPlus,
+  IconTrash,
+  IconEdit,
+  IconUserPlus,
+} from "@tabler/icons-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { AddStudentToClassModal } from "@/components/add-student-to-class-modal"
@@ -30,8 +26,9 @@ import { AssignTeacherModal } from "@/components/assign-teacher-modal"
 import { ReassignTeacherModal } from "@/components/reassign-teacher-modal"
 import { removeStudentFromClass, removeSubjectFromClass } from "./actions"
 import { ScoreEntryInterface } from "@/components/score-entry-interface"
+import { isAdmin } from "@/lib/auth/role-redirect"
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
 
 interface ClassDetails {
   id: string
@@ -111,8 +108,10 @@ export default function ClassDetailsPage() {
     teacher?: any
   } | null>(null)
 
+  const [userRole, setUserRole] = useState<string>("")
+
   useEffect(() => {
-    if (typeof window !== 'undefined' && classId) {
+    if (typeof window !== "undefined" && classId) {
       fetchSessionsAndTerms()
     }
   }, [classId])
@@ -124,14 +123,11 @@ export default function ClassDetailsPage() {
   }, [classId, selectedSession, selectedTerm])
 
   async function fetchSessionsAndTerms() {
-    const { data: sessionsData } = await supabase
-      .from("sessions")
-      .select("*")
-      .order("start_date", { ascending: false })
+    const { data: sessionsData } = await supabase.from("sessions").select("*").order("start_date", { ascending: false })
 
     if (sessionsData && sessionsData.length > 0) {
       setSessions(sessionsData)
-      const activeSession = sessionsData.find(s => s.is_active) || sessionsData[0]
+      const activeSession = sessionsData.find((s) => s.is_active) || sessionsData[0]
       setSelectedSession(activeSession.id)
 
       const { data: termsData } = await supabase
@@ -142,7 +138,7 @@ export default function ClassDetailsPage() {
 
       if (termsData && termsData.length > 0) {
         setTerms(termsData)
-        const activeTerm = termsData.find(t => t.is_active) || termsData[0]
+        const activeTerm = termsData.find((t) => t.is_active) || termsData[0]
         setSelectedTerm(activeTerm.id)
       }
     }
@@ -151,7 +147,7 @@ export default function ClassDetailsPage() {
   async function fetchAllData() {
     try {
       setLoading(true)
-      
+
       const { data: classData } = await supabase
         .from("classes")
         .select("*, section:sections(name)")
@@ -166,7 +162,7 @@ export default function ClassDetailsPage() {
             .select("id, first_name, last_name, email, phone, photo_url")
             .eq("id", classData.class_teacher_id)
             .single()
-          
+
           teacherData = teacher
         }
 
@@ -200,20 +196,17 @@ export default function ClassDetailsPage() {
         .eq("is_active", true)
 
       if (enrollments) {
-        const students = enrollments.map(e => ({
+        const students = enrollments.map((e) => ({
           enrollment_id: e.id,
-          ...(e.students as any)
+          ...(e.students as any),
         }))
         setEnrolledStudents(students)
       }
 
-      const { data: allStudents } = await supabase
-        .from("students")
-        .select("*")
-        .eq("status", "Active")
+      const { data: allStudents } = await supabase.from("students").select("*").eq("status", "Active")
 
-      const enrolledIds = new Set(enrolledStudents.map(s => s.id))
-      const unenrolled = (allStudents || []).filter(s => !enrolledIds.has(s.id))
+      const enrolledIds = new Set(enrolledStudents.map((s) => s.id))
+      const unenrolled = (allStudents || []).filter((s) => !enrolledIds.has(s.id))
       setUnenrolledStudents(unenrolled)
 
       const { data: subjects } = await supabase
@@ -222,7 +215,7 @@ export default function ClassDetailsPage() {
         .eq("class_id", classId)
 
       if (subjects) {
-        const subjectIds = subjects.map(s => s.subject_id)
+        const subjectIds = subjects.map((s) => s.subject_id)
         const { data: assignments } = await supabase
           .from("teacher_subject_assignments")
           .select("subject_id, teacher:teachers(first_name, last_name, email)")
@@ -230,31 +223,23 @@ export default function ClassDetailsPage() {
           .eq("session_id", selectedSession)
           .in("subject_id", subjectIds)
 
-        const teacherMap = new Map(
-          (assignments || []).map(a => [a.subject_id, a.teacher])
-        )
+        const teacherMap = new Map((assignments || []).map((a) => [a.subject_id, a.teacher]))
 
-        const enrichedSubjects = subjects.map(s => ({
+        const enrichedSubjects = subjects.map((s) => ({
           ...s,
-          teacher: teacherMap.get(s.subject_id)
+          teacher: teacherMap.get(s.subject_id),
         }))
 
         setClassSubjects(enrichedSubjects)
       }
 
-      const { data: allSubjects } = await supabase
-        .from("subjects")
-        .select("*")
-        .eq("is_active", true)
+      const { data: allSubjects } = await supabase.from("subjects").select("*").eq("is_active", true)
 
-      const assignedSubjectIds = new Set((subjects || []).map(s => s.subject_id))
-      const available = (allSubjects || []).filter(s => !assignedSubjectIds.has(s.id))
+      const assignedSubjectIds = new Set((subjects || []).map((s) => s.subject_id))
+      const available = (allSubjects || []).filter((s) => !assignedSubjectIds.has(s.id))
       setAvailableSubjects(available)
 
-      const { data: teachers } = await supabase
-        .from("teachers")
-        .select("*")
-        .eq("status", "Active")
+      const { data: teachers } = await supabase.from("teachers").select("*").eq("status", "Active")
 
       setAllTeachers(teachers || [])
     } catch (error) {
@@ -289,17 +274,17 @@ export default function ClassDetailsPage() {
     const enrollmentsChannel = supabase
       .channel(`enrollments-${classId}`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'student_enrollments',
-          filter: `class_id=eq.${classId}`
+          event: "*",
+          schema: "public",
+          table: "student_enrollments",
+          filter: `class_id=eq.${classId}`,
         },
         (payload) => {
           console.log("[v0] Enrollment change detected:", payload)
           fetchAllData()
-        }
+        },
       )
       .subscribe()
 
@@ -307,17 +292,17 @@ export default function ClassDetailsPage() {
     const subjectsChannel = supabase
       .channel(`subjects-${classId}`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'class_subjects',
-          filter: `class_id=eq.${classId}`
+          event: "*",
+          schema: "public",
+          table: "class_subjects",
+          filter: `class_id=eq.${classId}`,
         },
         (payload) => {
           console.log("[v0] Class subject change detected:", payload)
           fetchAllData()
-        }
+        },
       )
       .subscribe()
 
@@ -325,17 +310,17 @@ export default function ClassDetailsPage() {
     const teachersChannel = supabase
       .channel(`teachers-${classId}`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'teacher_subject_assignments',
-          filter: `class_id=eq.${classId}`
+          event: "*",
+          schema: "public",
+          table: "teacher_subject_assignments",
+          filter: `class_id=eq.${classId}`,
         },
         (payload) => {
           console.log("[v0] Teacher assignment change detected:", payload)
           fetchAllData()
-        }
+        },
       )
       .subscribe()
 
@@ -343,17 +328,17 @@ export default function ClassDetailsPage() {
     const classChannel = supabase
       .channel(`class-${classId}`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'classes',
-          filter: `id=eq.${classId}`
+          event: "UPDATE",
+          schema: "public",
+          table: "classes",
+          filter: `id=eq.${classId}`,
         },
         (payload) => {
           console.log("[v0] Class update detected:", payload)
           fetchAllData()
-        }
+        },
       )
       .subscribe()
 
@@ -391,10 +376,28 @@ export default function ClassDetailsPage() {
     setSelectedSubjectForReassign({
       id: subject.subject.id,
       name: subject.subject.name,
-      teacher: subject.teacher
+      teacher: subject.teacher,
     })
     setShowReassignTeacherModal(true)
   }
+
+  useEffect(() => {
+    async function fetchUserRole() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (user) {
+        const { data } = await supabase.from("users").select("role").eq("id", user.id).single()
+
+        if (data) {
+          setUserRole(data.role)
+        }
+      }
+    }
+    fetchUserRole()
+  }, [])
+
+  const hasAdminAccess = isAdmin(userRole)
 
   if (!classId) {
     return (
@@ -436,7 +439,7 @@ export default function ClassDetailsPage() {
               <SelectValue placeholder="Select session" />
             </SelectTrigger>
             <SelectContent>
-              {sessions.map(session => (
+              {sessions.map((session) => (
                 <SelectItem key={session.id} value={session.id}>
                   {session.name}
                 </SelectItem>
@@ -448,7 +451,7 @@ export default function ClassDetailsPage() {
               <SelectValue placeholder="Select term" />
             </SelectTrigger>
             <SelectContent>
-              {terms.map(term => (
+              {terms.map((term) => (
                 <SelectItem key={term.id} value={term.id}>
                   {term.name}
                 </SelectItem>
@@ -477,9 +480,7 @@ export default function ClassDetailsPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{classDetails.student_count}</div>
-                <p className="text-muted-foreground text-xs">
-                  Capacity: {classDetails.capacity}
-                </p>
+                <p className="text-muted-foreground text-xs">Capacity: {classDetails.capacity}</p>
               </CardContent>
             </Card>
 
@@ -495,14 +496,12 @@ export default function ClassDetailsPage() {
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Attendance Rate</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Attendance Rate</CardTitle>
                 <IconChartBar className="text-muted-foreground h-4 w-4" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {classDetails.attendance_rate || 95}%
-                </div>
+                <div className="text-2xl font-bold">{classDetails.attendance_rate || 95}%</div>
                 <p className="text-muted-foreground text-xs">This term</p>
               </CardContent>
             </Card>
@@ -511,7 +510,7 @@ export default function ClassDetailsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Class Teacher</CardTitle>
-              {!classDetails.teacher && (
+              {!classDetails.teacher && hasAdminAccess && (
                 <Button onClick={() => setShowAssignClassTeacherModal(true)}>
                   <IconUserPlus className="mr-2 h-4 w-4" />
                   Assign Teacher
@@ -526,9 +525,7 @@ export default function ClassDetailsPage() {
                       {classDetails.teacher.photo_url && (
                         <AvatarImage src={classDetails.teacher.photo_url || "/placeholder.svg"} />
                       )}
-                      <AvatarFallback className="bg-primary text-primary-foreground">
-                        {teacherInitials}
-                      </AvatarFallback>
+                      <AvatarFallback className="bg-primary text-primary-foreground">{teacherInitials}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <p className="font-semibold">
@@ -543,9 +540,7 @@ export default function ClassDetailsPage() {
                   </p>
                 </div>
               ) : (
-                <p className="text-muted-foreground text-center py-8">
-                  No class teacher assigned yet
-                </p>
+                <p className="text-muted-foreground text-center py-8">No class teacher assigned yet</p>
               )}
             </CardContent>
           </Card>
@@ -553,50 +548,46 @@ export default function ClassDetailsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Special Subject Teachers</CardTitle>
-              <Button onClick={() => setShowAssignSubjectTeacherModal(true)}>
-                <IconUserPlus className="mr-2 h-4 w-4" />
-                Assign Subject Teacher
-              </Button>
+              {hasAdminAccess && (
+                <Button onClick={() => setShowAssignSubjectTeacherModal(true)}>
+                  <IconUserPlus className="mr-2 h-4 w-4" />
+                  Assign Subject Teacher
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground text-sm mb-4">
-                Assign special teachers for subjects like ICT, Art, Music, etc. Other subjects are taught by the class teacher.
+                Assign special teachers for subjects like ICT, Art, Music, etc. Other subjects are taught by the class
+                teacher.
               </p>
               {classSubjects.length > 0 ? (
                 <div className="space-y-2">
                   {classSubjects
-                    .filter(cs => cs.teacher) // Only show subjects with special teachers
+                    .filter((cs) => cs.teacher) // Only show subjects with special teachers
                     .map((cs) => (
-                      <div
-                        key={cs.id}
-                        className="flex items-center justify-between rounded-lg border p-3"
-                      >
+                      <div key={cs.id} className="flex items-center justify-between rounded-lg border p-3">
                         <div>
                           <p className="font-medium">{cs.subject.name}</p>
                           <p className="text-muted-foreground text-sm">
                             {cs.teacher.first_name} {cs.teacher.last_name}
                           </p>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleReassignTeacher(cs)}
-                        >
-                          <IconEdit className="mr-1 h-3 w-3" />
-                          Reassign
-                        </Button>
+                        {hasAdminAccess && (
+                          <Button size="sm" variant="outline" onClick={() => handleReassignTeacher(cs)}>
+                            <IconEdit className="mr-1 h-3 w-3" />
+                            Reassign
+                          </Button>
+                        )}
                       </div>
                     ))}
-                  {classSubjects.filter(cs => cs.teacher).length === 0 && (
+                  {classSubjects.filter((cs) => cs.teacher).length === 0 && (
                     <p className="text-muted-foreground text-center py-4 text-sm">
                       No special subject teachers assigned. All subjects are taught by the class teacher.
                     </p>
                   )}
                 </div>
               ) : (
-                <p className="text-muted-foreground text-center py-4 text-sm">
-                  No subjects added to this class yet
-                </p>
+                <p className="text-muted-foreground text-center py-4 text-sm">No subjects added to this class yet</p>
               )}
             </CardContent>
           </Card>
@@ -606,15 +597,15 @@ export default function ClassDetailsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>Class Students</CardTitle>
-                <CardDescription>
-                  {enrolledStudents.length} student(s) enrolled
-                </CardDescription>
+                <CardTitle>Enrolled Students</CardTitle>
+                <CardDescription>{enrolledStudents.length} student(s) enrolled</CardDescription>
               </div>
-              <Button onClick={() => setShowAddStudentModal(true)}>
-                <IconPlus className="mr-2 h-4 w-4" />
-                Add Student
-              </Button>
+              {hasAdminAccess && (
+                <Button onClick={() => setShowAddStudentModal(true)}>
+                  <IconPlus className="mr-2 h-4 w-4" />
+                  Add Student
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               <Table>
@@ -625,7 +616,7 @@ export default function ClassDetailsPage() {
                     <TableHead>Full Name</TableHead>
                     <TableHead>Gender</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
+                    {hasAdminAccess && <TableHead>Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -636,7 +627,8 @@ export default function ClassDetailsPage() {
                           <Avatar>
                             {student.photo_url && <AvatarImage src={student.photo_url || "/placeholder.svg"} />}
                             <AvatarFallback>
-                              {student.first_name[0]}{student.last_name[0]}
+                              {student.first_name[0]}
+                              {student.last_name[0]}
                             </AvatarFallback>
                           </Avatar>
                         </TableCell>
@@ -650,20 +642,22 @@ export default function ClassDetailsPage() {
                             {student.status}
                           </Badge>
                         </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveStudent(student.enrollment_id)}
-                          >
-                            <IconTrash className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
+                        {hasAdminAccess && (
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveStudent(student.enrollment_id)}
+                            >
+                              <IconTrash className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={hasAdminAccess ? 6 : 5} className="text-center text-muted-foreground py-8">
                         No students enrolled in this class yet
                       </TableCell>
                     </TableRow>
@@ -679,14 +673,14 @@ export default function ClassDetailsPage() {
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Class Subjects</CardTitle>
-                <CardDescription>
-                  {classSubjects.length} subject(s) configured
-                </CardDescription>
+                <CardDescription>{classSubjects.length} subject(s) configured</CardDescription>
               </div>
-              <Button onClick={() => setShowAddSubjectModal(true)}>
-                <IconPlus className="mr-2 h-4 w-4" />
-                Add Subject
-              </Button>
+              {hasAdminAccess && (
+                <Button onClick={() => setShowAddSubjectModal(true)}>
+                  <IconPlus className="mr-2 h-4 w-4" />
+                  Add Subject
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               <Table>
@@ -697,7 +691,7 @@ export default function ClassDetailsPage() {
                     <TableHead>Max Score</TableHead>
                     <TableHead>Pass Mark</TableHead>
                     <TableHead>Teacher</TableHead>
-                    <TableHead>Actions</TableHead>
+                    {hasAdminAccess && <TableHead>Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -717,33 +711,31 @@ export default function ClassDetailsPage() {
                             <span className="text-muted-foreground italic">Class teacher</span>
                           )}
                         </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              onClick={() => handleReassignTeacher(cs)}
-                              title="Reassign teacher"
-                            >
-                              <IconUserPlus className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon">
-                              <IconEdit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleRemoveSubject(cs.id)}
-                            >
-                              <IconTrash className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
+                        {hasAdminAccess && (
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleReassignTeacher(cs)}
+                                title="Reassign teacher"
+                              >
+                                <IconUserPlus className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon">
+                                <IconEdit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleRemoveSubject(cs.id)}>
+                                <IconTrash className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={hasAdminAccess ? 6 : 5} className="text-center text-muted-foreground py-8">
                         No subjects added to this class yet
                       </TableCell>
                     </TableRow>
@@ -760,7 +752,7 @@ export default function ClassDetailsPage() {
             sessionId={selectedSession}
             termId={selectedTerm}
             students={enrolledStudents}
-            subjects={classSubjects.map(cs => ({
+            subjects={classSubjects.map((cs) => ({
               id: cs.subject.id,
               name: cs.subject.name,
               code: cs.subject.code,
@@ -793,52 +785,56 @@ export default function ClassDetailsPage() {
         </TabsContent>
       </Tabs>
 
-      <AddStudentToClassModal
-        open={showAddStudentModal}
-        onOpenChange={setShowAddStudentModal}
-        classId={classId}
-        sessionId={selectedSession}
-        termId={selectedTerm}
-        unenrolledStudents={unenrolledStudents}
-      />
+      {hasAdminAccess && (
+        <>
+          <AddStudentToClassModal
+            open={showAddStudentModal}
+            onOpenChange={setShowAddStudentModal}
+            classId={classId}
+            sessionId={selectedSession}
+            termId={selectedTerm}
+            unenrolledStudents={unenrolledStudents}
+          />
 
-      <AddSubjectToClassModal
-        open={showAddSubjectModal}
-        onOpenChange={setShowAddSubjectModal}
-        classId={classId}
-        availableSubjects={availableSubjects}
-      />
+          <AddSubjectToClassModal
+            open={showAddSubjectModal}
+            onOpenChange={setShowAddSubjectModal}
+            classId={classId}
+            availableSubjects={availableSubjects}
+          />
 
-      <AssignTeacherModal
-        open={showAssignClassTeacherModal}
-        onOpenChange={setShowAssignClassTeacherModal}
-        classId={classId}
-        sessionId={selectedSession}
-        teachers={allTeachers}
-        type="class"
-      />
+          <AssignTeacherModal
+            open={showAssignClassTeacherModal}
+            onOpenChange={setShowAssignClassTeacherModal}
+            classId={classId}
+            sessionId={selectedSession}
+            teachers={allTeachers}
+            type="class"
+          />
 
-      <AssignTeacherModal
-        open={showAssignSubjectTeacherModal}
-        onOpenChange={setShowAssignSubjectTeacherModal}
-        classId={classId}
-        sessionId={selectedSession}
-        teachers={allTeachers}
-        type="subject"
-        subjects={classSubjects.map(cs => ({ id: cs.subject.id, name: cs.subject.name }))}
-      />
+          <AssignTeacherModal
+            open={showAssignSubjectTeacherModal}
+            onOpenChange={setShowAssignSubjectTeacherModal}
+            classId={classId}
+            sessionId={selectedSession}
+            teachers={allTeachers}
+            type="subject"
+            subjects={classSubjects.map((cs) => ({ id: cs.subject.id, name: cs.subject.name }))}
+          />
 
-      {selectedSubjectForReassign && (
-        <ReassignTeacherModal
-          open={showReassignTeacherModal}
-          onOpenChange={setShowReassignTeacherModal}
-          classId={classId!}
-          sessionId={selectedSession}
-          subjectId={selectedSubjectForReassign.id}
-          subjectName={selectedSubjectForReassign.name}
-          currentTeacher={selectedSubjectForReassign.teacher}
-          teachers={allTeachers}
-        />
+          {selectedSubjectForReassign && (
+            <ReassignTeacherModal
+              open={showReassignTeacherModal}
+              onOpenChange={setShowReassignTeacherModal}
+              classId={classId!}
+              sessionId={selectedSession}
+              subjectId={selectedSubjectForReassign.id}
+              subjectName={selectedSubjectForReassign.name}
+              currentTeacher={selectedSubjectForReassign.teacher}
+              teachers={allTeachers}
+            />
+          )}
+        </>
       )}
     </div>
   )

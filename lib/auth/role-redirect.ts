@@ -12,3 +12,17 @@ export function getRoleDashboardUrl(role: string): string {
       return "/dashboard"
   }
 }
+
+/**
+ * Check if the current user has admin privileges
+ */
+export function isAdmin(role: string): boolean {
+  return role === "super_admin" || role === "admin"
+}
+
+/**
+ * Check if the current user is a teacher
+ */
+export function isTeacher(role: string): boolean {
+  return role === "teacher"
+}
