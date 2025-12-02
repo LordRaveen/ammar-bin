@@ -172,6 +172,7 @@ export function StudentsClientPage({
         sessions={sessions}
         terms={terms}
         classes={classes}
+        userRole={userRole} // Pass userRole to StudentDetailsSheet
       />
     </>
   )

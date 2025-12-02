@@ -1,37 +1,25 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { ExternalLink, Plus, Pencil, Loader2 } from 'lucide-react';
-import Link from "next/link";
-import { EnrollStudentModal } from "./enroll-student-modal";
-import { createClient } from "@/lib/supabase/client";
+import { useState, useEffect } from "react"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ExternalLink, Plus, Pencil, Loader2 } from "lucide-react"
+import Link from "next/link"
+import { EnrollStudentModal } from "./enroll-student-modal"
+import { createClient } from "@/lib/supabase/client"
 
 interface StudentDetailsSheetProps {
-  studentId: string | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  sessions: any[];
-  terms: any[];
-  classes: any[];
+  studentId: string | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  sessions: any[]
+  terms: any[]
+  classes: any[]
+  userRole?: string // Add userRole prop to control visibility of admin actions
 }
 
 export function StudentDetailsSheet({
@@ -41,21 +29,22 @@ export function StudentDetailsSheet({
   sessions,
   terms,
   classes,
+  userRole, // Destructure userRole
 }: StudentDetailsSheetProps) {
-  const [showEnrollModal, setShowEnrollModal] = useState(false);
-  const [student, setStudent] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+  const [showEnrollModal, setShowEnrollModal] = useState(false)
+  const [student, setStudent] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     async function fetchStudent() {
       if (!studentId || !open) {
-        setStudent(null);
-        return;
+        setStudent(null)
+        return
       }
 
-      setLoading(true);
-      const supabase = createClient();
-      
+      setLoading(true)
+      const supabase = createClient()
+
       const { data, error } = await supabase
         .from("students")
         .select(`
@@ -77,24 +66,22 @@ export function StudentDetailsSheet({
           )
         `)
         .eq("id", studentId)
-        .single();
+        .single()
 
       if (!error && data) {
-        setStudent(data);
+        setStudent(data)
       }
-      setLoading(false);
+      setLoading(false)
     }
 
-    fetchStudent();
-  }, [studentId, open]);
+    fetchStudent()
+  }, [studentId, open])
 
   const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName[0]}${lastName[0]}`.toUpperCase();
-  };
+    return `${firstName[0]}${lastName[0]}`.toUpperCase()
+  }
 
-  const currentEnrollment = student?.student_enrollments?.find(
-    (e: any) => e.is_active
-  );
+  const currentEnrollment = student?.student_enrollments?.find((e: any) => e.is_active)
 
   return (
     <>
@@ -104,9 +91,7 @@ export function StudentDetailsSheet({
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
                 <SheetTitle>Student Details</SheetTitle>
-                <SheetDescription>
-                  View student information and enrollment history
-                </SheetDescription>
+                <SheetDescription>View student information and enrollment history</SheetDescription>
               </div>
               <Button variant="outline" size="sm" asChild>
                 <Link href={`/students/${studentId}`}>
@@ -132,20 +117,11 @@ export function StudentDetailsSheet({
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <h2 className="text-xl font-bold">
-                      {student.first_name} {student.middle_name}{" "}
-                      {student.last_name}
+                      {student.first_name} {student.middle_name} {student.last_name}
                     </h2>
-                    <Badge
-                      variant={
-                        student.status === "Active" ? "default" : "secondary"
-                      }
-                    >
-                      {student.status}
-                    </Badge>
+                    <Badge variant={student.status === "Active" ? "default" : "secondary"}>{student.status}</Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {student.student_id}
-                  </p>
+                  <p className="text-sm text-muted-foreground mb-2">{student.student_id}</p>
                   {currentEnrollment ? (
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground">Current Class:</span>
@@ -154,9 +130,7 @@ export function StudentDetailsSheet({
                       </Badge>
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground italic">
-                      Not enrolled in any class
-                    </p>
+                    <p className="text-sm text-muted-foreground italic">Not enrolled in any class</p>
                   )}
                 </div>
                 <Button variant="ghost" size="icon" asChild>
@@ -173,9 +147,7 @@ export function StudentDetailsSheet({
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <span className="text-muted-foreground">Date of Birth:</span>
-                    <p className="font-medium">
-                      {new Date(student.date_of_birth).toLocaleDateString()}
-                    </p>
+                    <p className="font-medium">{new Date(student.date_of_birth).toLocaleDateString()}</p>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Gender:</span>
@@ -187,9 +159,7 @@ export function StudentDetailsSheet({
                   </div>
                   <div>
                     <span className="text-muted-foreground">State of Origin:</span>
-                    <p className="font-medium">
-                      {student.state_of_origin || "—"}
-                    </p>
+                    <p className="font-medium">{student.state_of_origin || "—"}</p>
                   </div>
                   <div className="col-span-2">
                     <span className="text-muted-foreground">Address:</span>
@@ -197,9 +167,7 @@ export function StudentDetailsSheet({
                   </div>
                   {student.medical_info && (
                     <div className="col-span-2">
-                      <span className="text-muted-foreground">
-                        Medical Information:
-                      </span>
+                      <span className="text-muted-foreground">Medical Information:</span>
                       <p className="font-medium">{student.medical_info}</p>
                     </div>
                   )}
@@ -210,14 +178,10 @@ export function StudentDetailsSheet({
 
               <div>
                 <h3 className="font-semibold mb-3">Guardians</h3>
-                {student.student_guardians &&
-                student.student_guardians.length > 0 ? (
+                {student.student_guardians && student.student_guardians.length > 0 ? (
                   <div className="space-y-3">
                     {student.student_guardians.map((sg: any) => (
-                      <div
-                        key={sg.guardian.id}
-                        className="p-3 rounded-lg border bg-muted/50"
-                      >
+                      <div key={sg.guardian.id} className="p-3 rounded-lg border bg-muted/50">
                         <div className="flex items-start justify-between">
                           <div>
                             <p className="font-medium">
@@ -228,26 +192,16 @@ export function StudentDetailsSheet({
                                 </Badge>
                               )}
                             </p>
-                            <p className="text-sm text-muted-foreground">
-                              {sg.relationship}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {sg.guardian.phone}
-                            </p>
-                            {sg.guardian.email && (
-                              <p className="text-sm text-muted-foreground">
-                                {sg.guardian.email}
-                              </p>
-                            )}
+                            <p className="text-sm text-muted-foreground">{sg.relationship}</p>
+                            <p className="text-sm text-muted-foreground">{sg.guardian.phone}</p>
+                            {sg.guardian.email && <p className="text-sm text-muted-foreground">{sg.guardian.email}</p>}
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
-                    No guardians linked
-                  </p>
+                  <p className="text-sm text-muted-foreground">No guardians linked</p>
                 )}
               </div>
 
@@ -256,17 +210,14 @@ export function StudentDetailsSheet({
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-semibold">Enrollment History</h3>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowEnrollModal(true)}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Enroll
-                  </Button>
+                  {userRole !== "teacher" && (
+                    <Button variant="outline" size="sm" onClick={() => setShowEnrollModal(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Enroll
+                    </Button>
+                  )}
                 </div>
-                {student.student_enrollments &&
-                student.student_enrollments.length > 0 ? (
+                {student.student_enrollments && student.student_enrollments.length > 0 ? (
                   <div className="border rounded-lg">
                     <Table>
                       <TableHeader>
@@ -278,37 +229,23 @@ export function StudentDetailsSheet({
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {student.student_enrollments.map(
-                          (enrollment: any, index: number) => (
-                            <TableRow key={index}>
-                              <TableCell className="text-sm">
-                                {enrollment.session?.name}
-                              </TableCell>
-                              <TableCell className="text-sm">
-                                {enrollment.term?.name}
-                              </TableCell>
-                              <TableCell className="text-sm font-medium">
-                                {enrollment.class?.name}
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant={
-                                    enrollment.is_active ? "default" : "secondary"
-                                  }
-                                >
-                                  {enrollment.is_active ? "Active" : "Inactive"}
-                                </Badge>
-                              </TableCell>
-                            </TableRow>
-                          )
-                        )}
+                        {student.student_enrollments.map((enrollment: any, index: number) => (
+                          <TableRow key={index}>
+                            <TableCell className="text-sm">{enrollment.session?.name}</TableCell>
+                            <TableCell className="text-sm">{enrollment.term?.name}</TableCell>
+                            <TableCell className="text-sm font-medium">{enrollment.class?.name}</TableCell>
+                            <TableCell>
+                              <Badge variant={enrollment.is_active ? "default" : "secondary"}>
+                                {enrollment.is_active ? "Active" : "Inactive"}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
                       </TableBody>
                     </Table>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Not enrolled in any class yet
-                  </p>
+                  <p className="text-sm text-muted-foreground">Not enrolled in any class yet</p>
                 )}
               </div>
             </div>
@@ -327,5 +264,5 @@ export function StudentDetailsSheet({
         />
       )}
     </>
-  );
+  )
 }
