@@ -40,8 +40,8 @@ export function FeeManagementTab({
     const initialFees: Record<string, ClassFees> = {}
 
     classes.forEach((classItem) => {
-      const tuitionCategory = feeCategories.find((c) => c.name.toLowerCase().includes("tuition"))
-      const textbooksCategory = feeCategories.find((c) => c.name.toLowerCase().includes("textbook"))
+      const tuitionCategory = feeCategories.find((c) => c.name.toLowerCase().includes("school fee"))
+      const textbooksCategory = feeCategories.find((c) => c.name.toLowerCase().includes("book"))
       const registrationCategory = feeCategories.find((c) => c.name.toLowerCase().includes("registration"))
 
       const tuitionFee = existingFeeStructures.find(
@@ -77,8 +77,8 @@ export function FeeManagementTab({
       console.log("[v0] Active term:", activeTerm)
       console.log("[v0] Fee data:", fees)
 
-      const tuitionCategory = feeCategories.find((c) => c.name.toLowerCase().includes("tuition"))
-      const textbooksCategory = feeCategories.find((c) => c.name.toLowerCase().includes("textbook"))
+      const tuitionCategory = feeCategories.find((c) => c.name.toLowerCase().includes("school fee"))
+      const textbooksCategory = feeCategories.find((c) => c.name.toLowerCase().includes("book"))
       const registrationCategory = feeCategories.find((c) => c.name.toLowerCase().includes("registration"))
 
       console.log("[v0] Categories found:", { tuitionCategory, textbooksCategory, registrationCategory })
