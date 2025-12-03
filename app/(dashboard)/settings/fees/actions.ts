@@ -25,6 +25,8 @@ export async function updateClassFeeStructure(
 
   try {
     for (const fee of fees) {
+      console.log("[v0] Processing fee:", fee)
+
       const { data: existing, error: selectError } = await supabase
         .from("fee_structures")
         .select("id")
@@ -32,12 +34,18 @@ export async function updateClassFeeStructure(
         .eq("session_id", sessionId)
         .eq("term_id", termId)
         .eq("fee_category_id", fee.categoryId)
-        .single()
+        .maybeSingle()
 
-      console.log("[v0] Existing fee structure:", { existing, selectError })
+      if (selectError) {
+        console.error("[v0] Error checking existing fee structure:", selectError)
+        throw selectError
+      }
+
+      console.log("[v0] Existing fee structure:", existing)
 
       if (existing) {
         // Update existing record
+        console.log("[v0] Updating existing fee structure:", existing.id)
         const { error: updateError } = await supabase
           .from("fee_structures")
           .update({ amount: fee.amount })
@@ -47,27 +55,31 @@ export async function updateClassFeeStructure(
           console.error("[v0] Error updating fee structure:", updateError)
           throw updateError
         }
-        console.log("[v0] Updated existing fee structure:", existing.id)
+        console.log("[v0] Successfully updated fee structure:", existing.id)
       } else {
         // Insert new record
-        const { error: insertError } = await supabase.from("fee_structures").insert({
-          class_id: classId,
-          session_id: sessionId,
-          term_id: termId,
-          fee_category_id: fee.categoryId,
-          amount: fee.amount,
-        })
+        console.log("[v0] Inserting new fee structure for category:", fee.categoryId)
+        const { data: insertedData, error: insertError } = await supabase
+          .from("fee_structures")
+          .insert({
+            class_id: classId,
+            session_id: sessionId,
+            term_id: termId,
+            fee_category_id: fee.categoryId,
+            amount: fee.amount,
+          })
+          .select()
 
         if (insertError) {
           console.error("[v0] Error inserting fee structure:", insertError)
           throw insertError
         }
-        console.log("[v0] Inserted new fee structure")
+        console.log("[v0] Successfully inserted new fee structure:", insertedData)
       }
     }
 
     revalidatePath("/settings")
-    console.log("[v0] Fee structures saved successfully")
+    console.log("[v0] All fee structures saved successfully")
     return { success: true }
   } catch (error) {
     console.error("[v0] Error in updateClassFeeStructure:", error)
