@@ -3,10 +3,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Removed @import 'tw-animate-css'; to fix CSS parsing error */
-
-/* Removed @theme inline block - Tailwind v4 doesn't require it for CSS variable-based theming */
-
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -23,7 +19,7 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
+  --destructive-foreground: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
