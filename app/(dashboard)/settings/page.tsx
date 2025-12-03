@@ -12,7 +12,6 @@ export default async function SettingsPage() {
   await requireAdmin()
   const supabase = await createClient()
 
-  // Fetch all necessary data
   const [
     { data: schoolSettings },
     { data: sessions },
@@ -21,21 +20,25 @@ export default async function SettingsPage() {
     { data: feeCategories },
     { data: classes },
     { data: gradingSchemes },
-    { data: feeStructures },
   ] = await Promise.all([
-    supabase.from("school_settings").select("*").single(),
+    supabase.from("school_settings").select("*").maybeSingle(),
     supabase.from("sessions").select("*, terms:terms(*)").order("start_date", { ascending: false }),
-    supabase.from("sessions").select("*").eq("is_active", true).single(),
-    supabase.from("terms").select("*").eq("is_active", true).single(),
+    supabase.from("sessions").select("*").eq("is_active", true).maybeSingle(),
+    supabase.from("terms").select("*").eq("is_active", true).maybeSingle(),
     supabase.from("fee_categories").select("*").order("name"),
     supabase.from("classes").select("*, section:sections(name)").eq("is_active", true).order("name"),
     supabase.from("grading_schemes").select("*").order("min_score", { ascending: false }),
-    supabase
+  ])
+
+  let feeStructures = null
+  if (activeSessions?.id && activeTerms?.id) {
+    const { data } = await supabase
       .from("fee_structures")
       .select("*")
-      .eq("session_id", activeSessions?.id || "")
-      .eq("term_id", activeTerms?.id || ""),
-  ])
+      .eq("session_id", activeSessions.id)
+      .eq("term_id", activeTerms.id)
+    feeStructures = data
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4">
