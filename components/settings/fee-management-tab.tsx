@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -23,16 +23,46 @@ export function FeeManagementTab({
   classes,
   activeSession,
   activeTerm,
+  existingFeeStructures,
 }: {
   feeCategories: any[]
   classes: any[]
   activeSession: any
   activeTerm: any
+  existingFeeStructures: any[]
 }) {
   const [editingClassFee, setEditingClassFee] = useState<string | null>(null)
   const [classFees, setClassFees] = useState<Record<string, ClassFees>>({})
   const [isSaving, setIsSaving] = useState(false)
   const { toast } = useToast()
+
+  useEffect(() => {
+    const initialFees: Record<string, ClassFees> = {}
+
+    classes.forEach((classItem) => {
+      const tuitionCategory = feeCategories.find((c) => c.name.toLowerCase().includes("tuition"))
+      const textbooksCategory = feeCategories.find((c) => c.name.toLowerCase().includes("textbook"))
+      const registrationCategory = feeCategories.find((c) => c.name.toLowerCase().includes("registration"))
+
+      const tuitionFee = existingFeeStructures.find(
+        (f) => f.class_id === classItem.id && f.fee_category_id === tuitionCategory?.id,
+      )
+      const textbookFee = existingFeeStructures.find(
+        (f) => f.class_id === classItem.id && f.fee_category_id === textbooksCategory?.id,
+      )
+      const registrationFee = existingFeeStructures.find(
+        (f) => f.class_id === classItem.id && f.fee_category_id === registrationCategory?.id,
+      )
+
+      initialFees[classItem.id] = {
+        tuition: tuitionFee?.amount?.toString() || "",
+        textbooks: textbookFee?.amount?.toString() || "",
+        registration: registrationFee?.amount?.toString() || "",
+      }
+    })
+
+    setClassFees(initialFees)
+  }, [classes, feeCategories, existingFeeStructures])
 
   const handleSaveFees = async (classId: string) => {
     if (!activeSession || !activeTerm) return
@@ -42,10 +72,16 @@ export function FeeManagementTab({
       const fees = classFees[classId]
       if (!fees) return
 
-      // Find fee category IDs
+      console.log("[v0] Saving fees for class:", classId)
+      console.log("[v0] Active session:", activeSession)
+      console.log("[v0] Active term:", activeTerm)
+      console.log("[v0] Fee data:", fees)
+
       const tuitionCategory = feeCategories.find((c) => c.name.toLowerCase().includes("tuition"))
       const textbooksCategory = feeCategories.find((c) => c.name.toLowerCase().includes("textbook"))
       const registrationCategory = feeCategories.find((c) => c.name.toLowerCase().includes("registration"))
+
+      console.log("[v0] Categories found:", { tuitionCategory, textbooksCategory, registrationCategory })
 
       const feeData = []
 
@@ -70,6 +106,8 @@ export function FeeManagementTab({
         })
       }
 
+      console.log("[v0] Final fee data to save:", feeData)
+
       await updateClassFeeStructure(classId, activeSession.id, activeTerm.id, feeData)
 
       toast({
@@ -82,7 +120,7 @@ export function FeeManagementTab({
       console.error("[v0] Error saving fees:", error)
       toast({
         title: "Error",
-        description: "Failed to save fee structure",
+        description: error instanceof Error ? error.message : "Failed to save fee structure",
         variant: "destructive",
       })
     } finally {
@@ -171,7 +209,7 @@ export function FeeManagementTab({
                           onChange={(e) => handleFeeChange(classItem.id, "tuition", e.target.value)}
                         />
                       ) : (
-                        <span>—</span>
+                        <span>{classFees[classItem.id]?.tuition || "—"}</span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -184,7 +222,7 @@ export function FeeManagementTab({
                           onChange={(e) => handleFeeChange(classItem.id, "textbooks", e.target.value)}
                         />
                       ) : (
-                        <span>—</span>
+                        <span>{classFees[classItem.id]?.textbooks || "—"}</span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -197,7 +235,7 @@ export function FeeManagementTab({
                           onChange={(e) => handleFeeChange(classItem.id, "registration", e.target.value)}
                         />
                       ) : (
-                        <span>—</span>
+                        <span>{classFees[classItem.id]?.registration || "—"}</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">

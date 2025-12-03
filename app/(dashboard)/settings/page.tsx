@@ -21,6 +21,7 @@ export default async function SettingsPage() {
     { data: feeCategories },
     { data: classes },
     { data: gradingSchemes },
+    { data: feeStructures },
   ] = await Promise.all([
     supabase.from("school_settings").select("*").single(),
     supabase.from("sessions").select("*, terms:terms(*)").order("start_date", { ascending: false }),
@@ -29,6 +30,11 @@ export default async function SettingsPage() {
     supabase.from("fee_categories").select("*").order("name"),
     supabase.from("classes").select("*, section:sections(name)").eq("is_active", true).order("name"),
     supabase.from("grading_schemes").select("*").order("min_score", { ascending: false }),
+    supabase
+      .from("fee_structures")
+      .select("*")
+      .eq("session_id", activeSessions?.id || "")
+      .eq("term_id", activeTerms?.id || ""),
   ])
 
   return (
@@ -60,6 +66,7 @@ export default async function SettingsPage() {
             classes={classes || []}
             activeSession={activeSessions}
             activeTerm={activeTerms}
+            existingFeeStructures={feeStructures || []}
           />
         </TabsContent>
 
