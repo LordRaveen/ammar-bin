@@ -3,6 +3,7 @@ import { createServerClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DollarSign, Receipt, TrendingUp, Users, FileText, AlertCircle, CreditCard, Wallet } from "lucide-react"
 import Link from "next/link"
+import { QuickPaymentEntry } from "@/components/quick-payment-entry"
 
 export const dynamic = "force-dynamic"
 
@@ -115,6 +116,8 @@ export default async function CashierDashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      <QuickPaymentEntry />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>

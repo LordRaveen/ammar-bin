@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { devLog } from "@/lib/logger"
+import { getRoleDashboardUrl } from "@/lib/auth/role-redirect"
 
 export default function SignInPage() {
   const [email, setEmail] = useState("")
@@ -34,11 +35,12 @@ export default function SignInPage() {
 
       if (error) throw error
 
-      const { data: userData } = await supabase.from("users").select("role").eq("id", data.user.id).single()
+      const { data: teacherData } = await supabase.from("teachers").select("role").eq("user_id", data.user.id).single()
 
-      const dashboardUrl = userData?.role === "teacher" ? "/teacher-dashboard" : "/dashboard"
+      const userRole = teacherData?.role || "admin"
+      const dashboardUrl = getRoleDashboardUrl(userRole)
 
-      devLog.debug("Sign in successful, redirecting to", dashboardUrl)
+      devLog.debug("Sign in successful, role:", userRole, "redirecting to", dashboardUrl)
       router.push(dashboardUrl)
       router.refresh()
     } catch (error: any) {
