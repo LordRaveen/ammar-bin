@@ -21,18 +21,33 @@ export async function updateClassFeeStructure(
 ) {
   const supabase = await createClient()
 
-  // Insert or update fee structures
-  for (const fee of fees) {
-    await supabase.from("fee_structures").upsert({
-      class_id: classId,
-      session_id: sessionId,
-      term_id: termId,
-      fee_category_id: fee.categoryId,
-      amount: fee.amount,
-    })
-  }
+  try {
+    for (const fee of fees) {
+      const { error } = await supabase.from("fee_structures").upsert(
+        {
+          class_id: classId,
+          session_id: sessionId,
+          term_id: termId,
+          fee_category_id: fee.categoryId,
+          amount: fee.amount,
+        },
+        {
+          onConflict: "class_id,session_id,term_id,fee_category_id",
+        },
+      )
 
-  revalidatePath("/settings")
+      if (error) {
+        console.error("[v0] Error upserting fee structure:", error)
+        throw error
+      }
+    }
+
+    revalidatePath("/settings")
+    return { success: true }
+  } catch (error) {
+    console.error("[v0] Error in updateClassFeeStructure:", error)
+    throw error
+  }
 }
 
 export async function addFeeStructure(data: {

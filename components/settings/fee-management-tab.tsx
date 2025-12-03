@@ -9,7 +9,14 @@ import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { IconCoin, IconEdit } from "@tabler/icons-react"
-import { updateFeeCategory } from "@/app/(dashboard)/settings/fees/actions"
+import { updateFeeCategory, updateClassFeeStructure } from "@/app/(dashboard)/settings/fees/actions"
+import { useToast } from "@/hooks/use-toast"
+
+type ClassFees = {
+  tuition: string
+  textbooks: string
+  registration: string
+}
 
 export function FeeManagementTab({
   feeCategories,
@@ -23,6 +30,75 @@ export function FeeManagementTab({
   activeTerm: any
 }) {
   const [editingClassFee, setEditingClassFee] = useState<string | null>(null)
+  const [classFees, setClassFees] = useState<Record<string, ClassFees>>({})
+  const [isSaving, setIsSaving] = useState(false)
+  const { toast } = useToast()
+
+  const handleSaveFees = async (classId: string) => {
+    if (!activeSession || !activeTerm) return
+
+    setIsSaving(true)
+    try {
+      const fees = classFees[classId]
+      if (!fees) return
+
+      // Find fee category IDs
+      const tuitionCategory = feeCategories.find((c) => c.name.toLowerCase().includes("tuition"))
+      const textbooksCategory = feeCategories.find((c) => c.name.toLowerCase().includes("textbook"))
+      const registrationCategory = feeCategories.find((c) => c.name.toLowerCase().includes("registration"))
+
+      const feeData = []
+
+      if (fees.tuition && tuitionCategory) {
+        feeData.push({
+          categoryId: tuitionCategory.id,
+          amount: Number.parseFloat(fees.tuition),
+        })
+      }
+
+      if (fees.textbooks && textbooksCategory) {
+        feeData.push({
+          categoryId: textbooksCategory.id,
+          amount: Number.parseFloat(fees.textbooks),
+        })
+      }
+
+      if (fees.registration && registrationCategory) {
+        feeData.push({
+          categoryId: registrationCategory.id,
+          amount: Number.parseFloat(fees.registration),
+        })
+      }
+
+      await updateClassFeeStructure(classId, activeSession.id, activeTerm.id, feeData)
+
+      toast({
+        title: "Success",
+        description: "Fee structure saved successfully",
+      })
+
+      setEditingClassFee(null)
+    } catch (error) {
+      console.error("[v0] Error saving fees:", error)
+      toast({
+        title: "Error",
+        description: "Failed to save fee structure",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleFeeChange = (classId: string, field: keyof ClassFees, value: string) => {
+    setClassFees((prev) => ({
+      ...prev,
+      [classId]: {
+        ...(prev[classId] || { tuition: "", textbooks: "", registration: "" }),
+        [field]: value,
+      },
+    }))
+  }
 
   return (
     <div className="space-y-4">
@@ -87,21 +163,39 @@ export function FeeManagementTab({
                     </TableCell>
                     <TableCell>
                       {editingClassFee === classItem.id ? (
-                        <Input type="number" placeholder="50000" className="w-32" />
+                        <Input
+                          type="number"
+                          placeholder="50000"
+                          className="w-32"
+                          value={classFees[classItem.id]?.tuition || ""}
+                          onChange={(e) => handleFeeChange(classItem.id, "tuition", e.target.value)}
+                        />
                       ) : (
                         <span>—</span>
                       )}
                     </TableCell>
                     <TableCell>
                       {editingClassFee === classItem.id ? (
-                        <Input type="number" placeholder="5000" className="w-32" />
+                        <Input
+                          type="number"
+                          placeholder="5000"
+                          className="w-32"
+                          value={classFees[classItem.id]?.textbooks || ""}
+                          onChange={(e) => handleFeeChange(classItem.id, "textbooks", e.target.value)}
+                        />
                       ) : (
                         <span>—</span>
                       )}
                     </TableCell>
                     <TableCell>
                       {editingClassFee === classItem.id ? (
-                        <Input type="number" placeholder="10000" className="w-32" />
+                        <Input
+                          type="number"
+                          placeholder="10000"
+                          className="w-32"
+                          value={classFees[classItem.id]?.registration || ""}
+                          onChange={(e) => handleFeeChange(classItem.id, "registration", e.target.value)}
+                        />
                       ) : (
                         <span>—</span>
                       )}
@@ -112,7 +206,9 @@ export function FeeManagementTab({
                           <Button size="sm" variant="outline" onClick={() => setEditingClassFee(null)}>
                             Cancel
                           </Button>
-                          <Button size="sm">Save</Button>
+                          <Button size="sm" onClick={() => handleSaveFees(classItem.id)} disabled={isSaving}>
+                            {isSaving ? "Saving..." : "Save"}
+                          </Button>
                         </div>
                       ) : (
                         <Button variant="ghost" size="sm" onClick={() => setEditingClassFee(classItem.id)}>
