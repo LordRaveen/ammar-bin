@@ -5,6 +5,8 @@ export function getRoleDashboardUrl(role: string): string {
   switch (role) {
     case "teacher":
       return "/teacher-dashboard"
+    case "accountant":
+      return "/cashier-dashboard"
     case "super_admin":
     case "admin":
       return "/dashboard"
@@ -25,4 +27,11 @@ export function isAdmin(role: string): boolean {
  */
 export function isTeacher(role: string): boolean {
   return role === "teacher"
+}
+
+/**
+ * Check if the current user is an accountant
+ */
+export function isAccountant(role: string): boolean {
+  return role === "accountant"
 }
