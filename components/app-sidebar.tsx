@@ -32,7 +32,12 @@ const getNavigationByRole = (role: UserRole) => {
   const baseNav = [
     {
       title: "Dashboard",
-      url: "/dashboard",
+      url:
+        role === "teacher"
+          ? "/teacher-dashboard"
+          : role === "accountant" || role === "cashier"
+            ? "/cashier-dashboard"
+            : "/dashboard",
       icon: IconDashboard,
     },
   ]
@@ -105,8 +110,30 @@ const getNavigationByRole = (role: UserRole) => {
     },
   ]
 
+  const cashierNav = [
+    {
+      title: "Dashboard",
+      url: "/cashier-dashboard",
+      icon: IconDashboard,
+    },
+    {
+      title: "Students",
+      url: "/students",
+      icon: IconUsers,
+    },
+    {
+      title: "Finance",
+      url: "/finance",
+      icon: IconCoin,
+    },
+  ]
+
   const accountantNav = [
-    ...baseNav,
+    {
+      title: "Dashboard",
+      url: "/cashier-dashboard",
+      icon: IconDashboard,
+    },
     {
       title: "Students",
       url: "/students",
@@ -149,6 +176,8 @@ const getNavigationByRole = (role: UserRole) => {
       return adminNav
     case "teacher":
       return teacherNav
+    case "cashier":
+      return cashierNav
     case "accountant":
       return accountantNav
     case "parent":

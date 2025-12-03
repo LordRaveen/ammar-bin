@@ -1,277 +1,326 @@
 import { requireAuth } from "@/lib/auth/get-user"
 import { createServerClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { DollarSign, Receipt, Users, TrendingUp, Calendar, CreditCard, Banknote, AlertCircle } from "lucide-react"
+import { DollarSign, Receipt, TrendingUp, Users, FileText, AlertCircle, CreditCard, Wallet } from "lucide-react"
 import Link from "next/link"
-import { QuickPaymentEntry } from "@/components/quick-payment-entry"
-import { RecentPayments } from "@/components/recent-payments"
 
 export const dynamic = "force-dynamic"
 
 export default async function CashierDashboardPage() {
-  const user = await requireAuth(["super_admin", "admin", "accountant"])
+  const user = await requireAuth(["accountant", "cashier"])
   const supabase = await createServerClient()
 
-  // Get teacher/staff name
-  const { data: teacher } = await supabase
+  // Get staff record
+  const { data: staff } = await supabase
     .from("teachers")
-    .select("first_name, last_name")
+    .select("id, first_name, last_name")
     .eq("user_id", user.id)
-    .single()
+    .maybeSingle()
 
-  const cashierName = teacher ? `${teacher.first_name} ${teacher.last_name}` : "Cashier"
+  // Get active session and term
+  const { data: activeSession } = await supabase
+    .from("sessions")
+    .select("*, terms(*)")
+    .eq("is_active", true)
+    .maybeSingle()
 
-  // Get today's date
+  const activeTerm = activeSession?.terms?.find((t: any) => t.is_active)
+
+  // Today's date for filtering
   const today = new Date().toISOString().split("T")[0]
 
-  // Get today's collections
-  const { data: todayPayments } = await supabase
+  // Get today's payments
+  const { data: todaysPayments } = await supabase
     .from("payments")
-    .select("amount, payment_method, created_at")
+    .select("*")
     .gte("payment_date", today)
     .lte("payment_date", today)
 
-  const todayTotal = todayPayments?.reduce((sum, p) => sum + Number.parseFloat(p.amount), 0) || 0
-  const todayCash =
-    todayPayments
+  const todaysTotal = todaysPayments?.reduce((sum, p) => sum + Number.parseFloat(p.amount), 0) || 0
+  const todaysCash =
+    todaysPayments
       ?.filter((p) => p.payment_method === "Cash")
       .reduce((sum, p) => sum + Number.parseFloat(p.amount), 0) || 0
-  const todayTransfer =
-    todayPayments
+  const todaysTransfer =
+    todaysPayments
       ?.filter((p) => p.payment_method === "Bank Transfer")
       .reduce((sum, p) => sum + Number.parseFloat(p.amount), 0) || 0
-  const todayPOS =
-    todayPayments?.filter((p) => p.payment_method === "POS").reduce((sum, p) => sum + Number.parseFloat(p.amount), 0) ||
-    0
+  const todaysPOS =
+    todaysPayments
+      ?.filter((p) => p.payment_method === "POS")
+      .reduce((sum, p) => sum + Number.parseFloat(p.amount), 0) || 0
 
-  // Get this week's collections (last 7 days)
-  const weekAgo = new Date()
-  weekAgo.setDate(weekAgo.getDate() - 7)
-  const weekAgoDate = weekAgo.toISOString().split("T")[0]
+  // Get all invoices stats
+  const { data: allInvoices } = await supabase
+    .from("invoices")
+    .select("*")
+    .eq("session_id", activeSession?.id)
+    .eq("term_id", activeTerm?.id)
 
-  const { data: weekPayments } = await supabase.from("payments").select("amount").gte("payment_date", weekAgoDate)
+  const pendingInvoices = allInvoices?.filter((i) => i.status === "Pending").length || 0
+  const overdueInvoices =
+    allInvoices?.filter((i) => {
+      if (i.status === "Pending" && i.due_date) {
+        return new Date(i.due_date) < new Date()
+      }
+      return false
+    }).length || 0
 
-  const weekTotal = weekPayments?.reduce((sum, p) => sum + Number.parseFloat(p.amount), 0) || 0
+  const totalOutstanding = allInvoices?.reduce((sum, i) => sum + Number.parseFloat(i.balance || "0"), 0) || 0
 
-  // Get this month's collections
-  const monthStart = new Date()
-  monthStart.setDate(1)
-  const monthStartDate = monthStart.toISOString().split("T")[0]
+  // Get recent payments
+  const { data: recentPayments } = await supabase
+    .from("payments")
+    .select(`
+      id,
+      receipt_number,
+      amount,
+      payment_method,
+      payment_date,
+      students (
+        first_name,
+        last_name,
+        student_id
+      )
+    `)
+    .order("created_at", { ascending: false })
+    .limit(5)
 
-  const { data: monthPayments } = await supabase.from("payments").select("amount").gte("payment_date", monthStartDate)
-
-  const monthTotal = monthPayments?.reduce((sum, p) => sum + Number.parseFloat(p.amount), 0) || 0
-
-  // Get invoice stats
-  const { data: invoices } = await supabase.from("invoices").select("status, balance, total_amount")
-
-  const pendingInvoices = invoices?.filter((i) => i.status === "Pending" || i.status === "Partial").length || 0
-  const overdueInvoices = invoices?.filter((i) => i.status === "Overdue").length || 0
-  const totalOutstanding = invoices?.reduce((sum, i) => sum + Number.parseFloat(i.balance), 0) || 0
-
-  const collectionRate = invoices?.length
-    ? ((invoices.filter((i) => i.status === "Paid").length / invoices.length) * 100).toFixed(0)
-    : 0
+  // Collection rate
+  const paidInvoices = allInvoices?.filter((i) => i.status === "Paid").length || 0
+  const collectionRate = allInvoices?.length ? ((paidInvoices / allInvoices.length) * 100).toFixed(1) : "0"
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Cashier Dashboard</h1>
-          <p className="text-muted-foreground">Welcome back, {cashierName}</p>
-        </div>
-        <Badge variant="outline" className="text-sm px-3 py-1">
-          <Calendar className="h-3 w-3 mr-1" />
-          {new Date().toLocaleDateString("en-US", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
-        </Badge>
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Welcome back, {staff?.first_name || "Cashier"}</h1>
+        <p className="text-muted-foreground">Here's an overview of today's financial activities</p>
       </div>
 
-      {/* Today's Collections */}
+      {activeSession && activeTerm && (
+        <Card className="bg-primary text-primary-foreground">
+          <CardHeader>
+            <CardTitle>Active Session</CardTitle>
+            <CardDescription className="text-primary-foreground/80">Current academic period</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1">
+              <p className="text-2xl font-bold">{activeSession.name}</p>
+              <p className="text-lg">{activeTerm.name}</p>
+              <p className="text-sm text-primary-foreground/80">
+                {new Date(activeTerm.start_date).toLocaleDateString()} -{" "}
+                {new Date(activeTerm.end_date).toLocaleDateString()}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today's Collections</CardTitle>
+            <CardTitle className="text-sm font-medium">Today's Collection</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₦{todayTotal.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">{todayPayments?.length || 0} transaction(s)</p>
+            <div className="text-2xl font-bold">₦{todaysTotal.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">{todaysPayments?.length || 0} payment(s)</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">This Week</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Pending Invoices</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₦{weekTotal.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Last 7 days collections</p>
+            <div className="text-2xl font-bold">{pendingInvoices}</div>
+            <p className="text-xs text-muted-foreground">Awaiting payment</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">This Month</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Overdue Students</CardTitle>
+            <AlertCircle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₦{monthTotal.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">{monthPayments?.length || 0} payment(s)</p>
+            <div className="text-2xl font-bold text-destructive">{overdueInvoices}</div>
+            <p className="text-xs text-muted-foreground">Past due date</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Collection Rate</CardTitle>
-            <Receipt className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{collectionRate}%</div>
-            <p className="text-xs text-muted-foreground">Of total invoices</p>
+            <p className="text-xs text-muted-foreground">
+              {paidInvoices} of {allInvoices?.length || 0}
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Payment Method Breakdown (Today) */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Today's Payment Breakdown</CardTitle>
-          <CardDescription>Collections by payment method</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 dark:bg-green-900 rounded-full">
-                <Banknote className="h-5 w-5 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Cash</p>
-                <p className="text-2xl font-bold">₦{todayCash.toLocaleString()}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-full">
-                <CreditCard className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Bank Transfer</p>
-                <p className="text-2xl font-bold">₦{todayTransfer.toLocaleString()}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-full">
-                <CreditCard className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">POS</p>
-                <p className="text-2xl font-bold">₦{todayPOS.toLocaleString()}</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Pending Fees Summary */}
       <div className="grid gap-6 md:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
-              <Users className="h-5 w-5" />
-              Pending Invoices
-            </CardTitle>
+            <CardTitle className="text-sm">Cash Payments</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{pendingInvoices}</div>
-            <p className="text-sm text-muted-foreground mt-1">Students with outstanding fees</p>
+            <div className="flex items-center justify-between">
+              <Wallet className="h-8 w-8 text-green-600" />
+              <div className="text-right">
+                <p className="text-2xl font-bold">₦{todaysCash.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Today</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
+            <CardTitle className="text-sm">Bank Transfer</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <CreditCard className="h-8 w-8 text-blue-600" />
+              <div className="text-right">
+                <p className="text-2xl font-bold">₦{todaysTransfer.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Today</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">POS Payments</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <CreditCard className="h-8 w-8 text-purple-600" />
+              <div className="text-right">
+                <p className="text-2xl font-bold">₦{todaysPOS.toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">Today</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>Common tasks and shortcuts</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3">
+              <Link href="/finance/payments/record">
+                <div className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent transition-colors cursor-pointer">
+                  <Receipt className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="font-medium">Record Payment</p>
+                    <p className="text-xs text-muted-foreground">Enter new payment and print receipt</p>
+                  </div>
+                </div>
+              </Link>
+
+              <Link href="/students">
+                <div className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent transition-colors cursor-pointer">
+                  <Users className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="font-medium">Search Student</p>
+                    <p className="text-xs text-muted-foreground">Find student fee status</p>
+                  </div>
+                </div>
+              </Link>
+
+              <Link href="/finance/invoices">
+                <div className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent transition-colors cursor-pointer">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="font-medium">View Invoices</p>
+                    <p className="text-xs text-muted-foreground">Check pending and paid invoices</p>
+                  </div>
+                </div>
+              </Link>
+
+              <Link href="/reports">
+                <div className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent transition-colors cursor-pointer">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="font-medium">Generate Reports</p>
+                    <p className="text-xs text-muted-foreground">Daily cash and debtors report</p>
+                  </div>
+                </div>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Payments</CardTitle>
+            <CardDescription>Latest payment transactions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {recentPayments && recentPayments.length > 0 ? (
+                recentPayments.map((payment: any) => (
+                  <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg border">
+                    <div className="flex items-center gap-3">
+                      <Receipt className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium">
+                          {payment.students?.first_name} {payment.students?.last_name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {payment.receipt_number} - {payment.payment_method}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold">₦{Number.parseFloat(payment.amount).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(payment.payment_date).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">No recent payments</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {overdueInvoices > 0 && (
+        <Card className="border-destructive">
+          <CardHeader>
+            <CardTitle className="text-destructive flex items-center gap-2">
               <AlertCircle className="h-5 w-5" />
-              Overdue
+              Attention Required
             </CardTitle>
+            <CardDescription>Students with overdue payments</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{overdueInvoices}</div>
-            <p className="text-sm text-muted-foreground mt-1">Invoices past due date</p>
+            <div className="space-y-2">
+              <p className="text-sm">
+                There are <span className="font-bold text-destructive">{overdueInvoices}</span> overdue invoices
+                totaling <span className="font-bold">₦{totalOutstanding.toLocaleString()}</span>
+              </p>
+              <Link href="/finance/invoices?filter=overdue">
+                <div className="text-sm text-primary hover:underline cursor-pointer">View debtors list →</div>
+              </Link>
+            </div>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              Total Outstanding
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">₦{totalOutstanding.toLocaleString()}</div>
-            <p className="text-sm text-muted-foreground mt-1">Total pending amount</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quick Actions & Recent Payments */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Quick Payment Entry */}
-        <QuickPaymentEntry />
-
-        {/* Recent Payments */}
-        <RecentPayments />
-      </div>
-
-      {/* Quick Links */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Common tasks and reports</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Link href="/finance/payments/record" className="group">
-              <div className="p-4 border rounded-lg hover:bg-accent transition-colors">
-                <Receipt className="h-6 w-6 mb-2 text-primary" />
-                <h3 className="font-semibold mb-1">Record Payment</h3>
-                <p className="text-xs text-muted-foreground">Process a new payment</p>
-              </div>
-            </Link>
-
-            <Link href="/reports/finance/debtors" className="group">
-              <div className="p-4 border rounded-lg hover:bg-accent transition-colors">
-                <Users className="h-6 w-6 mb-2 text-orange-600" />
-                <h3 className="font-semibold mb-1">View Debtors</h3>
-                <p className="text-xs text-muted-foreground">Students with outstanding fees</p>
-              </div>
-            </Link>
-
-            <Link href="/reports/finance/daily-cash" className="group">
-              <div className="p-4 border rounded-lg hover:bg-accent transition-colors">
-                <DollarSign className="h-6 w-6 mb-2 text-green-600" />
-                <h3 className="font-semibold mb-1">Daily Cash Report</h3>
-                <p className="text-xs text-muted-foreground">Today's cash summary</p>
-              </div>
-            </Link>
-
-            <Link href="/finance/invoices" className="group">
-              <div className="p-4 border rounded-lg hover:bg-accent transition-colors">
-                <AlertCircle className="h-6 w-6 mb-2 text-blue-600" />
-                <h3 className="font-semibold mb-1">View Invoices</h3>
-                <p className="text-xs text-muted-foreground">All student invoices</p>
-              </div>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+      )}
     </div>
   )
 }
