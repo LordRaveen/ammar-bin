@@ -126,6 +126,11 @@ const getNavigationByRole = (role: UserRole) => {
       url: "/finance",
       icon: IconCoin,
     },
+    {
+      title: "Reports",
+      url: "/reports",
+      icon: IconFileText,
+    },
   ]
 
   const accountantNav = [

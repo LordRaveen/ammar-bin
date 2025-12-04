@@ -252,7 +252,7 @@ export default async function CashierDashboardPage() {
                 </div>
               </Link>
 
-              <Link href="/reports">
+              <Link href="/reports/finance/daily-cash">
                 <div className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent transition-colors cursor-pointer">
                   <TrendingUp className="h-5 w-5 text-primary" />
                   <div>
