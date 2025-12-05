@@ -78,6 +78,21 @@ export default async function FinancePage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
+        <Link href="/finance/discounts/apply">
+          <Card className="hover:bg-accent transition-colors cursor-pointer h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                Discounts & Waivers
+              </CardTitle>
+              <CardDescription>Apply and manage fee discounts</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">Grant discounts or waivers to student invoices</p>
+            </CardContent>
+          </Card>
+        </Link>
+
         <Link href="/finance/students/search">
           <Card className="hover:bg-accent transition-colors cursor-pointer h-full">
             <CardHeader>
