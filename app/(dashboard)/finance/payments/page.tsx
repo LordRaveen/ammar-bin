@@ -1,26 +1,20 @@
-import { requireAuth } from '@/lib/auth/get-user'
-import { createServerClient } from '@/lib/supabase/server'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Plus, ArrowLeft, Download } from 'lucide-react'
-import Link from 'next/link'
+import { requireAuth } from "@/lib/auth/get-user"
+import { createServerClient } from "@/lib/supabase/server"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Plus, ArrowLeft, Download, RotateCcw } from "lucide-react"
+import Link from "next/link"
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
 
 export default async function PaymentsPage() {
-  await requireAuth(['super_admin', 'admin', 'accountant'])
+  await requireAuth(["super_admin", "admin", "accountant"])
   const supabase = await createServerClient()
 
   // Get all payments with details
   const { data: payments } = await supabase
-    .from('payments')
+    .from("payments")
     .select(`
       *,
       students (
@@ -34,7 +28,7 @@ export default async function PaymentsPage() {
         invoice_number
       )
     `)
-    .order('payment_date', { ascending: false })
+    .order("payment_date", { ascending: false })
 
   return (
     <div className="space-y-6">
@@ -46,10 +40,14 @@ export default async function PaymentsPage() {
         </Link>
         <div className="flex-1">
           <h1 className="text-3xl font-bold tracking-tight">Payments</h1>
-          <p className="text-muted-foreground">
-            View and record student payments
-          </p>
+          <p className="text-muted-foreground">View and record student payments</p>
         </div>
+        <Link href="/finance/payments/reverse">
+          <Button variant="outline">
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Reverse Payment
+          </Button>
+        </Link>
         <Link href="/finance/payments/record">
           <Button>
             <Plus className="h-4 w-4 mr-2" />
@@ -61,9 +59,7 @@ export default async function PaymentsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Payment History</CardTitle>
-          <CardDescription>
-            {payments?.length || 0} payment(s) recorded
-          </CardDescription>
+          <CardDescription>{payments?.length || 0} payment(s) recorded</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -84,23 +80,13 @@ export default async function PaymentsPage() {
                 {payments && payments.length > 0 ? (
                   payments.map((payment: any) => (
                     <tr key={payment.id} className="border-b">
-                      <td className="p-2 font-medium">
-                        {payment.receipt_number}
-                      </td>
+                      <td className="p-2 font-medium">{payment.receipt_number}</td>
+                      <td className="p-2">{new Date(payment.payment_date).toLocaleDateString()}</td>
                       <td className="p-2">
-                        {new Date(payment.payment_date).toLocaleDateString()}
-                      </td>
-                      <td className="p-2">
-                        <Link
-                          href={`/students/${payment.students.id}`}
-                          className="hover:underline"
-                        >
-                          {payment.students.first_name}{' '}
-                          {payment.students.last_name}
+                        <Link href={`/students/${payment.students.id}`} className="hover:underline">
+                          {payment.students.first_name} {payment.students.last_name}
                           <br />
-                          <span className="text-xs text-muted-foreground">
-                            {payment.students.student_id}
-                          </span>
+                          <span className="text-xs text-muted-foreground">{payment.students.student_id}</span>
                         </Link>
                       </td>
                       <td className="p-2">
@@ -112,16 +98,12 @@ export default async function PaymentsPage() {
                         </Link>
                       </td>
                       <td className="p-2 text-right font-medium text-green-600">
-                        ₦{parseFloat(payment.amount).toLocaleString()}
+                        ₦{Number.parseFloat(payment.amount).toLocaleString()}
                       </td>
                       <td className="p-2">
-                        <Badge variant="secondary">
-                          {payment.payment_method}
-                        </Badge>
+                        <Badge variant="secondary">{payment.payment_method}</Badge>
                       </td>
-                      <td className="p-2 text-sm text-muted-foreground">
-                        {payment.reference_number || '-'}
-                      </td>
+                      <td className="p-2 text-sm text-muted-foreground">{payment.reference_number || "-"}</td>
                       <td className="p-2 text-center">
                         <Link href={`/finance/receipts/${payment.id}`}>
                           <Button size="sm" variant="outline">
@@ -134,10 +116,7 @@ export default async function PaymentsPage() {
                   ))
                 ) : (
                   <tr>
-                    <td
-                      colSpan={8}
-                      className="p-8 text-center text-muted-foreground"
-                    >
+                    <td colSpan={8} className="p-8 text-center text-muted-foreground">
                       No payments recorded yet
                     </td>
                   </tr>

@@ -1,7 +1,7 @@
 import { requireAuth } from "@/lib/auth/get-user"
 import { createServerClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { DollarSign, FileText, Receipt, TrendingUp } from "lucide-react"
+import { DollarSign, FileText, Receipt, TrendingUp, RotateCcw } from "lucide-react"
 import Link from "next/link"
 
 export const dynamic = "force-dynamic"
@@ -78,6 +78,21 @@ export default async function FinancePage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
+        <Link href="/finance/payments/reverse">
+          <Card className="hover:bg-accent transition-colors cursor-pointer h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <RotateCcw className="h-5 w-5" />
+                Payment Reversals
+              </CardTitle>
+              <CardDescription>Reverse incorrect payments</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">Submit reversal requests for admin approval</p>
+            </CardContent>
+          </Card>
+        </Link>
+
         <Link href="/finance/discounts/apply">
           <Card className="hover:bg-accent transition-colors cursor-pointer h-full">
             <CardHeader>
