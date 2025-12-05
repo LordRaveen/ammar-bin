@@ -232,12 +232,12 @@ export default async function CashierDashboardPage() {
                 </div>
               </Link>
 
-              <Link href="/students">
+              <Link href="/finance/students/search">
                 <div className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent transition-colors cursor-pointer">
                   <Users className="h-5 w-5 text-primary" />
                   <div>
-                    <p className="font-medium">Search Student</p>
-                    <p className="text-xs text-muted-foreground">Find student fee status</p>
+                    <p className="font-medium">Search Student Fees</p>
+                    <p className="text-xs text-muted-foreground">View complete fee history and status</p>
                   </div>
                 </div>
               </Link>

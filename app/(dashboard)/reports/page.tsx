@@ -110,6 +110,12 @@ export default async function ReportsPage() {
                 Defaulters List
               </Button>
             </Link>
+            <Link href="/reports/finance/payment-history">
+              <Button variant="outline" className="w-full justify-start bg-transparent">
+                <Download className="h-4 w-4 mr-2" />
+                Payment History Report
+              </Button>
+            </Link>
             <Link href="/reports/finance/collection">
               <Button variant="outline" className="w-full justify-start bg-transparent">
                 <Download className="h-4 w-4 mr-2" />
