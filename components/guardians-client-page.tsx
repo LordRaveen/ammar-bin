@@ -3,12 +3,14 @@
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Search, CheckCircle2 } from "lucide-react"
+import { Search, CheckCircle2, Pencil, Trash2 } from "lucide-react"
 import { AddGuardianModal } from "@/components/add-guardian-modal"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { GuardianDetailsSheet } from "@/components/guardian-details-sheet"
+import { EditGuardianDialog } from "@/components/edit-guardian-dialog"
+import { DeleteGuardianDialog } from "@/components/delete-guardian-dialog"
 
 interface GuardiansClientPageProps {
   initialGuardians: any[]
@@ -17,9 +19,12 @@ interface GuardiansClientPageProps {
 
 export function GuardiansClientPage({ initialGuardians, initialSearch }: GuardiansClientPageProps) {
   const [selectedGuardianId, setSelectedGuardianId] = useState<string | null>(null)
+  const [editGuardianId, setEditGuardianId] = useState<string | null>(null)
+  const [deleteGuardianId, setDeleteGuardianId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState(initialSearch || "")
+  const [guardians, setGuardians] = useState(initialGuardians)
 
-  const filteredGuardians = initialGuardians.filter((guardian) => {
+  const filteredGuardians = guardians.filter((guardian) => {
     if (!searchTerm) return true
     const search = searchTerm.toLowerCase()
     return (
@@ -29,6 +34,15 @@ export function GuardiansClientPage({ initialGuardians, initialSearch }: Guardia
       guardian.email?.toLowerCase().includes(search)
     )
   })
+
+  const handleEditSuccess = () => {
+    window.location.reload()
+  }
+
+  const handleDeleteSuccess = () => {
+    setGuardians((prev) => prev.filter((g) => g.id !== deleteGuardianId))
+    setDeleteGuardianId(null)
+  }
 
   return (
     <>
@@ -102,9 +116,17 @@ export function GuardiansClientPage({ initialGuardians, initialSearch }: Guardia
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedGuardianId(guardian.id)}>
-                          View
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => setSelectedGuardianId(guardian.id)}>
+                            View
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setEditGuardianId(guardian.id)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setDeleteGuardianId(guardian.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -121,6 +143,24 @@ export function GuardiansClientPage({ initialGuardians, initialSearch }: Guardia
         onOpenChange={(open) => {
           if (!open) setSelectedGuardianId(null)
         }}
+      />
+
+      <EditGuardianDialog
+        guardianId={editGuardianId}
+        open={!!editGuardianId}
+        onOpenChange={(open) => {
+          if (!open) setEditGuardianId(null)
+        }}
+        onSuccess={handleEditSuccess}
+      />
+
+      <DeleteGuardianDialog
+        guardianId={deleteGuardianId}
+        open={!!deleteGuardianId}
+        onOpenChange={(open) => {
+          if (!open) setDeleteGuardianId(null)
+        }}
+        onSuccess={handleDeleteSuccess}
       />
     </>
   )
