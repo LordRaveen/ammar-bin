@@ -1,34 +1,25 @@
-import { requireAuth } from '@/lib/auth/get-user'
-import { createServerClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Mail, Phone, MapPin, Briefcase, Users } from 'lucide-react'
-import Link from 'next/link'
+import { requireAuth } from "@/lib/auth/get-user"
+import { createServerClient } from "@/lib/supabase/server"
+import { notFound } from "next/navigation"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { ArrowLeft, Mail, Phone, MapPin, Briefcase, Users } from "lucide-react"
+import Link from "next/link"
+import { ActivatePortalAccessButton } from "@/components/activate-portal-access-button"
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
 
 export default async function GuardianProfilePage({
   params,
 }: {
   params: { id: string }
 }) {
-  await requireAuth(['super_admin', 'admin', 'teacher', 'accountant'])
+  await requireAuth(["super_admin", "admin", "teacher", "accountant"])
   const supabase = await createServerClient()
 
   // Fetch guardian details
-  const { data: guardian, error } = await supabase
-    .from('guardians')
-    .select('*')
-    .eq('id', params.id)
-    .single()
+  const { data: guardian, error } = await supabase.from("guardians").select("*").eq("id", params.id).single()
 
   if (error || !guardian) {
     notFound()
@@ -36,7 +27,7 @@ export default async function GuardianProfilePage({
 
   // Fetch linked students
   const { data: linkedStudents } = await supabase
-    .from('student_guardians')
+    .from("student_guardians")
     .select(
       `
       *,
@@ -50,9 +41,9 @@ export default async function GuardianProfilePage({
         status,
         photo_url
       )
-    `
+    `,
     )
-    .eq('guardian_id', params.id)
+    .eq("guardian_id", params.id)
 
   return (
     <div className="space-y-6">
@@ -68,6 +59,12 @@ export default async function GuardianProfilePage({
           </h1>
           <p className="text-muted-foreground">{guardian.relationship_type}</p>
         </div>
+        {!guardian.user_id && <ActivatePortalAccessButton guardianId={guardian.id} guardianEmail={guardian.email} />}
+        {guardian.user_id && (
+          <Badge variant="secondary" className="text-sm">
+            Portal Access Active
+          </Badge>
+        )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
@@ -81,8 +78,7 @@ export default async function GuardianProfilePage({
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">Full Name</p>
                 <p className="font-medium">
-                  {guardian.first_name} {guardian.middle_name}{' '}
-                  {guardian.last_name}
+                  {guardian.first_name} {guardian.middle_name} {guardian.last_name}
                 </p>
               </div>
 
@@ -125,9 +121,7 @@ export default async function GuardianProfilePage({
                 <div className="flex items-center gap-3">
                   <Phone className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="text-sm text-muted-foreground">
-                      Alternate Phone
-                    </p>
+                    <p className="text-sm text-muted-foreground">Alternate Phone</p>
                     <p className="font-medium">{guardian.alternate_phone}</p>
                   </div>
                 </div>
@@ -161,9 +155,7 @@ export default async function GuardianProfilePage({
                 <Users className="h-5 w-5" />
                 Linked Students
               </CardTitle>
-              <CardDescription>
-                {linkedStudents?.length || 0} student(s)
-              </CardDescription>
+              <CardDescription>{linkedStudents?.length || 0} student(s)</CardDescription>
             </CardHeader>
             <CardContent>
               {linkedStudents && linkedStudents.length > 0 ? (
@@ -183,12 +175,9 @@ export default async function GuardianProfilePage({
                         </div>
                         <div className="flex-1">
                           <p className="font-medium">
-                            {link.students.first_name}{' '}
-                            {link.students.last_name}
+                            {link.students.first_name} {link.students.last_name}
                           </p>
-                          <p className="text-sm text-muted-foreground">
-                            {link.students.student_id}
-                          </p>
+                          <p className="text-sm text-muted-foreground">{link.students.student_id}</p>
                         </div>
                         {link.is_primary && (
                           <Badge variant="secondary" className="text-xs">
@@ -200,9 +189,7 @@ export default async function GuardianProfilePage({
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  No students linked yet
-                </p>
+                <p className="text-sm text-muted-foreground">No students linked yet</p>
               )}
             </CardContent>
           </Card>

@@ -1,8 +1,6 @@
 "use client"
 
 import type React from "react"
-import Link from "next/link"
-
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,10 +8,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { devLog } from "@/lib/logger"
-import { getRoleDashboardUrl } from "@/lib/auth/role-redirect"
+import Link from "next/link"
+import { UserCircle } from "lucide-react"
 
-export default function SignInPage() {
+export default function ParentLoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -26,26 +24,30 @@ export default function SignInPage() {
     setIsLoading(true)
     setError(null)
 
-    devLog.debug("Attempting sign in for:", email)
-
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
-      if (error) throw error
+      if (signInError) throw signInError
 
-      const { data: teacherData } = await supabase.from("teachers").select("role").eq("user_id", data.user.id).single()
+      // Check if user is a parent/guardian
+      const { data: guardianData, error: guardianError } = await supabase
+        .from("guardians")
+        .select("id, first_name, last_name, user_id")
+        .eq("user_id", data.user.id)
+        .single()
 
-      const userRole = teacherData?.role || "admin"
-      const dashboardUrl = getRoleDashboardUrl(userRole)
+      if (guardianError || !guardianData) {
+        await supabase.auth.signOut()
+        throw new Error("Access denied. This portal is for parents and guardians only.")
+      }
 
-      devLog.debug("Sign in successful, role:", userRole, "redirecting to", dashboardUrl)
-      router.push(dashboardUrl)
+      // Redirect to parent dashboard
+      router.push("/parent/dashboard")
       router.refresh()
     } catch (error: any) {
-      devLog.error("Sign in error:", error)
       setError(error.message || "Failed to sign in. Please check your credentials.")
     } finally {
       setIsLoading(false)
@@ -57,14 +59,17 @@ export default function SignInPage() {
       <div className="w-full max-w-sm">
         <div className="flex flex-col gap-6">
           <div className="flex flex-col items-center gap-2 text-center">
-            <h1 className="text-2xl font-bold">Ammar Bin Yasir Institute</h1>
-            <p className="text-sm text-muted-foreground">معهد عمار بن ياسر</p>
+            <div className="rounded-full bg-primary/10 p-3">
+              <UserCircle className="h-8 w-8 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold">Parent Portal</h1>
+            <p className="text-sm text-muted-foreground">Ammar Bin Yasir Institute</p>
           </div>
 
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl">Sign In</CardTitle>
-              <CardDescription>Enter your credentials to access the school management system</CardDescription>
+              <CardDescription>Enter your credentials to access your children's information</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSignIn}>
@@ -74,7 +79,7 @@ export default function SignInPage() {
                     <Input
                       id="email"
                       type="email"
-                      placeholder="admin@ammarschool.edu.ng"
+                      placeholder="parent@example.com"
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -104,13 +109,13 @@ export default function SignInPage() {
               </form>
 
               <div className="mt-4 text-center text-sm">
-                <Link href="/auth/parent-login" className="text-primary hover:underline">
-                  Parent/Guardian Login
+                <Link href="/auth/signin" className="text-primary hover:underline">
+                  Staff/Admin Login
                 </Link>
               </div>
 
               <div className="mt-2 text-center text-sm text-muted-foreground">
-                <p>Contact the administrator if you need access credentials.</p>
+                <p>Contact the school administrator if you need access credentials.</p>
               </div>
             </CardContent>
           </Card>

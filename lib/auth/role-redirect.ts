@@ -8,6 +8,8 @@ export function getRoleDashboardUrl(role: string): string {
     case "cashier":
     case "accountant":
       return "/cashier-dashboard"
+    case "parent":
+      return "/parent/dashboard"
     case "super_admin":
     case "admin":
       return "/dashboard"
@@ -35,4 +37,11 @@ export function isTeacher(role: string): boolean {
  */
 export function isCashierOrAccountant(role: string): boolean {
   return role === "cashier" || role === "accountant"
+}
+
+/**
+ * Check if the current user is a parent
+ */
+export function isParent(role: string): boolean {
+  return role === "parent"
 }
