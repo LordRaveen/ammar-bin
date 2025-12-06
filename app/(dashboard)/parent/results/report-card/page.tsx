@@ -11,10 +11,10 @@ export const dynamic = "force-dynamic"
 export default async function ParentReportCardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ studentId?: string; sessionId?: string; termId?: string }>
+  searchParams: { studentId?: string; sessionId?: string; termId?: string }
 }) {
   const user = await requireAuth()
-  const params = await searchParams
+  const params = searchParams
 
   if (user.role !== "parent") {
     return <div>Access Denied</div>
