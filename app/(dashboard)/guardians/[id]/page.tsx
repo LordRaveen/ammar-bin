@@ -13,13 +13,15 @@ export const dynamic = "force-dynamic"
 export default async function GuardianProfilePage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }> // Updated to Promise for Next.js 16
 }) {
   await requireAuth(["super_admin", "admin", "teacher", "accountant"])
+
+  const { id } = await params
   const supabase = await createServerClient()
 
   // Fetch guardian details
-  const { data: guardian, error } = await supabase.from("guardians").select("*").eq("id", params.id).single()
+  const { data: guardian, error } = await supabase.from("guardians").select("*").eq("id", id).single()
 
   if (error || !guardian) {
     notFound()
@@ -43,7 +45,7 @@ export default async function GuardianProfilePage({
       )
     `,
     )
-    .eq("guardian_id", params.id)
+    .eq("guardian_id", id)
 
   return (
     <div className="space-y-6">
