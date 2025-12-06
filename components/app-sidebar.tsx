@@ -14,6 +14,7 @@ import {
   IconUsers,
   IconUsersGroup,
   IconSpeakerphone,
+  IconCalendarEvent,
 } from "@tabler/icons-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -178,6 +179,11 @@ const getNavigationByRole = (role: UserRole) => {
       title: "Results",
       url: "/parent/results",
       icon: IconChartBar,
+    },
+    {
+      title: "Attendance",
+      url: "/parent/attendance",
+      icon: IconCalendarEvent,
     },
     {
       title: "Announcements",
