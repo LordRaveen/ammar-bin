@@ -12,11 +12,7 @@ import { IconCoin, IconEdit } from "@tabler/icons-react"
 import { updateFeeCategory, updateClassFeeStructure } from "@/app/(dashboard)/settings/fees/actions"
 import { useToast } from "@/hooks/use-toast"
 
-type ClassFees = {
-  tuition: string
-  textbooks: string
-  registration: string
-}
+type ClassFees = Record<string, string> // categoryId -> amount
 
 export function FeeManagementTab({
   feeCategories,
@@ -34,35 +30,33 @@ export function FeeManagementTab({
   const [editingClassFee, setEditingClassFee] = useState<string | null>(null)
   const [classFees, setClassFees] = useState<Record<string, ClassFees>>({})
   const [isSaving, setIsSaving] = useState(false)
+  const [activeCategoryIds, setActiveCategoryIds] = useState<Set<string>>(new Set())
   const { toast } = useToast()
 
   useEffect(() => {
+    setActiveCategoryIds(new Set(feeCategories.filter((c) => c.is_active).map((c) => c.id)))
+
     const initialFees: Record<string, ClassFees> = {}
 
     classes.forEach((classItem) => {
-      const tuitionCategory = feeCategories.find((c) => c.name.toLowerCase().includes("school fee"))
-      const textbooksCategory = feeCategories.find((c) => c.name.toLowerCase().includes("book"))
-      const registrationCategory = feeCategories.find((c) => c.name.toLowerCase().includes("registration"))
+      const fees: ClassFees = {}
 
-      const tuitionFee = existingFeeStructures.find(
-        (f) => f.class_id === classItem.id && f.fee_category_id === tuitionCategory?.id,
-      )
-      const textbookFee = existingFeeStructures.find(
-        (f) => f.class_id === classItem.id && f.fee_category_id === textbooksCategory?.id,
-      )
-      const registrationFee = existingFeeStructures.find(
-        (f) => f.class_id === classItem.id && f.fee_category_id === registrationCategory?.id,
-      )
+      feeCategories.forEach((category) => {
+        const existingFee = existingFeeStructures.find(
+          (f) => f.class_id === classItem.id && f.fee_category_id === category.id,
+        )
+        if (existingFee) {
+          fees[category.id] = existingFee.amount?.toString() || ""
+        }
+      })
 
-      initialFees[classItem.id] = {
-        tuition: tuitionFee?.amount?.toString() || "",
-        textbooks: textbookFee?.amount?.toString() || "",
-        registration: registrationFee?.amount?.toString() || "",
-      }
+      initialFees[classItem.id] = fees
     })
 
     setClassFees(initialFees)
   }, [classes, feeCategories, existingFeeStructures])
+
+  const activeFeeCategories = feeCategories.filter((c) => c.is_active)
 
   const handleSaveFees = async (classId: string) => {
     if (!activeSession || !activeTerm) return
@@ -72,41 +66,27 @@ export function FeeManagementTab({
       const fees = classFees[classId]
       if (!fees) return
 
-      console.log("[v0] Saving fees for class:", classId)
-      console.log("[v0] Active session:", activeSession)
-      console.log("[v0] Active term:", activeTerm)
-      console.log("[v0] Fee data:", fees)
-
-      const tuitionCategory = feeCategories.find((c) => c.name.toLowerCase().includes("school fee"))
-      const textbooksCategory = feeCategories.find((c) => c.name.toLowerCase().includes("book"))
-      const registrationCategory = feeCategories.find((c) => c.name.toLowerCase().includes("registration"))
-
-      console.log("[v0] Categories found:", { tuitionCategory, textbooksCategory, registrationCategory })
-
       const feeData = []
 
-      if (fees.tuition && tuitionCategory) {
-        feeData.push({
-          categoryId: tuitionCategory.id,
-          amount: Number.parseFloat(fees.tuition),
-        })
+      for (const category of activeFeeCategories) {
+        const amount = fees[category.id]
+        if (amount && Number.parseFloat(amount) > 0) {
+          feeData.push({
+            categoryId: category.id,
+            amount: Number.parseFloat(amount),
+          })
+        }
       }
 
-      if (fees.textbooks && textbooksCategory) {
-        feeData.push({
-          categoryId: textbooksCategory.id,
-          amount: Number.parseFloat(fees.textbooks),
+      if (feeData.length === 0) {
+        toast({
+          title: "No fees to save",
+          description: "Please enter at least one fee amount",
+          variant: "destructive",
         })
+        setIsSaving(false)
+        return
       }
-
-      if (fees.registration && registrationCategory) {
-        feeData.push({
-          categoryId: registrationCategory.id,
-          amount: Number.parseFloat(fees.registration),
-        })
-      }
-
-      console.log("[v0] Final fee data to save:", feeData)
 
       await updateClassFeeStructure(classId, activeSession.id, activeTerm.id, feeData)
 
@@ -128,14 +108,43 @@ export function FeeManagementTab({
     }
   }
 
-  const handleFeeChange = (classId: string, field: keyof ClassFees, value: string) => {
+  const handleFeeChange = (classId: string, categoryId: string, value: string) => {
     setClassFees((prev) => ({
       ...prev,
       [classId]: {
-        ...(prev[classId] || { tuition: "", textbooks: "", registration: "" }),
-        [field]: value,
+        ...(prev[classId] || {}),
+        [categoryId]: value,
       },
     }))
+  }
+
+  const handleCategoryToggle = async (categoryId: string, checked: boolean) => {
+    try {
+      await updateFeeCategory(categoryId, checked)
+
+      // Update local state immediately for reactive UI
+      setActiveCategoryIds((prev) => {
+        const newSet = new Set(prev)
+        if (checked) {
+          newSet.add(categoryId)
+        } else {
+          newSet.delete(categoryId)
+        }
+        return newSet
+      })
+
+      toast({
+        title: "Success",
+        description: `Fee category ${checked ? "activated" : "deactivated"} successfully`,
+      })
+    } catch (error) {
+      console.error("[v0] Error updating category:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update fee category",
+        variant: "destructive",
+      })
+    }
   }
 
   return (
@@ -162,8 +171,8 @@ export function FeeManagementTab({
                   )}
                 </div>
                 <Switch
-                  checked={category.is_active}
-                  onCheckedChange={(checked) => updateFeeCategory(category.id, checked)}
+                  checked={activeCategoryIds.has(category.id)}
+                  onCheckedChange={(checked) => handleCategoryToggle(category.id, checked)}
                 />
               </div>
             ))}
@@ -175,20 +184,29 @@ export function FeeManagementTab({
         <CardHeader>
           <CardTitle>Class Fee Structure</CardTitle>
           <CardDescription>
-            Set tuition and other fees for each class (Session: {activeSession?.name || "Not Set"})
+            Set fees for each class (Session: {activeSession?.name || "Not Set"})
+            {activeFeeCategories.length === 0 && (
+              <span className="block text-destructive mt-1">
+                No active fee categories. Please activate at least one category above.
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {!activeSession || !activeTerm ? (
             <div className="text-center py-6 text-muted-foreground">Please set an active session and term first.</div>
+          ) : activeFeeCategories.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground">
+              Please activate at least one fee category to configure class fees.
+            </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Class Name</TableHead>
-                  <TableHead>Tuition (₦)</TableHead>
-                  <TableHead>Textbooks (₦)</TableHead>
-                  <TableHead>Registration (₦)</TableHead>
+                  {activeFeeCategories.map((category) => (
+                    <TableHead key={category.id}>{category.name} (₦)</TableHead>
+                  ))}
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -199,45 +217,21 @@ export function FeeManagementTab({
                       {classItem.name}
                       <span className="text-muted-foreground text-sm ml-2">({classItem.section?.name})</span>
                     </TableCell>
-                    <TableCell>
-                      {editingClassFee === classItem.id ? (
-                        <Input
-                          type="number"
-                          placeholder="50000"
-                          className="w-32"
-                          value={classFees[classItem.id]?.tuition || ""}
-                          onChange={(e) => handleFeeChange(classItem.id, "tuition", e.target.value)}
-                        />
-                      ) : (
-                        <span>{classFees[classItem.id]?.tuition || "—"}</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingClassFee === classItem.id ? (
-                        <Input
-                          type="number"
-                          placeholder="5000"
-                          className="w-32"
-                          value={classFees[classItem.id]?.textbooks || ""}
-                          onChange={(e) => handleFeeChange(classItem.id, "textbooks", e.target.value)}
-                        />
-                      ) : (
-                        <span>{classFees[classItem.id]?.textbooks || "—"}</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingClassFee === classItem.id ? (
-                        <Input
-                          type="number"
-                          placeholder="10000"
-                          className="w-32"
-                          value={classFees[classItem.id]?.registration || ""}
-                          onChange={(e) => handleFeeChange(classItem.id, "registration", e.target.value)}
-                        />
-                      ) : (
-                        <span>{classFees[classItem.id]?.registration || "—"}</span>
-                      )}
-                    </TableCell>
+                    {activeFeeCategories.map((category) => (
+                      <TableCell key={category.id}>
+                        {editingClassFee === classItem.id ? (
+                          <Input
+                            type="number"
+                            placeholder="0"
+                            className="w-32"
+                            value={classFees[classItem.id]?.[category.id] || ""}
+                            onChange={(e) => handleFeeChange(classItem.id, category.id, e.target.value)}
+                          />
+                        ) : (
+                          <span>{classFees[classItem.id]?.[category.id] || "—"}</span>
+                        )}
+                      </TableCell>
+                    ))}
                     <TableCell className="text-right">
                       {editingClassFee === classItem.id ? (
                         <div className="flex gap-2 justify-end">
