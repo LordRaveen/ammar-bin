@@ -158,14 +158,14 @@ export function FeeManagementTab({
           <CardDescription>Manage fee types and their activation status</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
             {feeCategories.map((category) => (
-              <div key={category.id} className="flex items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <div className="font-medium">{category.name}</div>
-                  <div className="text-sm text-muted-foreground">{category.description}</div>
+              <div key={category.id} className="flex items-start justify-between rounded-lg border p-4 gap-3 min-w-0">
+                <div className="space-y-0.5 min-w-0 flex-1">
+                  <div className="font-medium break-words">{category.name}</div>
+                  <div className="text-sm text-muted-foreground break-words">{category.description}</div>
                   {category.is_recurring && (
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-xs mt-1">
                       Recurring
                     </Badge>
                   )}
@@ -173,6 +173,7 @@ export function FeeManagementTab({
                 <Switch
                   checked={activeCategoryIds.has(category.id)}
                   onCheckedChange={(checked) => handleCategoryToggle(category.id, checked)}
+                  className="flex-shrink-0"
                 />
               </div>
             ))}
