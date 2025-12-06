@@ -29,12 +29,40 @@ export default function SignInPage() {
     devLog.debug("Attempting sign in for:", email)
 
     try {
+      const lockoutResponse = await fetch("/api/auth/check-lockout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      })
+
+      const lockoutData = await lockoutResponse.json()
+
+      if (lockoutData.locked) {
+        const minutesRemaining = Math.ceil(lockoutData.minutesRemaining)
+        throw new Error(
+          `Account temporarily locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minute${minutesRemaining !== 1 ? "s" : ""}.`,
+        )
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
-      if (error) throw error
+      if (error) {
+        await fetch("/api/auth/track-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, success: false, reason: error.message }),
+        })
+        throw error
+      }
+
+      await fetch("/api/auth/track-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, success: true }),
+      })
 
       const { data: teacherData } = await supabase.from("teachers").select("role").eq("user_id", data.user.id).single()
 
@@ -91,6 +119,11 @@ export default function SignInPage() {
                       onChange={(e) => setPassword(e.target.value)}
                       disabled={isLoading}
                     />
+                  </div>
+                  <div className="flex items-center justify-end">
+                    <Link href="/auth/forgot-password" className="text-sm text-primary hover:underline">
+                      Forgot password?
+                    </Link>
                   </div>
                   {error && (
                     <div className="rounded-md bg-destructive/15 p-3">

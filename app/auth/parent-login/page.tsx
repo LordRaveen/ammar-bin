@@ -24,21 +24,35 @@ export default function ParentLoginPage() {
     setIsLoading(true)
     setError(null)
 
-    console.log("[v0] Parent login attempt:", { email })
-
     try {
+      const lockoutResponse = await fetch("/api/auth/check-lockout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      })
+
+      const lockoutData = await lockoutResponse.json()
+
+      if (lockoutData.locked) {
+        const minutesRemaining = Math.ceil(lockoutData.minutesRemaining)
+        throw new Error(
+          `Account temporarily locked. Please try again in ${minutesRemaining} minute${minutesRemaining !== 1 ? "s" : ""}.`,
+        )
+      }
+
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
-      console.log("[v0] Sign in result:", {
-        success: !signInError,
-        userId: data?.user?.id,
-        error: signInError?.message,
-      })
-
-      if (signInError) throw signInError
+      if (signInError) {
+        await fetch("/api/auth/track-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, success: false, reason: signInError.message }),
+        })
+        throw signInError
+      }
 
       // Check if user is a parent/guardian
       const { data: guardianData, error: guardianError } = await supabase
@@ -47,20 +61,22 @@ export default function ParentLoginPage() {
         .eq("user_id", data.user.id)
         .single()
 
-      console.log("[v0] Guardian lookup result:", {
-        found: !!guardianData,
-        guardianId: guardianData?.id,
-        error: guardianError?.message,
-      })
-
       if (guardianError || !guardianData) {
         await supabase.auth.signOut()
+        await fetch("/api/auth/track-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, success: false, reason: "Not a guardian account" }),
+        })
         throw new Error("Access denied. This portal is for parents and guardians only.")
       }
 
-      console.log("[v0] Redirecting to parent dashboard")
+      await fetch("/api/auth/track-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, success: true }),
+      })
 
-      // Redirect to parent dashboard
       router.push("/parent/dashboard")
       router.refresh()
     } catch (error: any) {
@@ -133,6 +149,12 @@ export default function ParentLoginPage() {
 
               <div className="mt-2 text-center text-sm text-muted-foreground">
                 <p>Contact the school administrator if you need access credentials.</p>
+              </div>
+
+              <div className="flex items-center justify-end">
+                <Link href="/auth/forgot-password" className="text-sm text-primary hover:underline">
+                  Forgot password?
+                </Link>
               </div>
             </CardContent>
           </Card>

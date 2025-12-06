@@ -15,6 +15,7 @@ import {
   IconUsersGroup,
   IconSpeakerphone,
   IconCalendarEvent,
+  IconHistory,
 } from "@tabler/icons-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -92,6 +93,11 @@ const getNavigationByRole = (role: UserRole) => {
       icon: IconSpeakerphone,
     },
     {
+      title: "Audit Trail",
+      url: "/finance/audit-trail",
+      icon: IconHistory,
+    },
+    {
       title: "Settings",
       url: "/settings",
       icon: IconSettings,
@@ -160,6 +166,11 @@ const getNavigationByRole = (role: UserRole) => {
       title: "Reports",
       url: "/reports",
       icon: IconFileText,
+    },
+    {
+      title: "Audit Trail",
+      url: "/finance/audit-trail",
+      icon: IconHistory,
     },
   ]
 
