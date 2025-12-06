@@ -3,12 +3,14 @@
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Search } from "lucide-react"
+import { Search, Pencil, Trash2 } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { AddTeacherModal } from "@/components/add-teacher-modal"
 import { TeacherDetailsSheet } from "@/components/teacher-details-sheet"
+import { EditTeacherDialog } from "@/components/edit-teacher-dialog"
+import { DeleteTeacherDialog } from "@/components/delete-teacher-dialog"
 
 interface TeachersClientPageProps {
   initialTeachers: any[]
@@ -19,6 +21,8 @@ export function TeachersClientPage({ initialTeachers }: TeachersClientPageProps)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [editTeacherId, setEditTeacherId] = useState<string | null>(null)
+  const [deleteTeacherId, setDeleteTeacherId] = useState<string | null>(null)
 
   const handleViewTeacher = (teacherId: string) => {
     setSelectedTeacherId(teacherId)
@@ -28,6 +32,14 @@ export function TeachersClientPage({ initialTeachers }: TeachersClientPageProps)
   const handleSheetClose = () => {
     setSheetOpen(false)
     setSelectedTeacherId(null)
+  }
+
+  const handleTeacherUpdated = (updatedTeacher: any) => {
+    setTeachers((prev) => prev.map((t) => (t.id === updatedTeacher.id ? updatedTeacher : t)))
+  }
+
+  const handleTeacherDeleted = (teacherId: string) => {
+    setTeachers((prev) => prev.filter((t) => t.id !== teacherId))
   }
 
   const filteredTeachers = teachers.filter((teacher) => {
@@ -107,9 +119,27 @@ export function TeachersClientPage({ initialTeachers }: TeachersClientPageProps)
                         <Badge variant={teacher.status === "Active" ? "default" : "secondary"}>{teacher.status}</Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => handleViewTeacher(teacher.id)}>
-                          View
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => handleViewTeacher(teacher.id)}>
+                            View
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditTeacherId(teacher.id)}
+                            className="text-blue-600 hover:text-blue-700"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeleteTeacherId(teacher.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -121,6 +151,29 @@ export function TeachersClientPage({ initialTeachers }: TeachersClientPageProps)
       </div>
 
       <TeacherDetailsSheet teacherId={selectedTeacherId} open={sheetOpen} onOpenChange={handleSheetClose} />
+
+      {editTeacherId && (
+        <EditTeacherDialog
+          teacherId={editTeacherId}
+          open={!!editTeacherId}
+          onOpenChange={(open) => {
+            if (!open) setEditTeacherId(null)
+          }}
+          onSuccess={handleTeacherUpdated}
+        />
+      )}
+
+      {deleteTeacherId && (
+        <DeleteTeacherDialog
+          teacherId={deleteTeacherId}
+          teacher={teachers.find((t) => t.id === deleteTeacherId)}
+          open={!!deleteTeacherId}
+          onOpenChange={(open) => {
+            if (!open) setDeleteTeacherId(null)
+          }}
+          onSuccess={handleTeacherDeleted}
+        />
+      )}
     </>
   )
 }
