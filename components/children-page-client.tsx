@@ -115,45 +115,8 @@ export function ChildrenPageClient({ children }: ChildrenPageClientProps) {
             </CardContent>
           </Card>
 
-          {/* Class Teacher */}
-          {selectedChild.currentEnrollment?.classes?.class_teacher && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <GraduationCap className="h-5 w-5" />
-                  Class Teacher
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div>
-                    <p className="font-semibold text-lg">
-                      {selectedChild.currentEnrollment.classes.class_teacher.first_name}{" "}
-                      {selectedChild.currentEnrollment.classes.class_teacher.last_name}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedChild.currentEnrollment.classes.sections?.name} -{" "}
-                      {selectedChild.currentEnrollment.classes.name}
-                    </p>
-                  </div>
-                  <Separator />
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span>{selectedChild.currentEnrollment.classes.class_teacher.email}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span>{selectedChild.currentEnrollment.classes.class_teacher.phone}</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Guardians */}
-          <Card className="md:col-span-2">
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
@@ -161,7 +124,7 @@ export function ChildrenPageClient({ children }: ChildrenPageClientProps) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-4">
                 {selectedChild.guardians.map((sg: any, index: number) => (
                   <div key={index} className="p-4 rounded-lg border bg-muted/30">
                     <div className="flex items-start justify-between mb-2">
@@ -195,6 +158,43 @@ export function ChildrenPageClient({ children }: ChildrenPageClientProps) {
             </CardContent>
           </Card>
         </div>
+
+        {/* Class Teacher */}
+        {selectedChild.currentEnrollment?.classes?.class_teacher && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <GraduationCap className="h-5 w-5" />
+                Class Teacher
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div>
+                  <p className="font-semibold text-lg">
+                    {selectedChild.currentEnrollment.classes.class_teacher.first_name}{" "}
+                    {selectedChild.currentEnrollment.classes.class_teacher.last_name}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedChild.currentEnrollment.classes.sections?.name} -{" "}
+                    {selectedChild.currentEnrollment.classes.name}
+                  </p>
+                </div>
+                <Separator />
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span>{selectedChild.currentEnrollment.classes.class_teacher.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span>{selectedChild.currentEnrollment.classes.class_teacher.phone}</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Enrollment History */}
         <Card>
