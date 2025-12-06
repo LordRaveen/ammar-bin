@@ -34,7 +34,15 @@ export async function POST(request: Request) {
     }
 
     // Generate temporary password based on phone number
-    const tempPassword = `${guardian.phone.replace(/[^\d]/g, "")}@Parent`
+    const cleanPhone = guardian.phone.replace(/[^\d]/g, "")
+    const tempPassword = `${cleanPhone}@Parent`
+
+    console.log("[v0] Creating auth user with:", {
+      email: guardian.email,
+      phone: guardian.phone,
+      cleanPhone,
+      passwordFormat: `${cleanPhone}@Parent`,
+    })
 
     const adminClient = createAdminClient()
 
@@ -49,6 +57,11 @@ export async function POST(request: Request) {
       console.error("[v0] Auth user creation error:", authError)
       throw authError
     }
+
+    console.log("[v0] Auth user created successfully:", {
+      userId: authData.user.id,
+      email: authData.user.email,
+    })
 
     // Update guardian record with user_id
     const { error: updateError } = await supabase

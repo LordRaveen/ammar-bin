@@ -24,10 +24,18 @@ export default function ParentLoginPage() {
     setIsLoading(true)
     setError(null)
 
+    console.log("[v0] Parent login attempt:", { email })
+
     try {
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
+      })
+
+      console.log("[v0] Sign in result:", {
+        success: !signInError,
+        userId: data?.user?.id,
+        error: signInError?.message,
       })
 
       if (signInError) throw signInError
@@ -39,15 +47,24 @@ export default function ParentLoginPage() {
         .eq("user_id", data.user.id)
         .single()
 
+      console.log("[v0] Guardian lookup result:", {
+        found: !!guardianData,
+        guardianId: guardianData?.id,
+        error: guardianError?.message,
+      })
+
       if (guardianError || !guardianData) {
         await supabase.auth.signOut()
         throw new Error("Access denied. This portal is for parents and guardians only.")
       }
 
+      console.log("[v0] Redirecting to parent dashboard")
+
       // Redirect to parent dashboard
       router.push("/parent/dashboard")
       router.refresh()
     } catch (error: any) {
+      console.error("[v0] Login error:", error)
       setError(error.message || "Failed to sign in. Please check your credentials.")
     } finally {
       setIsLoading(false)

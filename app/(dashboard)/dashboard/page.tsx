@@ -13,6 +13,14 @@ export default async function DashboardPage() {
     redirect("/teacher-dashboard")
   }
 
+  if (user.role === "parent") {
+    redirect("/parent/dashboard")
+  }
+
+  if (user.role === "cashier" || user.role === "accountant") {
+    redirect("/cashier-dashboard")
+  }
+
   const supabase = await createClient()
 
   // Get statistics
