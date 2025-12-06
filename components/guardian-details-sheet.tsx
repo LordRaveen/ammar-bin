@@ -137,7 +137,7 @@ export function GuardianDetailsSheet({ guardianId, open, onOpenChange }: Guardia
                 </div>
               </div>
               {!guardian.user_id && (
-                <ActivatePortalAccessButton guardian={guardian} onSuccess={handleActivationSuccess} />
+                <ActivatePortalAccessButton guardianId={guardian.id} guardianEmail={guardian.email} />
               )}
             </div>
 

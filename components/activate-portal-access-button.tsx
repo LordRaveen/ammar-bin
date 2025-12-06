@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Key, Loader2 } from "lucide-react"
-import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import {
   AlertDialog,
@@ -20,12 +19,13 @@ import {
 export function ActivatePortalAccessButton({
   guardianId,
   guardianEmail,
+  onSuccess,
 }: {
   guardianId: string
   guardianEmail?: string | null
+  onSuccess?: () => void
 }) {
   const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
   const { toast } = useToast()
 
   const handleActivate = async () => {
@@ -55,10 +55,11 @@ export function ActivatePortalAccessButton({
 
       toast({
         title: "Portal Access Activated",
-        description: `Temporary password: ${data.temporaryPassword}. Please share this with the guardian securely.`,
+        description: `Login Email: ${guardianEmail} | Temporary Password: ${data.temporaryPassword}. Please share this with the guardian securely.`,
+        duration: 10000,
       })
 
-      router.refresh()
+      onSuccess?.()
     } catch (error: any) {
       toast({
         title: "Error",
