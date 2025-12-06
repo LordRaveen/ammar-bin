@@ -190,6 +190,11 @@ const getNavigationByRole = (role: UserRole) => {
       url: "/parent/announcements",
       icon: IconFileText,
     },
+    {
+      title: "Profile",
+      url: "/parent/profile",
+      icon: IconSettings,
+    },
   ]
 
   switch (role) {
