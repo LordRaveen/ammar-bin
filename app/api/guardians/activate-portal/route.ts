@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { getCurrentUser } from "@/lib/auth/get-user"
 
 export async function POST(request: Request) {
@@ -35,14 +36,17 @@ export async function POST(request: Request) {
     // Generate temporary password based on phone number
     const tempPassword = `${guardian.phone.replace(/[^\d]/g, "")}@Parent`
 
+    const adminClient = createAdminClient()
+
     // Create Supabase auth user
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
       email: guardian.email,
       password: tempPassword,
       email_confirm: true,
     })
 
     if (authError) {
+      console.error("[v0] Auth user creation error:", authError)
       throw authError
     }
 
@@ -53,8 +57,9 @@ export async function POST(request: Request) {
       .eq("id", guardianId)
 
     if (updateError) {
+      console.error("[v0] Guardian update error:", updateError)
       // Rollback: delete the auth user
-      await supabase.auth.admin.deleteUser(authData.user.id)
+      await adminClient.auth.admin.deleteUser(authData.user.id)
       throw updateError
     }
 
@@ -66,7 +71,7 @@ export async function POST(request: Request) {
     })
 
     if (roleError) {
-      console.error("Error creating user role:", roleError)
+      console.error("[v0] User role creation error:", roleError)
     }
 
     return NextResponse.json({
@@ -75,7 +80,7 @@ export async function POST(request: Request) {
       message: "Portal access activated successfully",
     })
   } catch (error: any) {
-    console.error("Error activating portal access:", error)
+    console.error("[v0] Error activating portal access:", error)
     return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 })
   }
 }

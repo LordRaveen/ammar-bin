@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { getCurrentUser } from "@/lib/auth/get-user"
 
 export async function POST(request: Request) {
@@ -31,12 +32,15 @@ export async function POST(request: Request) {
     // Generate new temporary password based on phone number
     const tempPassword = `${guardian.phone.replace(/[^\d]/g, "")}@Parent`
 
+    const adminClient = createAdminClient()
+
     // Update password for the Supabase auth user
-    const { error: updateError } = await supabase.auth.admin.updateUserById(guardian.user_id, {
+    const { error: updateError } = await adminClient.auth.admin.updateUserById(guardian.user_id, {
       password: tempPassword,
     })
 
     if (updateError) {
+      console.error("[v0] Password update error:", updateError)
       throw updateError
     }
 
@@ -46,7 +50,7 @@ export async function POST(request: Request) {
       message: "Password reset successfully",
     })
   } catch (error: any) {
-    console.error("Error resetting password:", error)
+    console.error("[v0] Error resetting password:", error)
     return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 })
   }
 }
