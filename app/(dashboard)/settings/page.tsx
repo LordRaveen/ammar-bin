@@ -41,13 +41,13 @@ export default async function SettingsPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4">
+    <div className="flex flex-1 flex-col gap-4 p-4 max-w-full overflow-hidden">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
         <p className="text-muted-foreground">Manage school configuration, fees, and academic settings</p>
       </div>
 
-      <Tabs defaultValue="general" className="space-y-4">
+      <Tabs defaultValue="general" className="space-y-4 max-w-full">
         <TabsList className="grid w-full grid-cols-4 lg:w-auto">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="session">Academic Session</TabsTrigger>
@@ -55,15 +55,15 @@ export default async function SettingsPage() {
           <TabsTrigger value="grading">Grading System</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="general" className="space-y-4">
+        <TabsContent value="general" className="space-y-4 max-w-full">
           <GeneralSettingsTab settings={schoolSettings} />
         </TabsContent>
 
-        <TabsContent value="session" className="space-y-4">
+        <TabsContent value="session" className="space-y-4 max-w-full">
           <AcademicSessionTab sessions={sessions || []} activeSession={activeSessions} activeTerm={activeTerms} />
         </TabsContent>
 
-        <TabsContent value="fees" className="space-y-4">
+        <TabsContent value="fees" className="space-y-4 max-w-full">
           <FeeManagementTab
             feeCategories={feeCategories || []}
             classes={classes || []}
@@ -73,7 +73,7 @@ export default async function SettingsPage() {
           />
         </TabsContent>
 
-        <TabsContent value="grading" className="space-y-4">
+        <TabsContent value="grading" className="space-y-4 max-w-full">
           <GradingSystemTab gradingSchemes={gradingSchemes || []} />
         </TabsContent>
       </Tabs>

@@ -148,7 +148,7 @@ export function FeeManagementTab({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-w-full">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -200,7 +200,7 @@ export function FeeManagementTab({
               Please activate at least one fee category to configure class fees.
             </div>
           ) : (
-            <div className="relative w-full overflow-auto">
+            <div className="relative w-full overflow-x-auto border rounded-md">
               <Table>
                 <TableHeader>
                   <TableRow>
