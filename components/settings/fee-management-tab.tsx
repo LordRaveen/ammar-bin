@@ -200,59 +200,63 @@ export function FeeManagementTab({
               Please activate at least one fee category to configure class fees.
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Class Name</TableHead>
-                  {activeFeeCategories.map((category) => (
-                    <TableHead key={category.id}>{category.name} (₦)</TableHead>
-                  ))}
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {classes.map((classItem) => (
-                  <TableRow key={classItem.id}>
-                    <TableCell className="font-medium">
-                      {classItem.name}
-                      <span className="text-muted-foreground text-sm ml-2">({classItem.section?.name})</span>
-                    </TableCell>
+            <div className="relative w-full overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[150px]">Class Name</TableHead>
                     {activeFeeCategories.map((category) => (
-                      <TableCell key={category.id}>
+                      <TableHead key={category.id} className="min-w-[120px]">
+                        {category.name} (₦)
+                      </TableHead>
+                    ))}
+                    <TableHead className="text-right min-w-[120px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {classes.map((classItem) => (
+                    <TableRow key={classItem.id}>
+                      <TableCell className="font-medium">
+                        {classItem.name}
+                        <span className="text-muted-foreground text-sm ml-2">({classItem.section?.name})</span>
+                      </TableCell>
+                      {activeFeeCategories.map((category) => (
+                        <TableCell key={category.id}>
+                          {editingClassFee === classItem.id ? (
+                            <Input
+                              type="number"
+                              placeholder="0"
+                              className="w-32"
+                              value={classFees[classItem.id]?.[category.id] || ""}
+                              onChange={(e) => handleFeeChange(classItem.id, category.id, e.target.value)}
+                            />
+                          ) : (
+                            <span>{classFees[classItem.id]?.[category.id] || "—"}</span>
+                          )}
+                        </TableCell>
+                      ))}
+                      <TableCell className="text-right">
                         {editingClassFee === classItem.id ? (
-                          <Input
-                            type="number"
-                            placeholder="0"
-                            className="w-32"
-                            value={classFees[classItem.id]?.[category.id] || ""}
-                            onChange={(e) => handleFeeChange(classItem.id, category.id, e.target.value)}
-                          />
+                          <div className="flex gap-2 justify-end">
+                            <Button size="sm" variant="outline" onClick={() => setEditingClassFee(null)}>
+                              Cancel
+                            </Button>
+                            <Button size="sm" onClick={() => handleSaveFees(classItem.id)} disabled={isSaving}>
+                              {isSaving ? "Saving..." : "Save"}
+                            </Button>
+                          </div>
                         ) : (
-                          <span>{classFees[classItem.id]?.[category.id] || "—"}</span>
+                          <Button variant="ghost" size="sm" onClick={() => setEditingClassFee(classItem.id)}>
+                            <IconEdit className="h-4 w-4 mr-1" />
+                            Edit
+                          </Button>
                         )}
                       </TableCell>
-                    ))}
-                    <TableCell className="text-right">
-                      {editingClassFee === classItem.id ? (
-                        <div className="flex gap-2 justify-end">
-                          <Button size="sm" variant="outline" onClick={() => setEditingClassFee(null)}>
-                            Cancel
-                          </Button>
-                          <Button size="sm" onClick={() => handleSaveFees(classItem.id)} disabled={isSaving}>
-                            {isSaving ? "Saving..." : "Save"}
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button variant="ghost" size="sm" onClick={() => setEditingClassFee(classItem.id)}>
-                          <IconEdit className="h-4 w-4 mr-1" />
-                          Edit
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
