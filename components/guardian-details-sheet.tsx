@@ -6,9 +6,9 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Loader2, Mail, Phone, MapPin, CheckCircle2 } from "lucide-react"
+import { Loader2, Mail, Phone, MapPin } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
-import { ActivatePortalAccessButton } from "./activate-portal-access-button"
+import { PortalAccessManager } from "./portal-access-manager"
 
 interface GuardianDetailsSheetProps {
   guardianId: string | null
@@ -91,7 +91,7 @@ export function GuardianDetailsSheet({ guardianId, open, onOpenChange }: Guardia
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <SheetTitle>Guardian Details</SheetTitle>
-              <SheetDescription>View guardian information and linked children</SheetDescription>
+              <SheetDescription>View guardian information and manage portal access</SheetDescription>
             </div>
           </div>
         </SheetHeader>
@@ -114,12 +114,6 @@ export function GuardianDetailsSheet({ guardianId, open, onOpenChange }: Guardia
                     {guardian.first_name} {guardian.last_name}
                   </h2>
                   <Badge variant="outline">{guardian.relationship_type}</Badge>
-                  {guardian.user_id && (
-                    <Badge variant="default" className="gap-1">
-                      <CheckCircle2 className="h-3 w-3" />
-                      Portal Access Active
-                    </Badge>
-                  )}
                 </div>
                 <div className="space-y-1">
                   {guardian.phone && (
@@ -136,10 +130,15 @@ export function GuardianDetailsSheet({ guardianId, open, onOpenChange }: Guardia
                   )}
                 </div>
               </div>
-              {!guardian.user_id && (
-                <ActivatePortalAccessButton guardianId={guardian.id} guardianEmail={guardian.email} />
-              )}
             </div>
+
+            <PortalAccessManager
+              guardianId={guardian.id}
+              guardianEmail={guardian.email}
+              guardianPhone={guardian.phone}
+              hasAccess={!!guardian.user_id}
+              onSuccess={handleActivationSuccess}
+            />
 
             <Separator />
 
