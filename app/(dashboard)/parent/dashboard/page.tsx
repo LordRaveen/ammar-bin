@@ -101,6 +101,13 @@ export default async function ParentDashboardPage() {
     }),
   )
 
+  const { data: recentAnnouncements } = await supabase
+    .from("announcements")
+    .select("id, title, category, priority, created_at")
+    .in("target_audience", ["All", "Parents"])
+    .order("created_at", { ascending: false })
+    .limit(5)
+
   return (
     <div className="space-y-6">
       <div>
@@ -242,11 +249,44 @@ export default async function ParentDashboardPage() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Recent Notifications</CardTitle>
-            <CardDescription>Updates and announcements</CardDescription>
+            <CardTitle>Recent Announcements</CardTitle>
+            <CardDescription>Latest updates from the school</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground text-center py-8">No recent notifications</p>
+            {recentAnnouncements && recentAnnouncements.length > 0 ? (
+              <div className="space-y-3">
+                {recentAnnouncements.map((announcement: any) => (
+                  <div key={announcement.id} className="flex items-start gap-3 p-3 rounded-lg border">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-medium">{announcement.title}</p>
+                        {announcement.priority !== "Normal" && (
+                          <Badge
+                            variant={announcement.priority === "Urgent" ? "destructive" : "secondary"}
+                            className="text-xs"
+                          >
+                            {announcement.priority}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Badge variant="outline" className="text-xs">
+                          {announcement.category}
+                        </Badge>
+                        <span>{new Date(announcement.created_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <Link href="/parent/announcements">
+                  <Button variant="outline" size="sm" className="w-full bg-transparent">
+                    View All Announcements
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-8">No recent announcements</p>
+            )}
           </CardContent>
         </Card>
 
