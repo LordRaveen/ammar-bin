@@ -1,6 +1,6 @@
 "use client"
 
-import { IconMenu2, IconBell, IconMoon, IconSun } from "@tabler/icons-react"
+import { IconMenu2, IconMoon, IconSun } from "@tabler/icons-react"
 import { useSidebar } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -12,24 +12,25 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { usePathname } from 'next/navigation'
-import { useTheme } from 'next-themes'
+import { usePathname } from "next/navigation"
+import { useTheme } from "next-themes"
 import React from "react"
+import { NotificationsPopover } from "@/components/notifications-popover"
 
 function generateBreadcrumbs(pathname: string) {
-  const segments = pathname.split('/').filter(Boolean)
-  
+  const segments = pathname.split("/").filter(Boolean)
+
   const breadcrumbs = segments.map((segment, index) => {
-    const path = '/' + segments.slice(0, index + 1).join('/')
+    const path = "/" + segments.slice(0, index + 1).join("/")
     const label = segment
-      .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ')
-    
+      .split("-")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ")
+
     return {
       label,
       path,
-      isLast: index === segments.length - 1
+      isLast: index === segments.length - 1,
     }
   })
 
@@ -44,17 +45,13 @@ export function AppHeader() {
 
   return (
     <header className="bg-background sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b px-4">
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={toggleSidebar}
-      >
+      <Button variant="ghost" size="icon" onClick={toggleSidebar}>
         <IconMenu2 className="h-5 w-5" />
         <span className="sr-only">Toggle Sidebar</span>
       </Button>
-      
+
       <Separator orientation="vertical" className="mr-2 h-4" />
-      
+
       <Breadcrumb>
         <BreadcrumbList>
           {breadcrumbs.map((crumb, index) => (
@@ -63,9 +60,7 @@ export function AppHeader() {
                 {crumb.isLast ? (
                   <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
                 ) : (
-                  <BreadcrumbLink href={crumb.path}>
-                    {crumb.label}
-                  </BreadcrumbLink>
+                  <BreadcrumbLink href={crumb.path}>{crumb.label}</BreadcrumbLink>
                 )}
               </BreadcrumbItem>
               {!crumb.isLast && <BreadcrumbSeparator />}
@@ -76,21 +71,14 @@ export function AppHeader() {
 
       <div className="ml-auto flex items-center gap-2">
         {/* Theme Toggle */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-        >
+        <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
           <IconSun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
           <IconMoon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
           <span className="sr-only">Toggle theme</span>
         </Button>
 
         {/* Notifications */}
-        <Button variant="ghost" size="icon">
-          <IconBell className="h-5 w-5" />
-          <span className="sr-only">Notifications</span>
-        </Button>
+        <NotificationsPopover />
       </div>
     </header>
   )

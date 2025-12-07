@@ -9,7 +9,7 @@ import { notFound } from "next/navigation"
 import ReceiptViewer from "@/components/receipt-viewer"
 
 export default async function ReceiptPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAuth(["super_admin", "admin", "accountant", "cashier"])
+  await requireAuth()
   const { id } = await params
   const supabase = await createServerClient()
 

@@ -1,3 +1,5 @@
+"use server"
+
 import { createClient } from "@/lib/supabase/server"
 import { devLog } from "@/lib/logger"
 import type { UserRole } from "@/lib/types/database"
