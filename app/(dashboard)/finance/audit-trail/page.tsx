@@ -2,6 +2,8 @@ import { Suspense } from "react"
 import { createServerClient } from "@/lib/supabase/server"
 import AuditTrailClient from "@/components/audit-trail-client"
 
+export const dynamic = "force-dynamic"
+
 export default async function AuditTrailPage() {
   const supabase = await createServerClient()
 

@@ -79,6 +79,11 @@ const getNavigationByRole = (role: UserRole) => {
       icon: IconChartBar,
     },
     {
+      title: "Assignments",
+      url: "/assignments",
+      icon: IconClipboardCheck,
+    },
+    {
       title: "Finance",
       url: "/finance",
       icon: IconCoin,

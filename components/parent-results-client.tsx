@@ -59,8 +59,7 @@ export function ParentResultsClient({
   }
 
   const handleDownload = () => {
-    // TODO: Generate PDF
-    console.log("Download report card")
+    // TODO: Generate PDF report card
   }
 
   const hasResults = resultData && scores && scores.length > 0

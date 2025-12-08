@@ -10,17 +10,20 @@ ALTER TABLE payments ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 ALTER TABLE students ADD CONSTRAINT unique_active_student_id UNIQUE NULLS NOT DISTINCT (student_id, deleted_at);
 ALTER TABLE teachers ADD CONSTRAINT unique_active_staff_id UNIQUE NULLS NOT DISTINCT (staff_id, deleted_at);
 
--- Add validation check constraints
-ALTER TABLE students ADD CONSTRAINT valid_phone_format CHECK (
-  phone ~ '^[0-9+\-\s()]+$' OR phone IS NULL
-);
+-- Removed invalid phone constraint from students table (students don't have phone field)
 
+-- Add validation check constraints
 ALTER TABLE students ADD CONSTRAINT valid_birthdate CHECK (
   date_of_birth <= CURRENT_DATE
 );
 
-ALTER TABLE guardians ADD CONSTRAINT valid_guardian_phone CHECK (
+-- Fixed phone validation for guardians table (correct table and column names)
+ALTER TABLE guardians ADD CONSTRAINT valid_guardian_phone_primary CHECK (
   phone_primary ~ '^[0-9+\-\s()]+$' OR phone_primary IS NULL
+);
+
+ALTER TABLE guardians ADD CONSTRAINT valid_guardian_phone_secondary CHECK (
+  phone_secondary ~ '^[0-9+\-\s()]+$' OR phone_secondary IS NULL
 );
 
 ALTER TABLE teachers ADD CONSTRAINT valid_teacher_phone CHECK (

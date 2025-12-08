@@ -37,13 +37,6 @@ export async function POST(request: Request) {
     const cleanPhone = guardian.phone.replace(/[^\d]/g, "")
     const tempPassword = `${cleanPhone}@Parent`
 
-    console.log("[v0] Creating auth user with:", {
-      email: guardian.email,
-      phone: guardian.phone,
-      cleanPhone,
-      passwordFormat: `${cleanPhone}@Parent`,
-    })
-
     const adminClient = createAdminClient()
 
     // Create Supabase auth user
@@ -54,14 +47,8 @@ export async function POST(request: Request) {
     })
 
     if (authError) {
-      console.error("[v0] Auth user creation error:", authError)
       throw authError
     }
-
-    console.log("[v0] Auth user created successfully:", {
-      userId: authData.user.id,
-      email: authData.user.email,
-    })
 
     // Update guardian record with user_id
     const { error: updateError } = await supabase
@@ -70,7 +57,6 @@ export async function POST(request: Request) {
       .eq("id", guardianId)
 
     if (updateError) {
-      console.error("[v0] Guardian update error:", updateError)
       // Rollback: delete the auth user
       await adminClient.auth.admin.deleteUser(authData.user.id)
       throw updateError
@@ -84,7 +70,7 @@ export async function POST(request: Request) {
     })
 
     if (roleError) {
-      console.error("[v0] User role creation error:", roleError)
+      // Non-critical error, continue
     }
 
     return NextResponse.json({
@@ -93,7 +79,6 @@ export async function POST(request: Request) {
       message: "Portal access activated successfully",
     })
   } catch (error: any) {
-    console.error("[v0] Error activating portal access:", error)
     return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 })
   }
 }

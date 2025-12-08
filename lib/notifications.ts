@@ -15,13 +15,11 @@ export interface SMSNotification {
 
 export async function sendEmail(notification: EmailNotification): Promise<boolean> {
   // TODO: Integrate with email service (SendGrid, Mailgun, etc.)
-  console.log("[Notification] Email would be sent:", notification)
   return true
 }
 
 export async function sendSMS(notification: SMSNotification): Promise<boolean> {
   // TODO: Integrate with SMS service (Termii, Twilio, etc.)
-  console.log("[Notification] SMS would be sent:", notification)
   return true
 }
 

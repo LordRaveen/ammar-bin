@@ -1,7 +1,7 @@
 import { requireAuth } from "@/lib/auth/get-user"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { FileText, Download, BarChart3, TrendingUp } from "lucide-react"
+import { FileText, Download, BarChart3, TrendingUp, Wrench } from "lucide-react"
 import Link from "next/link"
 
 export const dynamic = "force-dynamic"
@@ -56,6 +56,12 @@ export default async function ReportsPage() {
             <CardDescription>Performance and assessment reports</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
+            <Link href="/reports/academic">
+              <Button variant="outline" className="w-full justify-start bg-transparent">
+                <Download className="h-4 w-4 mr-2" />
+                Academic Performance Analysis
+              </Button>
+            </Link>
             <Link href="/reports/academic/results">
               <Button variant="outline" className="w-full justify-start bg-transparent">
                 <Download className="h-4 w-4 mr-2" />
@@ -149,6 +155,24 @@ export default async function ReportsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-primary/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wrench className="h-5 w-5" />
+            Custom Report Builder
+          </CardTitle>
+          <CardDescription>Create and save custom reports with your own filters and columns</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link href="/reports/custom">
+            <Button className="w-full sm:w-auto">
+              <Wrench className="h-4 w-4 mr-2" />
+              Build Custom Report
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
     </div>
   )
 }

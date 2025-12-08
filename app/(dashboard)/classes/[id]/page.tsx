@@ -268,8 +268,6 @@ export default function ClassDetailsPage() {
   useEffect(() => {
     if (!classId || !selectedSession || !selectedTerm) return
 
-    console.log("[v0] Setting up realtime subscriptions for class:", classId)
-
     // Subscribe to student enrollments changes
     const enrollmentsChannel = supabase
       .channel(`enrollments-${classId}`)
@@ -282,7 +280,6 @@ export default function ClassDetailsPage() {
           filter: `class_id=eq.${classId}`,
         },
         (payload) => {
-          console.log("[v0] Enrollment change detected:", payload)
           fetchAllData()
         },
       )
@@ -300,7 +297,6 @@ export default function ClassDetailsPage() {
           filter: `class_id=eq.${classId}`,
         },
         (payload) => {
-          console.log("[v0] Class subject change detected:", payload)
           fetchAllData()
         },
       )
@@ -318,7 +314,6 @@ export default function ClassDetailsPage() {
           filter: `class_id=eq.${classId}`,
         },
         (payload) => {
-          console.log("[v0] Teacher assignment change detected:", payload)
           fetchAllData()
         },
       )
@@ -336,7 +331,6 @@ export default function ClassDetailsPage() {
           filter: `id=eq.${classId}`,
         },
         (payload) => {
-          console.log("[v0] Class update detected:", payload)
           fetchAllData()
         },
       )
@@ -344,7 +338,6 @@ export default function ClassDetailsPage() {
 
     // Cleanup subscriptions on unmount
     return () => {
-      console.log("[v0] Cleaning up realtime subscriptions")
       supabase.removeChannel(enrollmentsChannel)
       supabase.removeChannel(subjectsChannel)
       supabase.removeChannel(teachersChannel)
