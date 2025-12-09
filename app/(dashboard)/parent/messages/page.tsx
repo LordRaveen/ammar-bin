@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server"
 import { requireAuth } from "@/lib/auth/get-user"
 import ParentMessagesClient from "@/components/parent-messages-client"
 
+export const dynamic = "force-dynamic"
+
 export default async function ParentMessagesPage() {
   const user = await requireAuth()
   const supabase = await createClient()
