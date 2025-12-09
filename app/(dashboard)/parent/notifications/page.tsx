@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server"
 import { requireAuth } from "@/lib/auth/get-user"
 import NotificationsPageClient from "@/components/notifications-page-client"
 
+export const dynamic = "force-dynamic"
+
 export default async function NotificationsPage() {
   const user = await requireAuth()
   const supabase = await createClient()

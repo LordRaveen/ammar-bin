@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server"
 import { requireAuth } from "@/lib/auth/get-user"
 import AssignmentsClient from "@/components/assignments-client"
 
+export const dynamic = "force-dynamic"
+
 export default async function AssignmentsPage() {
   const user = await requireAuth()
   const supabase = await createClient()

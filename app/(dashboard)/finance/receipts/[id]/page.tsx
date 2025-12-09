@@ -8,6 +8,8 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import ReceiptViewer from "@/components/receipt-viewer"
 
+export const dynamic = "force-dynamic"
+
 export default async function ReceiptPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAuth()
   const { id } = await params
