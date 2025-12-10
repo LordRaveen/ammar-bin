@@ -22,6 +22,8 @@ export default function SignInPage() {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
+    e.stopPropagation()
+
     const supabase = createClient()
     setIsLoading(true)
     setError(null)
@@ -29,43 +31,52 @@ export default function SignInPage() {
     devLog.debug("Attempting sign in for:", email)
 
     try {
-      const lockoutResponse = await fetch("/api/auth/check-lockout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      })
+      const isLocked = false
+      try {
+        const lockoutResponse = await fetch("/api/auth/check-lockout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        })
 
-      if (!lockoutResponse.ok) {
-        throw new Error("Failed to check account status. Please try again.")
+        if (lockoutResponse.ok) {
+          const lockoutData = await lockoutResponse.json()
+          if (lockoutData.locked) {
+            const minutesRemaining = Math.ceil(lockoutData.minutesRemaining)
+            throw new Error(
+              `Account temporarily locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minute${minutesRemaining !== 1 ? "s" : ""}.`,
+            )
+          }
+        } else {
+          devLog.error("Lockout check failed, continuing with login")
+        }
+      } catch (lockoutError: any) {
+        if (lockoutError.message.includes("locked")) {
+          throw lockoutError
+        }
+        devLog.error("Lockout check error (non-blocking):", lockoutError)
       }
 
-      const lockoutData = await lockoutResponse.json()
-
-      if (lockoutData.locked) {
-        const minutesRemaining = Math.ceil(lockoutData.minutesRemaining)
-        throw new Error(
-          `Account temporarily locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minute${minutesRemaining !== 1 ? "s" : ""}.`,
-        )
-      }
-
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
-      if (error) {
+      if (signInError) {
+        // Track failed login attempt (non-blocking)
         try {
           await fetch("/api/auth/track-login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, success: false, reason: error.message }),
+            body: JSON.stringify({ email, success: false, reason: signInError.message }),
           })
         } catch (trackError) {
           devLog.error("Failed to track login attempt:", trackError)
         }
-        throw error
+        throw signInError
       }
 
+      // Track successful login (non-blocking)
       try {
         await fetch("/api/auth/track-login", {
           method: "POST",
@@ -130,7 +141,7 @@ export default function SignInPage() {
               <CardDescription>Enter your credentials to access the school management system</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSignIn}>
+              <form onSubmit={handleSignIn} action="#">
                 <div className="flex flex-col gap-6">
                   <div className="grid gap-2">
                     <Label htmlFor="email">Email</Label>
