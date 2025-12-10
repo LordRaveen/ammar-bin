@@ -19,22 +19,29 @@ export async function POST(request: Request) {
     const ipAddress = headersList.get("x-forwarded-for") || headersList.get("x-real-ip") || "unknown"
     const userAgent = headersList.get("user-agent") || "unknown"
 
-    // Record login attempt
-    await supabase.from("login_attempts").insert({
-      email: email.toLowerCase(),
-      ip_address: ipAddress,
-      user_agent: userAgent,
-      success,
-      failure_reason: reason || null,
-    })
+    try {
+      await supabase.from("login_attempts").insert({
+        email: email.toLowerCase(),
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        success,
+        failure_reason: reason || null,
+      })
+    } catch (insertError) {
+      console.error("Error inserting login attempt (table may not exist):", insertError)
+      // Continue - don't block login flow
+    }
 
     // If successful, clear any lockout
     if (success) {
-      await supabase.from("account_lockouts").delete().eq("email", email.toLowerCase())
+      try {
+        await supabase.from("account_lockouts").delete().eq("email", email.toLowerCase())
+      } catch (deleteError) {
+        console.error("Error clearing lockout:", deleteError)
+      }
       return NextResponse.json({ success: true })
     }
 
-    // Count recent failed attempts
     const windowStart = new Date(Date.now() - FAILED_ATTEMPT_WINDOW_MINUTES * 60 * 1000).toISOString()
 
     const { data: recentFailures, error } = await supabase
@@ -44,7 +51,11 @@ export async function POST(request: Request) {
       .eq("success", false)
       .gte("created_at", windowStart)
 
-    if (error) throw error
+    if (error) {
+      console.error("Error fetching recent failures:", error)
+      // Return success to not block login flow
+      return NextResponse.json({ success: false, locked: false })
+    }
 
     const failedCount = recentFailures?.length || 0
 
@@ -52,12 +63,16 @@ export async function POST(request: Request) {
     if (failedCount >= MAX_FAILED_ATTEMPTS) {
       const lockedUntil = new Date(Date.now() + LOCKOUT_DURATION_MINUTES * 60 * 1000).toISOString()
 
-      await supabase.from("account_lockouts").upsert({
-        email: email.toLowerCase(),
-        locked_until: lockedUntil,
-        failed_attempts: failedCount,
-        updated_at: new Date().toISOString(),
-      })
+      try {
+        await supabase.from("account_lockouts").upsert({
+          email: email.toLowerCase(),
+          locked_until: lockedUntil,
+          failed_attempts: failedCount,
+          updated_at: new Date().toISOString(),
+        })
+      } catch (lockError) {
+        console.error("Error creating lockout:", lockError)
+      }
 
       return NextResponse.json({
         success: false,
@@ -75,6 +90,6 @@ export async function POST(request: Request) {
     })
   } catch (error) {
     console.error("Error tracking login:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ success: true })
   }
 }

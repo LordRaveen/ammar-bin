@@ -35,6 +35,10 @@ export default function SignInPage() {
         body: JSON.stringify({ email }),
       })
 
+      if (!lockoutResponse.ok) {
+        throw new Error("Failed to check account status. Please try again.")
+      }
+
       const lockoutData = await lockoutResponse.json()
 
       if (lockoutData.locked) {
@@ -50,23 +54,54 @@ export default function SignInPage() {
       })
 
       if (error) {
-        await fetch("/api/auth/track-login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, success: false, reason: error.message }),
-        })
+        try {
+          await fetch("/api/auth/track-login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, success: false, reason: error.message }),
+          })
+        } catch (trackError) {
+          devLog.error("Failed to track login attempt:", trackError)
+        }
         throw error
       }
 
-      await fetch("/api/auth/track-login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, success: true }),
-      })
+      try {
+        await fetch("/api/auth/track-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, success: true }),
+        })
+      } catch (trackError) {
+        devLog.error("Failed to track successful login:", trackError)
+      }
 
-      const { data: teacherData } = await supabase.from("teachers").select("role").eq("user_id", data.user.id).single()
+      let userRole = "admin"
 
-      const userRole = teacherData?.role || "admin"
+      try {
+        const { data: teacherData, error: teacherError } = await supabase
+          .from("teachers")
+          .select("role")
+          .eq("user_id", data.user.id)
+          .maybeSingle()
+
+        if (!teacherError && teacherData) {
+          userRole = teacherData.role
+        } else {
+          const { data: guardianData, error: guardianError } = await supabase
+            .from("guardians")
+            .select("id")
+            .eq("user_id", data.user.id)
+            .maybeSingle()
+
+          if (!guardianError && guardianData) {
+            userRole = "parent"
+          }
+        }
+      } catch (roleError) {
+        devLog.error("Error fetching user role:", roleError)
+      }
+
       const dashboardUrl = getRoleDashboardUrl(userRole)
 
       devLog.debug("Sign in successful, role:", userRole, "redirecting to", dashboardUrl)

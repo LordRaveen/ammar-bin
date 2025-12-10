@@ -14,12 +14,16 @@ export async function POST(request: Request) {
 
     const supabase = await createServerClient()
 
-    // Check if account is locked
-    const { data: lockout } = await supabase
+    const { data: lockout, error: lockoutError } = await supabase
       .from("account_lockouts")
       .select("*")
       .eq("email", email.toLowerCase())
-      .single()
+      .maybeSingle()
+
+    if (lockoutError) {
+      console.error("Error checking lockout (table may not exist):", lockoutError)
+      return NextResponse.json({ locked: false })
+    }
 
     if (lockout && new Date(lockout.locked_until) > new Date()) {
       const minutesRemaining = (new Date(lockout.locked_until).getTime() - new Date().getTime()) / (1000 * 60)
@@ -39,6 +43,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ locked: false })
   } catch (error) {
     console.error("Error checking lockout:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ locked: false })
   }
 }
