@@ -15,6 +15,14 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [isParentPortal, setIsParentPortal] = useState(false)
+
+  useState(() => {
+    if (typeof window !== "undefined") {
+      const referrer = document.referrer
+      setIsParentPortal(referrer.includes("/auth/parent-login"))
+    }
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -24,15 +32,19 @@ export default function ForgotPasswordPage() {
     try {
       const supabase = createClient()
 
+      const redirectTo = process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL
+        ? `${process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL}/auth/reset-password`
+        : `${window.location.origin}/auth/reset-password`
+
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+        redirectTo,
       })
 
       if (error) throw error
 
       setMessage({
         type: "success",
-        text: "Password reset link has been sent to your email. Please check your inbox.",
+        text: "Password reset link has been sent to your email. Please check your inbox and spam folder.",
       })
       setEmail("")
     } catch (error: any) {
@@ -96,8 +108,11 @@ export default function ForgotPasswordPage() {
 
                   <div className="flex items-center justify-center gap-2 text-sm">
                     <ArrowLeft className="h-4 w-4" />
-                    <Link href="/auth/signin" className="text-primary hover:underline">
-                      Back to Sign In
+                    <Link
+                      href={isParentPortal ? "/auth/parent-login" : "/auth/signin"}
+                      className="text-primary hover:underline"
+                    >
+                      Back to {isParentPortal ? "Parent" : "Staff"} Login
                     </Link>
                   </div>
                 </div>

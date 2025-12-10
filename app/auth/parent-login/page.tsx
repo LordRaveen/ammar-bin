@@ -141,20 +141,17 @@ export default function ParentLoginPage() {
                 </div>
               </form>
 
-              <div className="mt-4 text-center text-sm">
-                <Link href="/auth/signin" className="text-primary hover:underline">
+              <div className="mt-4 flex items-center justify-between text-sm">
+                <Link href="/auth/forgot-password" className="text-primary hover:underline">
+                  Forgot password?
+                </Link>
+                <Link href="/auth/signin" className="text-muted-foreground hover:text-primary hover:underline">
                   Staff/Admin Login
                 </Link>
               </div>
 
               <div className="mt-2 text-center text-sm text-muted-foreground">
                 <p>Contact the school administrator if you need access credentials.</p>
-              </div>
-
-              <div className="flex items-center justify-end">
-                <Link href="/auth/forgot-password" className="text-sm text-primary hover:underline">
-                  Forgot password?
-                </Link>
               </div>
             </CardContent>
           </Card>
