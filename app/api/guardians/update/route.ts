@@ -10,6 +10,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Guardian ID is required" }, { status: 400 })
     }
 
+    const allowedFields = [
+      "first_name",
+      "middle_name",
+      "last_name",
+      "email",
+      "phone",
+      "alternate_phone",
+      "whatsapp_number",
+      "address",
+      "occupation",
+      "relationship_type",
+      "is_emergency_contact",
+    ]
+
+    const sanitizedData: Record<string, any> = {}
+    for (const [key, value] of Object.entries(updateData)) {
+      if (allowedFields.includes(key)) {
+        sanitizedData[key] = value
+      }
+    }
+
+    if (Object.keys(sanitizedData).length === 0) {
+      return NextResponse.json({ error: "No valid fields to update" }, { status: 400 })
+    }
+
     const supabase = await createServerClient()
 
     // Verify guardian exists
@@ -17,23 +42,33 @@ export async function POST(request: NextRequest) {
       .from("guardians")
       .select("id")
       .eq("id", guardianId)
-      .single()
+      .maybeSingle()
 
-    if (fetchError || !existing) {
+    if (fetchError) {
+      return NextResponse.json({ error: "Database error", details: fetchError.message }, { status: 500 })
+    }
+
+    if (!existing) {
       return NextResponse.json({ error: "Guardian not found" }, { status: 404 })
     }
 
-    // Update guardian
-    const { data, error } = await supabase.from("guardians").update(updateData).eq("id", guardianId).select().single()
+    // Update guardian with only sanitized fields
+    const { data, error } = await supabase
+      .from("guardians")
+      .update(sanitizedData)
+      .eq("id", guardianId)
+      .select()
+      .single()
 
     if (error) {
-      console.error("[v0] Error updating guardian:", error)
-      return NextResponse.json({ error: "Failed to update guardian" }, { status: 500 })
+      return NextResponse.json({ error: "Failed to update guardian", details: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(data)
-  } catch (error) {
-    console.error("[v0] Error in update guardian API:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ success: true, data })
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: "Internal server error", details: error?.message || "Unknown error" },
+      { status: 500 },
+    )
   }
 }
