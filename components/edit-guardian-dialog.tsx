@@ -32,7 +32,6 @@ export function EditGuardianDialog({ guardianId, open, onOpenChange, onSuccess }
     address: "",
     occupation: "",
     relationship_type: "",
-    national_id: "",
   })
   const { toast } = useToast()
 
@@ -57,7 +56,6 @@ export function EditGuardianDialog({ guardianId, open, onOpenChange, onSuccess }
           address: data.address || "",
           occupation: data.occupation || "",
           relationship_type: data.relationship_type || "",
-          national_id: data.national_id || "",
         })
       } catch (error) {
         toast({
