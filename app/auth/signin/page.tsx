@@ -31,65 +31,25 @@ export default function SignInPage() {
     devLog.debug("Attempting sign in for:", email)
 
     try {
-      const isLocked = false
-      try {
-        const lockoutResponse = await fetch("/api/auth/check-lockout", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
-        })
-
-        if (lockoutResponse.ok) {
-          const lockoutData = await lockoutResponse.json()
-          if (lockoutData.locked) {
-            const minutesRemaining = Math.ceil(lockoutData.minutesRemaining)
-            throw new Error(
-              `Account temporarily locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minute${minutesRemaining !== 1 ? "s" : ""}.`,
-            )
-          }
-        } else {
-          devLog.error("Lockout check failed, continuing with login")
-        }
-      } catch (lockoutError: any) {
-        if (lockoutError.message.includes("locked")) {
-          throw lockoutError
-        }
-        devLog.error("Lockout check error (non-blocking):", lockoutError)
-      }
-
+      // Sign in with Supabase
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (signInError) {
-        // Track failed login attempt (non-blocking)
-        try {
-          await fetch("/api/auth/track-login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, success: false, reason: signInError.message }),
-          })
-        } catch (trackError) {
-          devLog.error("Failed to track login attempt:", trackError)
-        }
         throw signInError
       }
 
-      // Track successful login (non-blocking)
-      try {
-        await fetch("/api/auth/track-login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, success: true }),
-        })
-      } catch (trackError) {
-        devLog.error("Failed to track successful login:", trackError)
+      if (!data.user) {
+        throw new Error("Failed to authenticate")
       }
 
+      // Determine user role
       let userRole = "admin"
 
       try {
+        // Check if user is a teacher/staff
         const { data: teacherData, error: teacherError } = await supabase
           .from("teachers")
           .select("role")
@@ -99,6 +59,7 @@ export default function SignInPage() {
         if (!teacherError && teacherData) {
           userRole = teacherData.role
         } else {
+          // Check if user is a guardian/parent
           const { data: guardianData, error: guardianError } = await supabase
             .from("guardians")
             .select("id")
@@ -111,16 +72,34 @@ export default function SignInPage() {
         }
       } catch (roleError) {
         devLog.error("Error fetching user role:", roleError)
+        // Default to admin if role lookup fails
       }
 
+      // Track login attempt in background (non-blocking)
+      fetch("/api/auth/track-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, success: true }),
+      }).catch((err) => devLog.error("Failed to track login:", err))
+
+      // Get dashboard URL based on role
       const dashboardUrl = getRoleDashboardUrl(userRole)
 
       devLog.debug("Sign in successful, role:", userRole, "redirecting to", dashboardUrl)
+
+      // Redirect to appropriate dashboard
       router.push(dashboardUrl)
       router.refresh()
     } catch (error: any) {
       devLog.error("Sign in error:", error)
       setError(error.message || "Failed to sign in. Please check your credentials.")
+
+      // Track failed login attempt in background (non-blocking)
+      fetch("/api/auth/track-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, success: false, reason: error.message }),
+      }).catch((err) => devLog.error("Failed to track failed login:", err))
     } finally {
       setIsLoading(false)
     }
@@ -141,7 +120,7 @@ export default function SignInPage() {
               <CardDescription>Enter your credentials to access the school management system</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSignIn} action="#">
+              <form onSubmit={handleSignIn} method="dialog">
                 <div className="flex flex-col gap-6">
                   <div className="grid gap-2">
                     <Label htmlFor="email">Email</Label>
