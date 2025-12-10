@@ -95,25 +95,30 @@ CREATE POLICY "Teachers can manage their assignments"
     )
   );
 
-CREATE POLICY "Students can view assignments for their class"
-  ON assignments FOR SELECT
-  USING (
-    class_id IN (
-      SELECT se.class_id FROM student_enrollments se
-      JOIN students s ON se.student_id = s.id
-      WHERE s.user_id = auth.uid() AND se.is_active = TRUE
-    )
-  );
+-- Fixed: Students table doesn't have user_id, removed this policy
+-- Students will access assignments through parent portal
 
 CREATE POLICY "Parents can view assignments for their children's classes"
   ON assignments FOR SELECT
   USING (
     class_id IN (
-      SELECT se.class_id FROM student_enrollments se
+      SELECT se.class_id 
+      FROM student_enrollments se
       JOIN students s ON se.student_id = s.id
-      JOIN guardian_students gs ON s.id = gs.student_id
-      JOIN guardians g ON gs.guardian_id = g.id
+      JOIN student_guardians sg ON s.id = sg.student_id  -- Fixed: Use correct table name student_guardians
+      JOIN guardians g ON sg.guardian_id = g.id
       WHERE g.user_id = auth.uid() AND se.is_active = TRUE
+    )
+  );
+
+CREATE POLICY "Admins can manage all assignments"
+  ON assignments FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM user_roles ur
+      WHERE ur.user_id = auth.uid() 
+      AND ur.role = 'admin'
+      AND ur.is_active = TRUE
     )
   );
 
@@ -130,19 +135,27 @@ CREATE POLICY "Teachers can manage submissions for their assignments"
     )
   );
 
-CREATE POLICY "Students can view their own submissions"
+-- Fixed: Students don't have user_id, parents view submissions for their children
+CREATE POLICY "Parents can view their children's submissions"
   ON assignment_submissions FOR SELECT
   USING (
     student_id IN (
-      SELECT id FROM students WHERE user_id = auth.uid()
+      SELECT s.id 
+      FROM students s
+      JOIN student_guardians sg ON s.id = sg.student_id
+      JOIN guardians g ON sg.guardian_id = g.id
+      WHERE g.user_id = auth.uid()
     )
   );
 
-CREATE POLICY "Students can update their own submissions"
-  ON assignment_submissions FOR UPDATE
+CREATE POLICY "Admins can manage all submissions"
+  ON assignment_submissions FOR ALL
   USING (
-    student_id IN (
-      SELECT id FROM students WHERE user_id = auth.uid()
+    EXISTS (
+      SELECT 1 FROM user_roles ur
+      WHERE ur.user_id = auth.uid() 
+      AND ur.role = 'admin'
+      AND ur.is_active = TRUE
     )
   );
 
@@ -158,6 +171,11 @@ CREATE POLICY "Teachers and admins can manage timetables"
   USING (
     EXISTS (
       SELECT 1 FROM teachers WHERE user_id = auth.uid()
+    ) OR EXISTS (
+      SELECT 1 FROM user_roles ur
+      WHERE ur.user_id = auth.uid() 
+      AND ur.role = 'admin'
+      AND ur.is_active = TRUE
     )
   );
 
@@ -165,31 +183,44 @@ CREATE POLICY "Teachers and admins can manage timetables"
 CREATE OR REPLACE FUNCTION notify_new_assignment()
 RETURNS TRIGGER AS $$
 DECLARE
-  v_student RECORD;
+  v_guardian RECORD;
   v_teacher_name TEXT;
 BEGIN
   -- Get teacher name
   SELECT first_name || ' ' || last_name INTO v_teacher_name
   FROM teachers WHERE id = NEW.teacher_id;
   
-  -- Notify all students in the class
-  FOR v_student IN 
-    SELECT s.id AS student_id, s.user_id
+  -- Fixed: Notify guardians, not students (students don't have user_id)
+  -- Notify all guardians of students in the class
+  FOR v_guardian IN 
+    SELECT DISTINCT g.user_id
     FROM students s
     JOIN student_enrollments se ON s.id = se.student_id
+    JOIN student_guardians sg ON s.id = sg.student_id
+    JOIN guardians g ON sg.guardian_id = g.id
     WHERE se.class_id = NEW.class_id 
     AND se.is_active = TRUE
+    AND g.user_id IS NOT NULL
   LOOP
-    IF v_student.user_id IS NOT NULL THEN
-      PERFORM create_notification(
-        v_student.user_id,
-        'New Assignment: ' || NEW.title,
-        'Due: ' || NEW.due_date::TEXT,
-        'general',
-        NEW.id,
-        'assignment'
-      );
-    END IF;
+    INSERT INTO notifications (
+      user_id,
+      title,
+      message,
+      type,
+      reference_id,
+      reference_type,
+      is_read,
+      created_at
+    ) VALUES (
+      v_guardian.user_id,
+      'New Assignment: ' || NEW.title,
+      'Teacher: ' || v_teacher_name || ' | Due: ' || NEW.due_date::TEXT,
+      'assignment',
+      NEW.id,
+      'assignment',
+      FALSE,
+      NOW()
+    );
   END LOOP;
   
   RETURN NEW;

@@ -10,20 +10,22 @@ ALTER TABLE payments ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 ALTER TABLE students ADD CONSTRAINT unique_active_student_id UNIQUE NULLS NOT DISTINCT (student_id, deleted_at);
 ALTER TABLE teachers ADD CONSTRAINT unique_active_staff_id UNIQUE NULLS NOT DISTINCT (staff_id, deleted_at);
 
--- Removed invalid phone constraint from students table (students don't have phone field)
-
 -- Add validation check constraints
 ALTER TABLE students ADD CONSTRAINT valid_birthdate CHECK (
   date_of_birth <= CURRENT_DATE
 );
 
--- Fixed phone validation for guardians table (correct table and column names)
-ALTER TABLE guardians ADD CONSTRAINT valid_guardian_phone_primary CHECK (
-  phone_primary ~ '^[0-9+\-\s()]+$' OR phone_primary IS NULL
+-- Fixed phone validation for guardians table with correct column names: phone, alternate_phone, whatsapp_number
+ALTER TABLE guardians ADD CONSTRAINT valid_guardian_phone CHECK (
+  phone ~ '^[0-9+\-\s()]+$' OR phone IS NULL
 );
 
-ALTER TABLE guardians ADD CONSTRAINT valid_guardian_phone_secondary CHECK (
-  phone_secondary ~ '^[0-9+\-\s()]+$' OR phone_secondary IS NULL
+ALTER TABLE guardians ADD CONSTRAINT valid_guardian_alternate_phone CHECK (
+  alternate_phone ~ '^[0-9+\-\s()]+$' OR alternate_phone IS NULL
+);
+
+ALTER TABLE guardians ADD CONSTRAINT valid_guardian_whatsapp CHECK (
+  whatsapp_number ~ '^[0-9+\-\s()]+$' OR whatsapp_number IS NULL
 );
 
 ALTER TABLE teachers ADD CONSTRAINT valid_teacher_phone CHECK (
@@ -55,14 +57,14 @@ BEGIN
       action,
       old_values,
       new_values,
-      changed_by
+      performed_by
     ) VALUES (
       TG_TABLE_NAME,
       OLD.id::TEXT,
       'soft_delete',
       row_to_json(OLD),
       row_to_json(NEW),
-      current_setting('app.current_user_id', true)
+      current_setting('app.current_user_id', true)::UUID
     );
   END IF;
   RETURN NEW;
