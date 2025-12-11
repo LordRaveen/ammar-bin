@@ -26,31 +26,67 @@ export default function ForgotPasswordPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    e.stopPropagation()
     setIsLoading(true)
     setMessage(null)
 
     try {
       const supabase = createClient()
 
+      const { data: guardianData } = await supabase
+        .from("guardians")
+        .select("id, email, user_id")
+        .eq("email", email)
+        .maybeSingle()
+
+      console.log("[v0] Guardian check:", { email, found: !!guardianData, hasUserId: !!guardianData?.user_id })
+
+      if (!guardianData) {
+        setMessage({
+          type: "error",
+          text: "No account found with this email address. Please check your email or contact the school admin.",
+        })
+        setIsLoading(false)
+        return
+      }
+
+      if (!guardianData.user_id) {
+        setMessage({
+          type: "error",
+          text: "Your portal access is not activated. Please contact the school admin to activate your account first.",
+        })
+        setIsLoading(false)
+        return
+      }
+
+      // Build redirect URL
       const redirectTo = process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL
         ? `${process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL}/auth/reset-password`
         : `${window.location.origin}/auth/reset-password`
 
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      console.log("[v0] Sending reset email to:", email, "Redirect:", redirectTo)
+
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo,
       })
 
-      if (error) throw error
+      console.log("[v0] Reset password response:", { data, error })
+
+      if (error) {
+        console.error("[v0] Supabase reset error:", error)
+        throw error
+      }
 
       setMessage({
         type: "success",
-        text: "Password reset link has been sent to your email. Please check your inbox and spam folder.",
+        text: "Password reset link has been sent to your email. Please check your inbox and spam folder. The link will expire in 1 hour.",
       })
       setEmail("")
     } catch (error: any) {
+      console.error("[v0] Password reset failed:", error)
       setMessage({
         type: "error",
-        text: error.message || "Failed to send reset link. Please try again.",
+        text: error.message || "Failed to send reset link. Please try again or contact support.",
       })
     } finally {
       setIsLoading(false)
@@ -75,7 +111,7 @@ export default function ForgotPasswordPage() {
               <CardDescription>We'll send you a link to reset your password</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} method="dialog">
                 <div className="flex flex-col gap-4">
                   <div className="grid gap-2">
                     <Label htmlFor="email">Email Address</Label>
@@ -117,6 +153,14 @@ export default function ForgotPasswordPage() {
                   </div>
                 </div>
               </form>
+            </CardContent>
+          </Card>
+
+          <Card className="border-muted">
+            <CardContent className="pt-6">
+              <p className="text-xs text-muted-foreground text-center">
+                Not receiving emails? Check your spam folder or contact the school admin at admin@school.com
+              </p>
             </CardContent>
           </Card>
         </div>
