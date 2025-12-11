@@ -19,9 +19,14 @@ export async function POST(request: Request) {
       .from("guardians")
       .select("*")
       .eq("id", guardianId)
-      .single()
+      .maybeSingle()
 
-    if (guardianError || !guardian) {
+    if (guardianError) {
+      console.error("Guardian fetch error:", guardianError)
+      return NextResponse.json({ error: "Failed to fetch guardian details" }, { status: 500 })
+    }
+
+    if (!guardian) {
       return NextResponse.json({ error: "Guardian not found" }, { status: 404 })
     }
 
@@ -33,9 +38,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Portal access already activated for this guardian" }, { status: 400 })
     }
 
-    // Generate temporary password based on phone number
-    const cleanPhone = guardian.phone.replace(/[^\d]/g, "")
-    const tempPassword = `${cleanPhone}@Parent`
+    let tempPassword: string
+
+    if (guardian.phone) {
+      // Use phone-based password if phone exists
+      const cleanPhone = guardian.phone.replace(/[^\d]/g, "")
+      if (cleanPhone.length >= 8) {
+        tempPassword = `${cleanPhone}@Parent`
+      } else {
+        // Fallback if phone is invalid
+        tempPassword = `${guardian.first_name?.substring(0, 3) || "Par"}${Math.random().toString(36).substring(2, 10)}@Parent`
+      }
+    } else {
+      // Generate random password if no phone
+      const randomCode = Math.random().toString(36).substring(2, 10).toUpperCase()
+      tempPassword = `Parent${randomCode}!`
+    }
 
     const adminClient = createAdminClient()
 
@@ -44,22 +62,42 @@ export async function POST(request: Request) {
       email: guardian.email,
       password: tempPassword,
       email_confirm: true,
+      user_metadata: {
+        role: "parent",
+        guardian_id: guardianId,
+        full_name: `${guardian.first_name} ${guardian.last_name}`.trim(),
+      },
     })
 
     if (authError) {
-      throw authError
+      console.error("Auth user creation error:", authError)
+      return NextResponse.json(
+        {
+          error: `Failed to create user account: ${authError.message}`,
+        },
+        { status: 500 },
+      )
     }
 
     // Update guardian record with user_id
     const { error: updateError } = await supabase
       .from("guardians")
-      .update({ user_id: authData.user.id })
+      .update({
+        user_id: authData.user.id,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", guardianId)
 
     if (updateError) {
+      console.error("Guardian update error:", updateError)
       // Rollback: delete the auth user
       await adminClient.auth.admin.deleteUser(authData.user.id)
-      throw updateError
+      return NextResponse.json(
+        {
+          error: `Failed to link user account: ${updateError.message}`,
+        },
+        { status: 500 },
+      )
     }
 
     // Create user_roles entry for parent role
@@ -70,7 +108,8 @@ export async function POST(request: Request) {
     })
 
     if (roleError) {
-      // Non-critical error, continue
+      // Non-critical error, log but continue
+      console.error("Role creation error (non-critical):", roleError)
     }
 
     return NextResponse.json({
@@ -79,6 +118,12 @@ export async function POST(request: Request) {
       message: "Portal access activated successfully",
     })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 })
+    console.error("Portal activation error:", error)
+    return NextResponse.json(
+      {
+        error: error.message || "Internal server error",
+      },
+      { status: 500 },
+    )
   }
 }
