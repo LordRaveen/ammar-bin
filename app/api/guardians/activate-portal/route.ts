@@ -38,6 +38,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Portal access already activated for this guardian" }, { status: 400 })
     }
 
+    const adminClient = createAdminClient()
+
+    // Check if email already exists in auth system
+    const { data: existingUsers, error: checkError } = await adminClient.auth.admin.listUsers()
+
+    if (!checkError && existingUsers) {
+      const emailInUse = existingUsers.users.some((u) => u.email?.toLowerCase() === guardian.email.toLowerCase())
+
+      if (emailInUse) {
+        return NextResponse.json(
+          {
+            error: `Email ${guardian.email} is already registered in the system. Please use a different email address or contact support to resolve this conflict.`,
+          },
+          { status: 409 }, // 409 Conflict
+        )
+      }
+    }
+
     let tempPassword: string
 
     if (guardian.phone) {
@@ -55,8 +73,6 @@ export async function POST(request: Request) {
       tempPassword = `Parent${randomCode}!`
     }
 
-    const adminClient = createAdminClient()
-
     // Create Supabase auth user
     const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
       email: guardian.email,
@@ -70,7 +86,15 @@ export async function POST(request: Request) {
     })
 
     if (authError) {
-      console.error("Auth user creation error:", authError)
+      if (authError.message?.includes("already registered") || authError.message?.includes("duplicate")) {
+        return NextResponse.json(
+          {
+            error: `Email ${guardian.email} is already registered. Please use a different email or contact support.`,
+          },
+          { status: 409 },
+        )
+      }
+
       return NextResponse.json(
         {
           error: `Failed to create user account: ${authError.message}`,

@@ -8,13 +8,14 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { createClient } from "@/lib/supabase/client"
-import { ArrowLeft, Mail } from "lucide-react"
+import { ArrowLeft, Mail, AlertCircle, CheckCircle2 } from "lucide-react"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [message, setMessage] = useState<{ type: "success" | "error" | "warning"; text: string } | null>(null)
   const [isParentPortal, setIsParentPortal] = useState(false)
 
   useState(() => {
@@ -33,15 +34,15 @@ export default function ForgotPasswordPage() {
     try {
       const supabase = createClient()
 
-      const { data: guardianData } = await supabase
-        .from("guardians")
-        .select("id, email, user_id")
-        .eq("email", email)
-        .maybeSingle()
+      const [{ data: guardianData }, { data: teacherData }] = await Promise.all([
+        supabase.from("guardians").select("id, email, user_id").eq("email", email).maybeSingle(),
+        supabase.from("teachers").select("id, email, user_id").eq("email", email).maybeSingle(),
+      ])
 
-      console.log("[v0] Guardian check:", { email, found: !!guardianData, hasUserId: !!guardianData?.user_id })
+      const userData = guardianData || teacherData
+      const userType = guardianData ? "guardian" : teacherData ? "teacher" : null
 
-      if (!guardianData) {
+      if (!userData) {
         setMessage({
           type: "error",
           text: "No account found with this email address. Please check your email or contact the school admin.",
@@ -50,7 +51,7 @@ export default function ForgotPasswordPage() {
         return
       }
 
-      if (!guardianData.user_id) {
+      if (!userData.user_id) {
         setMessage({
           type: "error",
           text: "Your portal access is not activated. Please contact the school admin to activate your account first.",
@@ -64,29 +65,37 @@ export default function ForgotPasswordPage() {
         ? `${process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL}/auth/reset-password`
         : `${window.location.origin}/auth/reset-password`
 
-      console.log("[v0] Sending reset email to:", email, "Redirect:", redirectTo)
-
-      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo,
       })
 
-      console.log("[v0] Reset password response:", { data, error })
-
       if (error) {
-        console.error("[v0] Supabase reset error:", error)
-        throw error
+        if (error.message.includes("rate limit")) {
+          setMessage({
+            type: "warning",
+            text: "Too many password reset requests. Please wait a few minutes and try again, or contact the school admin for assistance.",
+          })
+        } else if (error.message.includes("SMTP") || error.message.includes("email provider")) {
+          setMessage({
+            type: "warning",
+            text: "Email service is temporarily unavailable. Please contact the school admin at admin@school.com to reset your password manually.",
+          })
+        } else {
+          throw error
+        }
+        setIsLoading(false)
+        return
       }
 
       setMessage({
         type: "success",
-        text: "Password reset link has been sent to your email. Please check your inbox and spam folder. The link will expire in 1 hour.",
+        text: `Password reset link has been sent to ${email}. Please check your inbox and spam/junk folder. The link expires in 1 hour. If you don't receive it within 5 minutes, contact the school admin.`,
       })
       setEmail("")
     } catch (error: any) {
-      console.error("[v0] Password reset failed:", error)
       setMessage({
         type: "error",
-        text: error.message || "Failed to send reset link. Please try again or contact support.",
+        text: error.message || "Failed to send reset link. Please contact the school admin for manual password reset.",
       })
     } finally {
       setIsLoading(false)
@@ -127,15 +136,22 @@ export default function ForgotPasswordPage() {
                   </div>
 
                   {message && (
-                    <div
-                      className={`rounded-md p-3 ${
+                    <Alert
+                      className={
                         message.type === "success"
-                          ? "bg-green-50 text-green-800 border border-green-200"
-                          : "bg-destructive/15 text-destructive"
-                      }`}
+                          ? "bg-green-50 text-green-800 border-green-200"
+                          : message.type === "warning"
+                            ? "bg-amber-50 text-amber-800 border-amber-200"
+                            : "bg-destructive/15 text-destructive border-destructive/20"
+                      }
                     >
-                      <p className="text-sm">{message.text}</p>
-                    </div>
+                      {message.type === "success" ? (
+                        <CheckCircle2 className="h-4 w-4" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4" />
+                      )}
+                      <AlertDescription className="text-sm">{message.text}</AlertDescription>
+                    </Alert>
                   )}
 
                   <Button type="submit" className="w-full" disabled={isLoading}>
@@ -157,10 +173,14 @@ export default function ForgotPasswordPage() {
           </Card>
 
           <Card className="border-muted">
-            <CardContent className="pt-6">
-              <p className="text-xs text-muted-foreground text-center">
-                Not receiving emails? Check your spam folder or contact the school admin at admin@school.com
-              </p>
+            <CardContent className="pt-6 space-y-2">
+              <p className="text-xs text-muted-foreground text-center font-semibold">Not receiving emails?</p>
+              <ul className="text-xs text-muted-foreground space-y-1">
+                <li>• Check your spam/junk folder</li>
+                <li>• Wait 5-10 minutes for delivery</li>
+                <li>• Verify your email address is correct</li>
+                <li>• Contact school admin: admin@school.com</li>
+              </ul>
             </CardContent>
           </Card>
         </div>
