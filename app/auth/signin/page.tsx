@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertTriangle, Lock } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { devLog } from "@/lib/logger"
@@ -18,6 +20,11 @@ export default function SignInPage() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [lockoutInfo, setLockoutInfo] = useState<{
+    locked: boolean
+    lockedUntil?: string
+    attemptsRemaining?: number
+  } | null>(null)
   const router = useRouter()
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -27,10 +34,35 @@ export default function SignInPage() {
     const supabase = createClient()
     setIsLoading(true)
     setError(null)
+    setLockoutInfo(null)
 
     devLog.debug("Attempting sign in for:", email)
 
     try {
+      const checkResponse = await fetch("/api/auth/check-lockout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      })
+
+      if (checkResponse.ok) {
+        const lockData = await checkResponse.json()
+        if (lockData.locked) {
+          const lockedUntil = new Date(lockData.lockedUntil)
+          const minutesRemaining = Math.ceil((lockedUntil.getTime() - Date.now()) / 60000)
+
+          setLockoutInfo({
+            locked: true,
+            lockedUntil: lockData.lockedUntil,
+          })
+          setError(
+            `Account locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minute${minutesRemaining !== 1 ? "s" : ""} or contact the administrator.`,
+          )
+          setIsLoading(false)
+          return
+        }
+      }
+
       // Sign in with Supabase
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
@@ -75,7 +107,7 @@ export default function SignInPage() {
         // Default to admin if role lookup fails
       }
 
-      // Track login attempt in background (non-blocking)
+      // Track successful login
       fetch("/api/auth/track-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -92,14 +124,46 @@ export default function SignInPage() {
       router.refresh()
     } catch (error: any) {
       devLog.error("Sign in error:", error)
-      setError(error.message || "Failed to sign in. Please check your credentials.")
 
-      // Track failed login attempt in background (non-blocking)
-      fetch("/api/auth/track-login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, success: false, reason: error.message }),
-      }).catch((err) => devLog.error("Failed to track failed login:", err))
+      try {
+        const trackResponse = await fetch("/api/auth/track-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, success: false, reason: error.message }),
+        })
+
+        if (trackResponse.ok) {
+          const trackData = await trackResponse.json()
+
+          if (trackData.locked) {
+            const lockedUntil = new Date(trackData.lockedUntil)
+            const minutesRemaining = Math.ceil((lockedUntil.getTime() - Date.now()) / 60000)
+
+            setLockoutInfo({
+              locked: true,
+              lockedUntil: trackData.lockedUntil,
+            })
+            setError(
+              `Account locked after ${trackData.failedAttempts} failed attempts. Please try again in ${minutesRemaining} minute${minutesRemaining !== 1 ? "s" : ""} or contact the administrator.`,
+            )
+          } else if (trackData.attemptsRemaining !== undefined) {
+            setLockoutInfo({
+              locked: false,
+              attemptsRemaining: trackData.attemptsRemaining,
+            })
+            setError(
+              `Invalid credentials. ${trackData.attemptsRemaining} attempt${trackData.attemptsRemaining !== 1 ? "s" : ""} remaining before account lockout.`,
+            )
+          } else {
+            setError("Invalid credentials. Please try again.")
+          }
+        } else {
+          setError(error.message || "Failed to sign in. Please check your credentials.")
+        }
+      } catch (trackError) {
+        devLog.error("Failed to track failed login:", trackError)
+        setError(error.message || "Failed to sign in. Please check your credentials.")
+      }
     } finally {
       setIsLoading(false)
     }
@@ -150,13 +214,32 @@ export default function SignInPage() {
                       Forgot password?
                     </Link>
                   </div>
+
                   {error && (
-                    <div className="rounded-md bg-destructive/15 p-3">
-                      <p className="text-sm text-destructive">{error}</p>
-                    </div>
+                    <Alert variant={lockoutInfo?.locked ? "destructive" : "default"} className="border-destructive/50">
+                      <div className="flex items-start gap-2">
+                        {lockoutInfo?.locked ? (
+                          <Lock className="h-4 w-4 mt-0.5" />
+                        ) : (
+                          <AlertTriangle className="h-4 w-4 mt-0.5" />
+                        )}
+                        <AlertDescription className="text-sm">{error}</AlertDescription>
+                      </div>
+                    </Alert>
                   )}
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? "Signing in..." : "Sign In"}
+
+                  {!error && lockoutInfo?.attemptsRemaining !== undefined && lockoutInfo.attemptsRemaining <= 2 && (
+                    <Alert variant="default" className="border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20">
+                      <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />
+                      <AlertDescription className="text-sm text-yellow-800 dark:text-yellow-200">
+                        Warning: {lockoutInfo.attemptsRemaining} attempt{lockoutInfo.attemptsRemaining !== 1 ? "s" : ""}{" "}
+                        remaining before account lockout.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  <Button type="submit" className="w-full" disabled={isLoading || lockoutInfo?.locked}>
+                    {isLoading ? "Signing in..." : lockoutInfo?.locked ? "Account Locked" : "Sign In"}
                   </Button>
                 </div>
               </form>
