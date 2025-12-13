@@ -37,17 +37,22 @@ export default function SignInPage() {
     setError(null)
     setLockoutInfo(null)
 
-    devLog.debug("Attempting sign in for:", email)
+    console.log("[v0] Sign in attempt for:", email)
 
     try {
+      console.log("[v0] Checking lockout status...")
       const checkResponse = await fetch("/api/auth/check-lockout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       })
 
+      console.log("[v0] Check-lockout response status:", checkResponse.status)
+
       if (checkResponse.ok) {
         const lockData = await checkResponse.json()
+        console.log("[v0] Lockout data:", lockData)
+
         if (lockData.locked) {
           const lockedUntil = new Date(lockData.lockedUntil)
           const minutesRemaining = Math.ceil((lockedUntil.getTime() - Date.now()) / 60000)
@@ -63,12 +68,14 @@ export default function SignInPage() {
         }
       }
 
+      console.log("[v0] Attempting Supabase authentication...")
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (signInError) {
+        console.log("[v0] Authentication failed:", signInError.message)
         throw signInError
       }
 
@@ -115,19 +122,24 @@ export default function SignInPage() {
       router.push(dashboardUrl)
       router.refresh()
     } catch (error: any) {
-      devLog.error("Sign in error:", error)
+      console.log("[v0] Sign in error occurred:", error.message)
 
       try {
+        console.log("[v0] Tracking failed login attempt...")
         const trackResponse = await fetch("/api/auth/track-login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, success: false, reason: error.message }),
         })
 
+        console.log("[v0] Track-login response status:", trackResponse.status)
+
         if (trackResponse.ok) {
           const trackData = await trackResponse.json()
+          console.log("[v0] Track-login data:", trackData)
 
           if (trackData.locked) {
+            console.log("[v0] Account is now LOCKED")
             const minutesRemaining = Math.ceil((new Date(trackData.lockedUntil).getTime() - Date.now()) / 60000)
 
             setLockoutInfo({
@@ -137,19 +149,22 @@ export default function SignInPage() {
             })
             setError("locked")
           } else if (trackData.attemptsRemaining !== undefined) {
+            console.log("[v0] Attempts remaining:", trackData.attemptsRemaining)
             setLockoutInfo({
               locked: false,
               attemptsRemaining: trackData.attemptsRemaining,
             })
             setError("invalid_credentials")
           } else {
+            console.log("[v0] No attempts data returned")
             setError("invalid_credentials")
           }
         } else {
+          console.log("[v0] Track-login request failed")
           setError("invalid_credentials")
         }
       } catch (trackError) {
-        devLog.error("Failed to track failed login:", trackError)
+        console.error("[v0] Failed to track failed login:", trackError)
         setError("invalid_credentials")
       }
     } finally {
