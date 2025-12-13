@@ -20,14 +20,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Check if user is admin
-    const { data: teacher } = await supabase.from("teachers").select("role").eq("user_id", user.id).maybeSingle()
+    const { data: teacher } = await supabase.from("teachers").select("role").eq("user_id", user.id).single()
 
-    if (!teacher || teacher.role !== "admin") {
-      return NextResponse.json({ error: "Admin access required" }, { status: 403 })
+    if (!teacher || (teacher.role !== "admin" && teacher.role !== "super_admin")) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    // Delete lockout record
+    // Delete the lockout record
     const { error: deleteError } = await supabase.from("account_lockouts").delete().eq("email", email.toLowerCase())
 
     if (deleteError) {
@@ -35,18 +34,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to unlock account" }, { status: 500 })
     }
 
-    // Also clear failed login attempts
-    const windowStart = new Date(Date.now() - 15 * 60 * 1000).toISOString()
-    await supabase
-      .from("login_attempts")
-      .delete()
-      .eq("email", email.toLowerCase())
-      .eq("success", false)
-      .gte("created_at", windowStart)
+    // Log the unlock action in audit trail
+    await supabase.from("audit_logs").insert({
+      action: "UPDATE",
+      table_name: "account_lockouts",
+      description: `Admin unlocked account: ${email}`,
+      performed_by: user.id,
+    })
 
     return NextResponse.json({ success: true, message: "Account unlocked successfully" })
   } catch (error) {
-    console.error("Error in unlock-account:", error)
+    console.error("Error unlocking account:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

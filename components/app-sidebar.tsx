@@ -17,6 +17,7 @@ import {
   IconCalendarEvent,
   IconHistory,
   IconMessage,
+  IconShield,
 } from "@tabler/icons-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -102,6 +103,11 @@ const getNavigationByRole = (role: UserRole) => {
       title: "Audit Trail",
       url: "/finance/audit-trail",
       icon: IconHistory,
+    },
+    {
+      title: "Account Lockouts",
+      url: "/settings/account-lockouts",
+      icon: IconShield,
     },
     {
       title: "Settings",

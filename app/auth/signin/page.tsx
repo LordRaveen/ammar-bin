@@ -8,12 +8,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertTriangle, Lock } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { devLog } from "@/lib/logger"
 import { getRoleDashboardUrl } from "@/lib/auth/role-redirect"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { IconAlertTriangle, IconLock } from "@tabler/icons-react"
 
 export default function SignInPage() {
   const [email, setEmail] = useState("")
@@ -22,9 +22,8 @@ export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [lockoutInfo, setLockoutInfo] = useState<{
     locked: boolean
-    lockedUntil?: string
-    attemptsRemaining?: number
     minutesRemaining?: number
+    attemptsRemaining?: number
   } | null>(null)
   const router = useRouter()
 
@@ -37,45 +36,36 @@ export default function SignInPage() {
     setError(null)
     setLockoutInfo(null)
 
-    console.log("[v0] Sign in attempt for:", email)
+    devLog.debug("Attempting sign in for:", email)
 
     try {
-      console.log("[v0] Checking lockout status...")
-      const checkResponse = await fetch("/api/auth/check-lockout", {
+      const lockoutResponse = await fetch("/api/auth/check-lockout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       })
 
-      console.log("[v0] Check-lockout response status:", checkResponse.status)
+      if (lockoutResponse.ok) {
+        const lockoutData = await lockoutResponse.json()
 
-      if (checkResponse.ok) {
-        const lockData = await checkResponse.json()
-        console.log("[v0] Lockout data:", lockData)
-
-        if (lockData.locked) {
-          const lockedUntil = new Date(lockData.lockedUntil)
-          const minutesRemaining = Math.ceil((lockedUntil.getTime() - Date.now()) / 60000)
-
-          setLockoutInfo({
-            locked: true,
-            lockedUntil: lockData.lockedUntil,
-            minutesRemaining,
-          })
-          setError("locked")
+        if (lockoutData.locked) {
+          const minutesRemaining = Math.ceil(lockoutData.minutesRemaining)
+          setLockoutInfo({ locked: true, minutesRemaining })
+          setError(
+            `Account locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minute${minutesRemaining !== 1 ? "s" : ""}.`,
+          )
           setIsLoading(false)
           return
         }
       }
 
-      console.log("[v0] Attempting Supabase authentication...")
+      // Sign in with Supabase
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (signInError) {
-        console.log("[v0] Authentication failed:", signInError.message)
         throw signInError
       }
 
@@ -83,9 +73,11 @@ export default function SignInPage() {
         throw new Error("Failed to authenticate")
       }
 
+      // Determine user role
       let userRole = "admin"
 
       try {
+        // Check if user is a teacher/staff
         const { data: teacherData, error: teacherError } = await supabase
           .from("teachers")
           .select("role")
@@ -95,6 +87,7 @@ export default function SignInPage() {
         if (!teacherError && teacherData) {
           userRole = teacherData.role
         } else {
+          // Check if user is a guardian/parent
           const { data: guardianData, error: guardianError } = await supabase
             .from("guardians")
             .select("id")
@@ -116,56 +109,43 @@ export default function SignInPage() {
       }).catch((err) => devLog.error("Failed to track login:", err))
 
       const dashboardUrl = getRoleDashboardUrl(userRole)
-
       devLog.debug("Sign in successful, role:", userRole, "redirecting to", dashboardUrl)
 
       router.push(dashboardUrl)
       router.refresh()
     } catch (error: any) {
-      console.log("[v0] Sign in error occurred:", error.message)
+      devLog.error("Sign in error:", error)
 
       try {
-        console.log("[v0] Tracking failed login attempt...")
         const trackResponse = await fetch("/api/auth/track-login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, success: false, reason: error.message }),
         })
 
-        console.log("[v0] Track-login response status:", trackResponse.status)
-
         if (trackResponse.ok) {
           const trackData = await trackResponse.json()
-          console.log("[v0] Track-login data:", trackData)
 
           if (trackData.locked) {
-            console.log("[v0] Account is now LOCKED")
-            const minutesRemaining = Math.ceil((new Date(trackData.lockedUntil).getTime() - Date.now()) / 60000)
-
-            setLockoutInfo({
-              locked: true,
-              lockedUntil: trackData.lockedUntil,
-              minutesRemaining,
-            })
-            setError("locked")
+            const minutesRemaining = Math.ceil((new Date(trackData.lockedUntil).getTime() - Date.now()) / (1000 * 60))
+            setLockoutInfo({ locked: true, minutesRemaining })
+            setError(
+              `Account locked due to too many failed attempts (${trackData.failedAttempts}). Please try again in ${minutesRemaining} minute${minutesRemaining !== 1 ? "s" : ""}.`,
+            )
           } else if (trackData.attemptsRemaining !== undefined) {
-            console.log("[v0] Attempts remaining:", trackData.attemptsRemaining)
-            setLockoutInfo({
-              locked: false,
-              attemptsRemaining: trackData.attemptsRemaining,
-            })
-            setError("invalid_credentials")
+            setLockoutInfo({ locked: false, attemptsRemaining: trackData.attemptsRemaining })
+            setError(
+              `Invalid email or password. You have ${trackData.attemptsRemaining} attempt${trackData.attemptsRemaining !== 1 ? "s" : ""} remaining before your account is locked.`,
+            )
           } else {
-            console.log("[v0] No attempts data returned")
-            setError("invalid_credentials")
+            setError("Invalid email or password. Please try again.")
           }
         } else {
-          console.log("[v0] Track-login request failed")
-          setError("invalid_credentials")
+          setError("Invalid email or password. Please try again.")
         }
       } catch (trackError) {
-        console.error("[v0] Failed to track failed login:", trackError)
-        setError("invalid_credentials")
+        devLog.error("Failed to track failed login:", trackError)
+        setError(error.message || "Invalid email or password. Please try again.")
       }
     } finally {
       setIsLoading(false)
@@ -187,7 +167,7 @@ export default function SignInPage() {
               <CardDescription>Enter your credentials to access the school management system</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSignIn} method="dialog">
+              <form onSubmit={handleSignIn} method="dialog" action="#">
                 <div className="flex flex-col gap-6">
                   <div className="grid gap-2">
                     <Label htmlFor="email">Email</Label>
@@ -217,65 +197,21 @@ export default function SignInPage() {
                       Forgot password?
                     </Link>
                   </div>
-
                   {error && (
                     <Alert
                       variant={lockoutInfo?.locked ? "destructive" : "default"}
-                      className={
-                        lockoutInfo?.locked ? "border-destructive" : "border-amber-500 bg-amber-50 dark:bg-amber-950"
-                      }
+                      className={lockoutInfo?.locked ? "" : "border-amber-500 bg-amber-50 text-amber-900"}
                     >
-                      <div className="flex gap-3">
+                      <div className="flex gap-2">
                         {lockoutInfo?.locked ? (
-                          <Lock className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                          <IconLock className="h-4 w-4" />
                         ) : (
-                          <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+                          <IconAlertTriangle className="h-4 w-4" />
                         )}
-                        <div className="flex-1 space-y-3">
-                          <div>
-                            <AlertTitle className="mb-1.5 font-semibold text-base">
-                              {lockoutInfo?.locked ? "Account Locked" : "Invalid Credentials"}
-                            </AlertTitle>
-                            <AlertDescription className="text-sm">
-                              {lockoutInfo?.locked ? (
-                                <div className="space-y-2">
-                                  <p>Your account has been locked due to multiple failed login attempts.</p>
-                                  <p className="font-medium">
-                                    Try again in <span className="font-bold">{lockoutInfo.minutesRemaining}</span>{" "}
-                                    minute{lockoutInfo.minutesRemaining !== 1 ? "s" : ""} or contact an administrator.
-                                  </p>
-                                </div>
-                              ) : (
-                                <p>The email or password you entered is incorrect.</p>
-                              )}
-                            </AlertDescription>
-                          </div>
-
-                          {!lockoutInfo?.locked && lockoutInfo?.attemptsRemaining !== undefined && (
-                            <div className="flex items-center gap-3 p-3 bg-amber-100 dark:bg-amber-900/40 rounded-md border border-amber-200 dark:border-amber-800">
-                              <div className="flex items-center justify-center w-12 h-12 rounded-md bg-amber-200 dark:bg-amber-900">
-                                <span className="text-2xl font-bold text-amber-900 dark:text-amber-100">
-                                  {lockoutInfo.attemptsRemaining}
-                                </span>
-                              </div>
-                              <div className="flex-1">
-                                <p className="text-sm font-semibold text-amber-900 dark:text-amber-100 leading-tight">
-                                  {lockoutInfo.attemptsRemaining === 1
-                                    ? "1 attempt"
-                                    : `${lockoutInfo.attemptsRemaining} attempts`}{" "}
-                                  remaining
-                                </p>
-                                <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
-                                  Account will be locked after 5 failed attempts
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                        <AlertDescription className="text-sm">{error}</AlertDescription>
                       </div>
                     </Alert>
                   )}
-
                   <Button type="submit" className="w-full" disabled={isLoading || lockoutInfo?.locked}>
                     {isLoading ? "Signing in..." : lockoutInfo?.locked ? "Account Locked" : "Sign In"}
                   </Button>
