@@ -216,25 +216,44 @@ export default function SignInPage() {
                   </div>
 
                   {error && (
-                    <Alert variant={lockoutInfo?.locked ? "destructive" : "default"} className="border-destructive/50">
-                      <div className="flex items-start gap-2">
+                    <Alert
+                      variant={lockoutInfo?.locked ? "destructive" : "default"}
+                      className={
+                        lockoutInfo?.locked ? "border-destructive" : "border-amber-500 bg-amber-50 dark:bg-amber-950/20"
+                      }
+                    >
+                      <div className="flex items-start gap-3">
                         {lockoutInfo?.locked ? (
-                          <Lock className="h-4 w-4 mt-0.5" />
+                          <Lock className="h-5 w-5 mt-0.5 text-destructive flex-shrink-0" />
                         ) : (
-                          <AlertTriangle className="h-4 w-4 mt-0.5" />
+                          <AlertTriangle className="h-5 w-5 mt-0.5 text-amber-600 dark:text-amber-500 flex-shrink-0" />
                         )}
-                        <AlertDescription className="text-sm">{error}</AlertDescription>
+                        <div className="flex-1 space-y-1">
+                          <AlertDescription
+                            className={`font-medium ${lockoutInfo?.locked ? "text-destructive" : "text-amber-800 dark:text-amber-200"}`}
+                          >
+                            {lockoutInfo?.locked ? "Account Locked" : "Invalid Credentials"}
+                          </AlertDescription>
+                          <AlertDescription
+                            className={`text-sm ${lockoutInfo?.locked ? "text-destructive/90" : "text-amber-700 dark:text-amber-300"}`}
+                          >
+                            {lockoutInfo?.attemptsRemaining !== undefined && !lockoutInfo.locked ? (
+                              <>
+                                <strong>{lockoutInfo.attemptsRemaining}</strong> attempt
+                                {lockoutInfo.attemptsRemaining !== 1 ? "s" : ""} remaining before account lockout.
+                              </>
+                            ) : lockoutInfo?.locked ? (
+                              <>
+                                {error.includes("minute")
+                                  ? error
+                                  : "Your account has been locked due to multiple failed login attempts. Please contact the administrator."}
+                              </>
+                            ) : (
+                              "Please check your email and password and try again."
+                            )}
+                          </AlertDescription>
+                        </div>
                       </div>
-                    </Alert>
-                  )}
-
-                  {!error && lockoutInfo?.attemptsRemaining !== undefined && lockoutInfo.attemptsRemaining <= 2 && (
-                    <Alert variant="default" className="border-yellow-500/50 bg-yellow-50 dark:bg-yellow-950/20">
-                      <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />
-                      <AlertDescription className="text-sm text-yellow-800 dark:text-yellow-200">
-                        Warning: {lockoutInfo.attemptsRemaining} attempt{lockoutInfo.attemptsRemaining !== 1 ? "s" : ""}{" "}
-                        remaining before account lockout.
-                      </AlertDescription>
                     </Alert>
                   )}
 
