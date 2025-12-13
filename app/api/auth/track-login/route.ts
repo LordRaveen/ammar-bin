@@ -59,7 +59,7 @@ export async function POST(request: Request) {
 
     const failedCount = recentFailures?.length || 0
 
-    // Lock account if threshold exceeded
+    // Lock account if threshold reached or exceeded
     if (failedCount >= MAX_FAILED_ATTEMPTS) {
       const lockedUntil = new Date(Date.now() + LOCKOUT_DURATION_MINUTES * 60 * 1000).toISOString()
 

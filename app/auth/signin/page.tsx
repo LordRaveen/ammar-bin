@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertTriangle, Lock, XCircle } from "lucide-react"
+import { AlertTriangle, Lock } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { devLog } from "@/lib/logger"
@@ -212,38 +212,50 @@ export default function SignInPage() {
                     >
                       <div className="flex gap-3">
                         {lockoutInfo?.locked ? (
-                          <Lock className="h-5 w-5 text-destructive" />
+                          <Lock className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                         ) : (
-                          <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-500" />
+                          <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
                         )}
-                        <div className="flex-1">
-                          <AlertTitle className="mb-1 font-semibold">
-                            {lockoutInfo?.locked ? "Account Locked" : "Invalid Credentials"}
-                          </AlertTitle>
-                          <AlertDescription className="space-y-2">
-                            {lockoutInfo?.locked ? (
-                              <div className="text-sm">
-                                <p>Your account has been locked due to multiple failed login attempts.</p>
-                                <p className="mt-2 font-medium">
-                                  Try again in {lockoutInfo.minutesRemaining} minute
-                                  {lockoutInfo.minutesRemaining !== 1 ? "s" : ""} or contact the administrator.
+                        <div className="flex-1 space-y-3">
+                          <div>
+                            <AlertTitle className="mb-1.5 font-semibold text-base">
+                              {lockoutInfo?.locked ? "Account Locked" : "Invalid Credentials"}
+                            </AlertTitle>
+                            <AlertDescription className="text-sm">
+                              {lockoutInfo?.locked ? (
+                                <div className="space-y-2">
+                                  <p>Your account has been locked due to multiple failed login attempts.</p>
+                                  <p className="font-medium">
+                                    Try again in <span className="font-bold">{lockoutInfo.minutesRemaining}</span>{" "}
+                                    minute{lockoutInfo.minutesRemaining !== 1 ? "s" : ""} or contact an administrator.
+                                  </p>
+                                </div>
+                              ) : (
+                                <p>The email or password you entered is incorrect.</p>
+                              )}
+                            </AlertDescription>
+                          </div>
+
+                          {!lockoutInfo?.locked && lockoutInfo?.attemptsRemaining !== undefined && (
+                            <div className="flex items-center gap-3 p-3 bg-amber-100 dark:bg-amber-900/40 rounded-md border border-amber-200 dark:border-amber-800">
+                              <div className="flex items-center justify-center w-12 h-12 rounded-md bg-amber-200 dark:bg-amber-900">
+                                <span className="text-2xl font-bold text-amber-900 dark:text-amber-100">
+                                  {lockoutInfo.attemptsRemaining}
+                                </span>
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm font-semibold text-amber-900 dark:text-amber-100 leading-tight">
+                                  {lockoutInfo.attemptsRemaining === 1
+                                    ? "1 attempt"
+                                    : `${lockoutInfo.attemptsRemaining} attempts`}{" "}
+                                  remaining
+                                </p>
+                                <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                                  Account will be locked after 5 failed attempts
                                 </p>
                               </div>
-                            ) : (
-                              <div className="text-sm space-y-1">
-                                <p>The email or password you entered is incorrect.</p>
-                                {lockoutInfo?.attemptsRemaining !== undefined && (
-                                  <div className="flex items-center gap-2 mt-2 p-2 bg-amber-100 dark:bg-amber-900/30 rounded">
-                                    <XCircle className="h-4 w-4 text-amber-700 dark:text-amber-400" />
-                                    <p className="font-medium text-amber-900 dark:text-amber-100">
-                                      <span className="text-lg font-bold">{lockoutInfo.attemptsRemaining}</span> attempt
-                                      {lockoutInfo.attemptsRemaining !== 1 ? "s" : ""} remaining before lockout
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </AlertDescription>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </Alert>
