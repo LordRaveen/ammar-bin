@@ -2,62 +2,70 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus } from "lucide-react"
-import { registerStudent } from "@/app/(dashboard)/students/actions"
+import { updateStudent } from "@/app/(dashboard)/students/actions"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useToast } from "@/hooks/use-toast"
 
-interface RegisterStudentModalProps {
+interface EditStudentModalProps {
+  student: any
   guardians: Array<{
     id: string
     first_name: string
     last_name: string
     phone: string
   }>
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }
 
-export function RegisterStudentModal({ guardians }: RegisterStudentModalProps) {
-  const [open, setOpen] = useState(false)
+export function EditStudentModal({ student, guardians, open, onOpenChange }: EditStudentModalProps) {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const { toast } = useToast()
 
   async function handleSubmit(formData: FormData) {
     setIsLoading(true)
     try {
-      await registerStudent(formData)
-      setOpen(false)
-      router.refresh()
+      formData.append("student_id", student.id)
+      const result = await updateStudent(formData)
+
+      if (result.success) {
+        toast({
+          title: "Student Updated",
+          description: "Student information has been updated successfully.",
+        })
+        onOpenChange(false)
+        router.refresh()
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to update student",
+          variant: "destructive",
+        })
+      }
     } catch (error) {
-      console.error("Error registering student:", error)
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Register Student
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Register Student</DialogTitle>
-          <DialogDescription>Add a new student to the school system</DialogDescription>
+          <DialogTitle>Edit Student</DialogTitle>
+          <DialogDescription>Update student information</DialogDescription>
         </DialogHeader>
 
         <form action={handleSubmit} className="space-y-6">
@@ -67,32 +75,24 @@ export function RegisterStudentModal({ guardians }: RegisterStudentModalProps) {
               <CardDescription>Basic student details</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="student_id">
-                  Student ID <span className="text-destructive">*</span>
-                </Label>
-                <Input id="student_id" name="student_id" placeholder="e.g., STU001, ISM/2024/001" required />
-                <p className="text-sm text-muted-foreground">Enter a unique student ID for this student</p>
-              </div>
-
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-2">
                   <Label htmlFor="first_name">
                     First Name <span className="text-destructive">*</span>
                   </Label>
-                  <Input id="first_name" name="first_name" required />
+                  <Input id="first_name" name="first_name" defaultValue={student.first_name} required />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="middle_name">Middle Name</Label>
-                  <Input id="middle_name" name="middle_name" />
+                  <Input id="middle_name" name="middle_name" defaultValue={student.middle_name || ""} />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="last_name">
                     Last Name <span className="text-destructive">*</span>
                   </Label>
-                  <Input id="last_name" name="last_name" required />
+                  <Input id="last_name" name="last_name" defaultValue={student.last_name} required />
                 </div>
               </div>
 
@@ -101,14 +101,20 @@ export function RegisterStudentModal({ guardians }: RegisterStudentModalProps) {
                   <Label htmlFor="date_of_birth">
                     Date of Birth <span className="text-destructive">*</span>
                   </Label>
-                  <Input id="date_of_birth" name="date_of_birth" type="date" required />
+                  <Input
+                    id="date_of_birth"
+                    name="date_of_birth"
+                    type="date"
+                    defaultValue={student.date_of_birth}
+                    required
+                  />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="gender">
                     Gender <span className="text-destructive">*</span>
                   </Label>
-                  <Select name="gender" required>
+                  <Select name="gender" defaultValue={student.gender} required>
                     <SelectTrigger>
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
@@ -124,18 +130,18 @@ export function RegisterStudentModal({ guardians }: RegisterStudentModalProps) {
                 <Label htmlFor="address">
                   Address <span className="text-destructive">*</span>
                 </Label>
-                <Textarea id="address" name="address" required rows={2} />
+                <Textarea id="address" name="address" defaultValue={student.address} required rows={2} />
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="state_of_origin">State of Origin</Label>
-                  <Input id="state_of_origin" name="state_of_origin" />
+                  <Input id="state_of_origin" name="state_of_origin" defaultValue={student.state_of_origin || ""} />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="nationality">Nationality</Label>
-                  <Input id="nationality" name="nationality" defaultValue="Nigerian" />
+                  <Input id="nationality" name="nationality" defaultValue={student.nationality || "Nigerian"} />
                 </div>
               </div>
             </CardContent>
@@ -153,75 +159,39 @@ export function RegisterStudentModal({ guardians }: RegisterStudentModalProps) {
                   id="medical_info"
                   name="medical_info"
                   placeholder="Allergies, medical conditions, special needs..."
+                  defaultValue={student.medical_info || ""}
                   rows={2}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="admission_date">Admission Date</Label>
-                <Input
-                  id="admission_date"
-                  name="admission_date"
-                  type="date"
-                  defaultValue={new Date().toISOString().split("T")[0]}
-                />
+                <Input id="admission_date" name="admission_date" type="date" defaultValue={student.admission_date} />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select name="status" defaultValue={student.status}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Inactive">Inactive</SelectItem>
+                    <SelectItem value="Graduated">Graduated</SelectItem>
+                    <SelectItem value="Transferred">Transferred</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Guardian Information</CardTitle>
-              <CardDescription>Link to parent/guardian</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {guardians && guardians.length > 0 ? (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="guardian_id">Select Guardian</Label>
-                    <Select name="guardian_id">
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose guardian" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {guardians.map((guardian) => (
-                          <SelectItem key={guardian.id} value={guardian.id}>
-                            {guardian.first_name} {guardian.last_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="relationship">Relationship</Label>
-                    <Select name="relationship">
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select relationship" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Father">Father</SelectItem>
-                        <SelectItem value="Mother">Mother</SelectItem>
-                        <SelectItem value="Guardian">Guardian</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </>
-              ) : (
-                <div className="text-sm text-muted-foreground">
-                  No guardians registered yet. Register a guardian first.
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
           <div className="flex gap-4 justify-end">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Registering..." : "Register Student"}
+              {isLoading ? "Updating..." : "Update Student"}
             </Button>
           </div>
         </form>

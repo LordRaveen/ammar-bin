@@ -3,13 +3,15 @@
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Search } from "lucide-react"
+import { Search, Trash2 } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RegisterStudentModal } from "@/components/register-student-modal"
 import { StudentDetailsSheet } from "@/components/student-details-sheet"
+import { DeleteStudentDialog } from "@/components/delete-student-dialog"
+import { EditStudentModal } from "@/components/edit-student-modal"
 
 interface StudentsClientPageProps {
   initialStudents: any[]
@@ -17,7 +19,7 @@ interface StudentsClientPageProps {
   sessions: any[]
   terms: any[]
   classes: any[]
-  userRole: string // Add userRole prop
+  userRole: string
 }
 
 export function StudentsClientPage({
@@ -26,10 +28,12 @@ export function StudentsClientPage({
   sessions,
   terms,
   classes,
-  userRole, // Destructure userRole
+  userRole,
 }: StudentsClientPageProps) {
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
+  const [deleteStudentId, setDeleteStudentId] = useState<string | null>(null)
+  const [editStudent, setEditStudent] = useState<any | null>(null)
   const allStudents = initialStudents
 
   const filteredStudents = allStudents.filter((student) => {
@@ -89,9 +93,26 @@ export function StudentsClientPage({
                   <Badge variant={student.status === "Active" ? "default" : "secondary"}>{student.status}</Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedStudentId(student.id)}>
-                    View
-                  </Button>
+                  <div className="flex items-center justify-end gap-2">
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedStudentId(student.id)}>
+                      View
+                    </Button>
+                    {userRole === "admin" && (
+                      <>
+                        <Button variant="ghost" size="sm" onClick={() => setEditStudent(student)}>
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteStudentId(student.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             )
@@ -172,8 +193,29 @@ export function StudentsClientPage({
         sessions={sessions}
         terms={terms}
         classes={classes}
-        userRole={userRole} // Pass userRole to StudentDetailsSheet
+        userRole={userRole}
       />
+
+      {deleteStudentId && (
+        <DeleteStudentDialog
+          studentId={deleteStudentId}
+          open={!!deleteStudentId}
+          onOpenChange={(open) => {
+            if (!open) setDeleteStudentId(null)
+          }}
+        />
+      )}
+
+      {editStudent && (
+        <EditStudentModal
+          student={editStudent}
+          guardians={guardians}
+          open={!!editStudent}
+          onOpenChange={(open) => {
+            if (!open) setEditStudent(null)
+          }}
+        />
+      )}
     </>
   )
 }

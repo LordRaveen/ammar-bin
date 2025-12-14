@@ -18,6 +18,7 @@ export default async function StudentsPage() {
         class:classes(name, section:sections(name))
       )
     `)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
 
   if (user.role === "teacher") {
@@ -44,6 +45,7 @@ export default async function StudentsPage() {
               class:classes(name, section:sections(name))
             )
           `)
+          .is("deleted_at", null)
           .in("student_enrollments.class_id", classIds)
           .order("created_at", { ascending: false })
       } else {

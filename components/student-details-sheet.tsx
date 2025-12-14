@@ -7,10 +7,12 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ExternalLink, Plus, Pencil, Loader2 } from "lucide-react"
+import { ExternalLink, Plus, Pencil, Loader2, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { EnrollStudentModal } from "./enroll-student-modal"
 import { createClient } from "@/lib/supabase/client"
+import { EditGuardianRelationDialog } from "./edit-guardian-relation-dialog"
+import { RemoveGuardianDialog } from "./remove-guardian-dialog"
 
 interface StudentDetailsSheetProps {
   studentId: string | null
@@ -19,7 +21,7 @@ interface StudentDetailsSheetProps {
   sessions: any[]
   terms: any[]
   classes: any[]
-  userRole?: string // Add userRole prop to control visibility of admin actions
+  userRole?: string
 }
 
 export function StudentDetailsSheet({
@@ -29,11 +31,13 @@ export function StudentDetailsSheet({
   sessions,
   terms,
   classes,
-  userRole, // Destructure userRole
+  userRole,
 }: StudentDetailsSheetProps) {
   const [showEnrollModal, setShowEnrollModal] = useState(false)
   const [student, setStudent] = useState<any>(null)
   const [loading, setLoading] = useState(false)
+  const [editGuardianRelation, setEditGuardianRelation] = useState<any | null>(null)
+  const [removeGuardianId, setRemoveGuardianId] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchStudent() {
@@ -50,6 +54,7 @@ export function StudentDetailsSheet({
         .select(`
           *,
           student_guardians(
+            id,
             relationship,
             is_primary,
             guardian:guardians(*)
@@ -183,7 +188,7 @@ export function StudentDetailsSheet({
                     {student.student_guardians.map((sg: any) => (
                       <div key={sg.guardian.id} className="p-3 rounded-lg border bg-muted/50">
                         <div className="flex items-start justify-between">
-                          <div>
+                          <div className="flex-1">
                             <p className="font-medium">
                               {sg.guardian.first_name} {sg.guardian.last_name}
                               {sg.is_primary && (
@@ -196,6 +201,21 @@ export function StudentDetailsSheet({
                             <p className="text-sm text-muted-foreground">{sg.guardian.phone}</p>
                             {sg.guardian.email && <p className="text-sm text-muted-foreground">{sg.guardian.email}</p>}
                           </div>
+                          {userRole === "admin" && (
+                            <div className="flex gap-2">
+                              <Button variant="ghost" size="sm" onClick={() => setEditGuardianRelation(sg)}>
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setRemoveGuardianId(sg.id)}
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -261,6 +281,26 @@ export function StudentDetailsSheet({
           classes={classes}
           open={showEnrollModal}
           onOpenChange={setShowEnrollModal}
+        />
+      )}
+
+      {editGuardianRelation && (
+        <EditGuardianRelationDialog
+          relation={editGuardianRelation}
+          open={!!editGuardianRelation}
+          onOpenChange={(open) => {
+            if (!open) setEditGuardianRelation(null)
+          }}
+        />
+      )}
+
+      {removeGuardianId && (
+        <RemoveGuardianDialog
+          relationId={removeGuardianId}
+          open={!!removeGuardianId}
+          onOpenChange={(open) => {
+            if (!open) setRemoveGuardianId(null)
+          }}
         />
       )}
     </>
