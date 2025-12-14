@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Search, Trash2 } from "lucide-react"
+import { Search, Trash2, Pencil } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -63,6 +63,8 @@ export function StudentsClientPage({
       )
     }
 
+    console.log("[v0] User role:", userRole)
+
     return (
       <Table>
         <TableHeader>
@@ -97,16 +99,22 @@ export function StudentsClientPage({
                     <Button variant="ghost" size="sm" onClick={() => setSelectedStudentId(student.id)}>
                       View
                     </Button>
-                    {userRole === "admin" && (
+                    {(userRole === "admin" || userRole === "super_admin") && (
                       <>
-                        <Button variant="ghost" size="sm" onClick={() => setEditStudent(student)}>
-                          Edit
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setEditStudent(student)}
+                          title="Edit Student"
+                        >
+                          <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
                           onClick={() => setDeleteStudentId(student.id)}
-                          className="text-destructive hover:text-destructive"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          title="Delete Student"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

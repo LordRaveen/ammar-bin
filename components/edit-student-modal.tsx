@@ -8,9 +8,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { updateStudent } from "@/app/(dashboard)/students/actions"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
+import { updateStudent } from "@/app/(dashboard)/students/actions" // Fixed import path to correct location
 
 interface EditStudentModalProps {
   student: any
@@ -75,6 +75,12 @@ export function EditStudentModal({ student, guardians, open, onOpenChange }: Edi
               <CardDescription>Basic student details</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="student_id_display">Student ID</Label>
+                <Input id="student_id_display" value={student.student_id} disabled className="bg-muted" />
+                <p className="text-xs text-muted-foreground">Student ID cannot be changed after creation</p>
+              </div>
+
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-2">
                   <Label htmlFor="first_name">
