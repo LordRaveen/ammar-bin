@@ -297,10 +297,12 @@ export function StudentsClientPage({
 
               <TabsContent value="enrolled" className="mt-4">
                 {renderStudentTable(enrolledStudents, "No enrolled students found.")}
+                {renderPagination()}
               </TabsContent>
 
               <TabsContent value="not-enrolled" className="mt-4">
                 {renderStudentTable(notEnrolledStudents, "All students are enrolled in classes.")}
+                {renderPagination()}
               </TabsContent>
             </Tabs>
           </CardContent>

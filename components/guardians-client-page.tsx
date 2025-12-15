@@ -44,7 +44,7 @@ export function GuardiansClientPage({
   const [editGuardianId, setEditGuardianId] = useState<string | null>(null)
   const [deleteGuardianId, setDeleteGuardianId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState(initialSearch || "")
-  const [guardians, setGuardians] = useState(initialGuardians)
+  const guardians = initialGuardians
 
   const totalPages = Math.ceil(totalCount / pageSize)
 
@@ -61,24 +61,14 @@ export function GuardiansClientPage({
     router.push(`?${params.toString()}`)
   }
 
-  const filteredGuardians = guardians.filter((guardian) => {
-    if (!searchTerm) return true
-    const search = searchTerm.toLowerCase()
-    return (
-      guardian.first_name?.toLowerCase().includes(search) ||
-      guardian.last_name?.toLowerCase().includes(search) ||
-      guardian.phone?.toLowerCase().includes(search) ||
-      guardian.email?.toLowerCase().includes(search)
-    )
-  })
+  const filteredGuardians = guardians
 
   const handleEditSuccess = () => {
     window.location.reload()
   }
 
   const handleDeleteSuccess = () => {
-    setGuardians((prev) => prev.filter((g) => g.id !== deleteGuardianId))
-    setDeleteGuardianId(null)
+    window.location.reload()
   }
 
   const renderPagination = () => {
