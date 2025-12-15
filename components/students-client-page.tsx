@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Search, Trash2, Pencil } from "lucide-react"
@@ -12,6 +13,16 @@ import { RegisterStudentModal } from "@/components/register-student-modal"
 import { StudentDetailsSheet } from "@/components/student-details-sheet"
 import { DeleteStudentDialog } from "@/components/delete-student-dialog"
 import { EditStudentModal } from "@/components/edit-student-modal"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface StudentsClientPageProps {
   initialStudents: any[]
@@ -20,6 +31,9 @@ interface StudentsClientPageProps {
   terms: any[]
   classes: any[]
   userRole: string
+  totalCount: number
+  currentPage: number
+  pageSize: number
 }
 
 export function StudentsClientPage({
@@ -29,12 +43,32 @@ export function StudentsClientPage({
   terms,
   classes,
   userRole,
+  totalCount,
+  currentPage,
+  pageSize,
 }: StudentsClientPageProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [deleteStudentId, setDeleteStudentId] = useState<string | null>(null)
   const [editStudent, setEditStudent] = useState<any | null>(null)
   const allStudents = initialStudents
+
+  const totalPages = Math.ceil(totalCount / pageSize)
+
+  const handlePageChange = (page: number) => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set("page", page.toString())
+    router.push(`?${params.toString()}`)
+  }
+
+  const handlePageSizeChange = (size: string) => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set("pageSize", size)
+    params.set("page", "1") // Reset to first page
+    router.push(`?${params.toString()}`)
+  }
 
   const filteredStudents = allStudents.filter((student) => {
     if (!searchTerm) return true
@@ -62,8 +96,6 @@ export function StudentsClientPage({
         </div>
       )
     }
-
-    console.log("[v0] User role:", userRole)
 
     return (
       <Table>
@@ -130,6 +162,88 @@ export function StudentsClientPage({
     )
   }
 
+  const renderPagination = () => {
+    if (totalPages <= 1) return null
+
+    const getPageNumbers = () => {
+      const pages = []
+      const showEllipsis = totalPages > 7
+
+      if (!showEllipsis) {
+        for (let i = 1; i <= totalPages; i++) {
+          pages.push(i)
+        }
+      } else {
+        if (currentPage <= 3) {
+          pages.push(1, 2, 3, 4, "ellipsis", totalPages)
+        } else if (currentPage >= totalPages - 2) {
+          pages.push(1, "ellipsis", totalPages - 3, totalPages - 2, totalPages - 1, totalPages)
+        } else {
+          pages.push(1, "ellipsis", currentPage - 1, currentPage, currentPage + 1, "ellipsis", totalPages)
+        }
+      }
+
+      return pages
+    }
+
+    return (
+      <div className="flex items-center justify-between mt-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount}{" "}
+            students
+          </span>
+          <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
+            <SelectTrigger className="w-24">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[10, 20, 50, 100].map((size) => (
+                <SelectItem key={size} value={size.toString()}>
+                  {size} / page
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+                className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              />
+            </PaginationItem>
+
+            {getPageNumbers().map((page, index) => (
+              <PaginationItem key={index}>
+                {page === "ellipsis" ? (
+                  <PaginationEllipsis />
+                ) : (
+                  <PaginationLink
+                    onClick={() => handlePageChange(page as number)}
+                    isActive={currentPage === page}
+                    className="cursor-pointer"
+                  >
+                    {page}
+                  </PaginationLink>
+                )}
+              </PaginationItem>
+            ))}
+
+            <PaginationItem>
+              <PaginationNext
+                onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+                className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
+    )
+  }
+
   return (
     <>
       <div className="flex flex-1 flex-col gap-4">
@@ -178,6 +292,7 @@ export function StudentsClientPage({
                   filteredStudents,
                   "No students registered yet. Register your first student to get started.",
                 )}
+                {renderPagination()}
               </TabsContent>
 
               <TabsContent value="enrolled" className="mt-4">
