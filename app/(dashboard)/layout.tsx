@@ -1,8 +1,10 @@
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
-import { AppSidebar } from '@/components/app-sidebar'
-import { AppHeader } from '@/components/app-header'
-import { requireAuth } from '@/lib/auth/get-user'
-import { createServerClient } from '@/lib/supabase/server'
+import type React from "react"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { AppSidebar } from "@/components/app-sidebar"
+import { AppHeader } from "@/components/app-header"
+import { requireAuth } from "@/lib/auth/get-user"
+import { createServerClient } from "@/lib/supabase/server"
+import { SessionTimeoutWrapper } from "@/components/session-timeout-wrapper"
 
 export default async function AuthenticatedLayout({
   children,
@@ -14,21 +16,21 @@ export default async function AuthenticatedLayout({
 
   let userName: string | undefined
 
-  if (authUser.role === 'teacher' || authUser.role === 'admin' || authUser.role === 'super_admin') {
+  if (authUser.role === "teacher" || authUser.role === "admin" || authUser.role === "super_admin") {
     const { data: teacher } = await supabase
-      .from('teachers')
-      .select('first_name, last_name')
-      .eq('user_id', authUser.id)
+      .from("teachers")
+      .select("first_name, last_name")
+      .eq("user_id", authUser.id)
       .maybeSingle()
 
     if (teacher) {
       userName = `${teacher.first_name} ${teacher.last_name}`
     }
-  } else if (authUser.role === 'parent') {
+  } else if (authUser.role === "parent") {
     const { data: guardian } = await supabase
-      .from('guardians')
-      .select('first_name, last_name')
-      .eq('user_id', authUser.id)
+      .from("guardians")
+      .select("first_name, last_name")
+      .eq("user_id", authUser.id)
       .maybeSingle()
 
     if (guardian) {
@@ -38,18 +40,20 @@ export default async function AuthenticatedLayout({
 
   const user = {
     id: authUser.id,
-    email: authUser.email || '',
+    email: authUser.email || "",
     name: userName,
     role: authUser.role,
   }
 
   return (
-    <SidebarProvider>
-      <AppSidebar user={user} />
-      <SidebarInset>
-        <AppHeader />
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
-      </SidebarInset>
-    </SidebarProvider>
+    <SessionTimeoutWrapper>
+      <SidebarProvider>
+        <AppSidebar user={user} />
+        <SidebarInset>
+          <AppHeader />
+          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
+        </SidebarInset>
+      </SidebarProvider>
+    </SessionTimeoutWrapper>
   )
 }
