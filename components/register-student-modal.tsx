@@ -15,8 +15,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus } from "lucide-react"
+import { Plus, Loader2 } from "lucide-react"
 import { registerStudent } from "@/app/(dashboard)/students/actions"
+import { createGuardian } from "@/app/(dashboard)/guardians/actions"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 interface RegisterStudentModalProps {
@@ -28,9 +29,12 @@ interface RegisterStudentModalProps {
   }>
 }
 
-export function RegisterStudentModal({ guardians }: RegisterStudentModalProps) {
+export function RegisterStudentModal({ guardians: initialGuardians }: RegisterStudentModalProps) {
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [showAddGuardian, setShowAddGuardian] = useState(false)
+  const [guardianLoading, setGuardianLoading] = useState(false)
+  const [guardians, setGuardians] = useState(initialGuardians)
   const router = useRouter()
 
   async function handleSubmit(formData: FormData) {
@@ -43,6 +47,28 @@ export function RegisterStudentModal({ guardians }: RegisterStudentModalProps) {
       console.error("Error registering student:", error)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  async function handleAddGuardian(formData: FormData) {
+    setGuardianLoading(true)
+    try {
+      const newGuardian = await createGuardian(formData)
+      // Add the newly created guardian to the list
+      setGuardians([
+        ...guardians,
+        {
+          id: newGuardian.id,
+          first_name: newGuardian.first_name,
+          last_name: newGuardian.last_name,
+          phone: newGuardian.phone,
+        },
+      ])
+      setShowAddGuardian(false)
+    } catch (error) {
+      console.error("Error creating guardian:", error)
+    } finally {
+      setGuardianLoading(false)
     }
   }
 
@@ -207,10 +233,104 @@ export function RegisterStudentModal({ guardians }: RegisterStudentModalProps) {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  <Button type="button" variant="outline" onClick={() => setShowAddGuardian(true)} className="w-full">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add New Guardian
+                  </Button>
                 </>
               ) : (
-                <div className="text-sm text-muted-foreground">
-                  No guardians registered yet. Register a guardian first.
+                <div className="text-sm text-muted-foreground mb-4">
+                  No guardians registered yet. Add one using the button below.
+                </div>
+              )}
+
+              {showAddGuardian && (
+                <div className="border-t pt-4 mt-4">
+                  <h4 className="font-semibold mb-4">Add New Guardian</h4>
+                  <form action={handleAddGuardian} className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="g_first_name">
+                          First Name <span className="text-destructive">*</span>
+                        </Label>
+                        <Input id="g_first_name" name="first_name" placeholder="Ahmad" required />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="g_middle_name">Middle Name</Label>
+                        <Input id="g_middle_name" name="middle_name" placeholder="Muhammad" />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="g_last_name">
+                          Last Name <span className="text-destructive">*</span>
+                        </Label>
+                        <Input id="g_last_name" name="last_name" placeholder="Ibrahim" required />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="g_email">Email</Label>
+                        <Input id="g_email" name="email" type="email" placeholder="ahmad@example.com" />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="g_phone">
+                          Phone Number <span className="text-destructive">*</span>
+                        </Label>
+                        <Input id="g_phone" name="phone" type="tel" placeholder="08012345678" required />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="g_address">
+                        Address <span className="text-destructive">*</span>
+                      </Label>
+                      <Input id="g_address" name="address" placeholder="No 1, Gwamna Awan Road, Kaduna" required />
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="g_occupation">Occupation</Label>
+                        <Input id="g_occupation" name="occupation" placeholder="Business Owner" />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="g_relationship_type">
+                          Relationship Type <span className="text-destructive">*</span>
+                        </Label>
+                        <Select name="relationship_type" required>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select relationship" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Father">Father</SelectItem>
+                            <SelectItem value="Mother">Mother</SelectItem>
+                            <SelectItem value="Guardian">Guardian</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button type="submit" disabled={guardianLoading} className="flex-1">
+                        {guardianLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Creating...
+                          </>
+                        ) : (
+                          "Create Guardian"
+                        )}
+                      </Button>
+                      <Button type="button" variant="outline" onClick={() => setShowAddGuardian(false)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
                 </div>
               )}
             </CardContent>
