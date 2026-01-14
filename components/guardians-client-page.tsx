@@ -44,6 +44,8 @@ export function GuardiansClientPage({
   const [editGuardianId, setEditGuardianId] = useState<string | null>(null)
   const [deleteGuardianId, setDeleteGuardianId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState(initialSearch || "")
+  const [portalFilter, setPortalFilter] = useState<string>("all")
+  const [occupationFilter, setOccupationFilter] = useState<string>("all")
   const guardians = initialGuardians
 
   const totalPages = Math.ceil(totalCount / pageSize)
@@ -57,6 +59,18 @@ export function GuardiansClientPage({
   const handlePageSizeChange = (size: string) => {
     const params = new URLSearchParams(searchParams.toString())
     params.set("pageSize", size)
+    params.set("page", "1")
+    router.push(`?${params.toString()}`)
+  }
+
+  const handleSearch = (value: string) => {
+    setSearchTerm(value)
+    const params = new URLSearchParams(searchParams.toString())
+    if (value) {
+      params.set("search", value)
+    } else {
+      params.delete("search")
+    }
     params.set("page", "1")
     router.push(`?${params.toString()}`)
   }
@@ -179,9 +193,19 @@ export function GuardiansClientPage({
                     placeholder="Search by name, phone, or email..."
                     className="pl-8"
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => handleSearch(e.target.value)}
                   />
                 </div>
+                <Select value={portalFilter} onValueChange={setPortalFilter}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Portal Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="active">Portal Active</SelectItem>
+                    <SelectItem value="inactive">Portal Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -196,6 +220,7 @@ export function GuardiansClientPage({
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">SN</TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Relationship Type</TableHead>
                       <TableHead>Phone</TableHead>
@@ -206,8 +231,15 @@ export function GuardiansClientPage({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredGuardians.map((guardian: any) => (
-                      <TableRow key={guardian.id}>
+                    {filteredGuardians.map((guardian: any, index: number) => (
+                      <TableRow
+                        key={guardian.id}
+                        onClick={() => setSelectedGuardianId(guardian.id)}
+                        className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      >
+                        <TableCell className="font-medium text-muted-foreground">
+                          {(currentPage - 1) * pageSize + index + 1}
+                        </TableCell>
                         <TableCell className="font-medium">
                           {guardian.first_name} {guardian.last_name}
                         </TableCell>
@@ -227,13 +259,24 @@ export function GuardiansClientPage({
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => setSelectedGuardianId(guardian.id)}>
-                              View
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => setEditGuardianId(guardian.id)}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setEditGuardianId(guardian.id)
+                              }}
+                            >
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => setDeleteGuardianId(guardian.id)}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setDeleteGuardianId(guardian.id)
+                              }}
+                            >
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </div>
