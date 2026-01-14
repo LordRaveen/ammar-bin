@@ -26,6 +26,7 @@ import { AssignTeacherModal } from "@/components/assign-teacher-modal"
 import { ReassignTeacherModal } from "@/components/reassign-teacher-modal"
 import { removeStudentFromClass, removeSubjectFromClass } from "./actions"
 import { ScoreEntryInterface } from "@/components/score-entry-interface"
+import { MarkAttendanceInterface } from "@/components/mark-attendance-interface"
 import { isAdmin } from "@/lib/auth/role-redirect"
 
 export const dynamic = "force-dynamic"
@@ -756,14 +757,12 @@ export default function ClassDetailsPage() {
         </TabsContent>
 
         <TabsContent value="attendance">
-          <Card>
-            <CardHeader>
-              <CardTitle>Attendance Records</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Attendance tracking will be implemented here</p>
-            </CardContent>
-          </Card>
+          <MarkAttendanceInterface
+            classId={classId}
+            sessionId={selectedSession}
+            termId={selectedTerm}
+            students={enrolledStudents}
+          />
         </TabsContent>
 
         <TabsContent value="settings">
