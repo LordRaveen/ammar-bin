@@ -116,6 +116,7 @@ export function StudentsClientPage({
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-12">SN</TableHead>
             <TableHead>Student ID</TableHead>
             <TableHead>Name</TableHead>
             <TableHead>Gender</TableHead>
@@ -125,11 +126,16 @@ export function StudentsClientPage({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {students.map((student: any) => {
+          {students.map((student: any, index: number) => {
             const activeEnrollment = student.student_enrollments?.find((e: any) => e.is_active)
 
             return (
-              <TableRow key={student.id}>
+              <TableRow
+                key={student.id}
+                onClick={() => setSelectedStudentId(student.id)}
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
+              >
+                <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
                 <TableCell className="font-medium">{student.student_id}</TableCell>
                 <TableCell>
                   {student.first_name} {student.last_name}
@@ -143,15 +149,15 @@ export function StudentsClientPage({
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
-                    <Button variant="ghost" size="sm" onClick={() => setSelectedStudentId(student.id)}>
-                      View
-                    </Button>
                     {(userRole === "admin" || userRole === "super_admin") && (
                       <>
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => setEditStudent(student)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setEditStudent(student)
+                          }}
                           title="Edit Student"
                         >
                           <Pencil className="h-4 w-4" />
@@ -159,7 +165,10 @@ export function StudentsClientPage({
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => setDeleteStudentId(student.id)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setDeleteStudentId(student.id)
+                          }}
                           className="text-destructive hover:text-destructive hover:bg-destructive/10"
                           title="Delete Student"
                         >
