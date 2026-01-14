@@ -1,5 +1,3 @@
-"use client"
-
 import { requireAdmin } from "@/lib/auth/get-user"
 import { createClient } from "@/lib/supabase/server"
 import Link from "next/link"
@@ -172,8 +170,8 @@ export default async function ClassesPage({
               ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {section.classes.map((classItem) => (
-                    <div key={classItem.id} className="group">
-                      <Link href={`/classes/${classItem.id}`}>
+                    <div key={classItem.id} className="group relative">
+                      <Link href={`/classes/${classItem.id}`} className="block h-full">
                         <Card className="hover:border-primary transition-colors cursor-pointer h-full flex flex-col">
                           <CardContent className="p-6 flex flex-col flex-1">
                             <div className="space-y-4 flex-1">
@@ -204,19 +202,19 @@ export default async function ClassesPage({
                                 </div>
                               </div>
                             </div>
-
-                            {!classItem.teacher && (
-                              <div className="mt-4 pt-4 border-t" onClick={(e) => e.stopPropagation()}>
-                                <AssignTeacherClientWrapper
-                                  classId={classItem.id}
-                                  sessionId="default"
-                                  teachers={teachersDataForModal || []}
-                                />
-                              </div>
-                            )}
                           </CardContent>
                         </Card>
                       </Link>
+
+                      {!classItem.teacher && (
+                        <div className="absolute bottom-4 left-4 right-4 z-10">
+                          <AssignTeacherClientWrapper
+                            classId={classItem.id}
+                            sessionId="default"
+                            teachers={teachersDataForModal || []}
+                          />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
