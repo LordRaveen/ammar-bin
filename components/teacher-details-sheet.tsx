@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator"
 import { Loader2, Mail, Phone, MapPin, Briefcase, Calendar } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
-import { AssignTeacherModal } from "@/components/assign-teacher-modal"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
 interface TeacherDetailsSheetProps {
   teacherId: string | null
@@ -191,14 +191,60 @@ export function TeacherDetailsSheet({ teacherId, open, onOpenChange }: TeacherDe
       </Sheet>
 
       {teacher && (
-        <AssignTeacherModal
-          open={assignClassModalOpen}
-          onOpenChange={setAssignClassModalOpen}
-          classId={availableClasses[0]?.id || ""}
-          sessionId="default"
-          teachers={[teacher]}
-          type="class"
-        />
+        <Dialog open={assignClassModalOpen} onOpenChange={setAssignClassModalOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Assign Classes</DialogTitle>
+              <DialogDescription>Select a class to assign to {teacher.first_name}</DialogDescription>
+            </DialogHeader>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault()
+                const selectedClassElement = (e.target as HTMLFormElement).querySelector(
+                  'input[name="classId"]:checked',
+                ) as HTMLInputElement
+                if (!selectedClassElement) return
+
+                try {
+                  const { assignClassTeacher } = await import("@/app/(dashboard)/classes/[id]/actions")
+                  await assignClassTeacher(selectedClassElement.value, teacher.id, "default")
+                  setAssignClassModalOpen(false)
+                  window.location.reload()
+                } catch (error) {
+                  console.error("Failed to assign class:", error)
+                  alert("Failed to assign class")
+                }
+              }}
+              className="space-y-4"
+            >
+              <div className="space-y-3">
+                {availableClasses.length > 0 ? (
+                  availableClasses.map((cls: any) => (
+                    <label
+                      key={cls.id}
+                      className="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-accent"
+                    >
+                      <input type="radio" name="classId" value={cls.id} required />
+                      <span>
+                        {cls.name} {cls.section?.name && `- ${cls.section.name}`}
+                      </span>
+                    </label>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">No available classes to assign</p>
+                )}
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setAssignClassModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={availableClasses.length === 0}>
+                  Assign Class
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       )}
     </>
   )
