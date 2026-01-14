@@ -1,3 +1,5 @@
+"use client"
+
 import { requireAdmin } from "@/lib/auth/get-user"
 import { createClient } from "@/lib/supabase/server"
 import Link from "next/link"
@@ -204,7 +206,7 @@ export default async function ClassesPage({
                             </div>
 
                             {!classItem.teacher && (
-                              <div className="mt-4 pt-4 border-t">
+                              <div className="mt-4 pt-4 border-t" onClick={(e) => e.stopPropagation()}>
                                 <AssignTeacherClientWrapper
                                   classId={classItem.id}
                                   sessionId="default"
