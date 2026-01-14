@@ -1,18 +1,14 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { assignClassTeacher, assignSubjectTeacher } from "@/app/(dashboard)/classes/[id]/actions"
-import { useRouter } from 'next/navigation'
+import { useRouter } from "next/navigation"
 
 interface Teacher {
   id: string
@@ -55,6 +51,10 @@ export function AssignTeacherModal({
 
     setLoading(true)
     try {
+      if (!sessionId) {
+        throw new Error("No active session found. Please ensure the current academic session is set.")
+      }
+
       if (type === "class") {
         await assignClassTeacher(classId, teacherId, sessionId)
       } else {
@@ -65,8 +65,9 @@ export function AssignTeacherModal({
       setSelectedSubjectId("")
       router.refresh()
     } catch (error) {
-      console.error("Failed to assign teacher:", error)
-      alert("Failed to assign teacher")
+      console.error("[v0] Failed to assign teacher:", error)
+      const errorMessage = error instanceof Error ? error.message : "Failed to assign teacher"
+      alert(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -76,13 +77,9 @@ export function AssignTeacherModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>
-            {type === "class" ? "Assign Class Teacher" : "Assign Subject Teacher"}
-          </DialogTitle>
+          <DialogTitle>{type === "class" ? "Assign Class Teacher" : "Assign Subject Teacher"}</DialogTitle>
           <DialogDescription>
-            {type === "class"
-              ? "Select a teacher to be the class teacher"
-              : "Select a teacher for a specific subject"}
+            {type === "class" ? "Select a teacher to be the class teacher" : "Select a teacher for a specific subject"}
           </DialogDescription>
         </DialogHeader>
 

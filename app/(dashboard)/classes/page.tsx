@@ -46,6 +46,16 @@ export default async function ClassesPage({
   await requireAdmin()
   const supabase = await createClient()
 
+  const { data: currentSession } = await supabase
+    .from("sessions")
+    .select("id")
+    .eq("is_active", true)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single()
+
+  const sessionId = currentSession?.id || ""
+
   const { data: sectionsData, error: sectionsError } = await supabase
     .from("sections")
     .select("*")
@@ -210,7 +220,7 @@ export default async function ClassesPage({
                         <div className="absolute bottom-4 left-4 right-4 z-10">
                           <AssignTeacherClientWrapper
                             classId={classItem.id}
-                            sessionId="default"
+                            sessionId={sessionId}
                             teachers={teachersDataForModal || []}
                           />
                         </div>
