@@ -21,6 +21,7 @@ export function TeacherDetailsSheet({ teacherId, open, onOpenChange }: TeacherDe
   const [loading, setLoading] = useState(false)
   const [assignClassModalOpen, setAssignClassModalOpen] = useState(false)
   const [availableClasses, setAvailableClasses] = useState<any[]>([])
+  const [currentSession, setCurrentSession] = useState<string>("")
 
   useEffect(() => {
     async function fetchTeacher() {
@@ -31,6 +32,12 @@ export function TeacherDetailsSheet({ teacherId, open, onOpenChange }: TeacherDe
 
       setLoading(true)
       const supabase = createClient()
+
+      const { data: sessionData } = await supabase.from("sessions").select("id").eq("is_active", true).single()
+
+      if (sessionData) {
+        setCurrentSession(sessionData.id)
+      }
 
       const { data, error } = await supabase
         .from("teachers")
@@ -209,12 +216,13 @@ export function TeacherDetailsSheet({ teacherId, open, onOpenChange }: TeacherDe
 
                 try {
                   const { assignClassTeacher } = await import("@/app/(dashboard)/classes/[id]/actions")
-                  await assignClassTeacher(selectedClassElement.value, teacher.id, "default")
+                  await assignClassTeacher(selectedClassElement.value, teacher.id, currentSession)
                   setAssignClassModalOpen(false)
                   window.location.reload()
                 } catch (error) {
-                  console.error("Failed to assign class:", error)
-                  alert("Failed to assign class")
+                  console.error("[v0] Failed to assign class:", error)
+                  const errorMessage = error instanceof Error ? error.message : "Unknown error"
+                  alert(`Failed to assign class: ${errorMessage}`)
                 }
               }}
               className="space-y-4"
