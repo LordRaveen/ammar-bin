@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Search, CheckCircle2, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
@@ -17,68 +16,64 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 interface GuardiansClientPageProps {
   initialGuardians: any[]
-  initialSearch?: string
-  totalCount: number
-  currentPage: number
-  pageSize: number
 }
 
-export function GuardiansClientPage({
-  initialGuardians,
-  initialSearch,
-  totalCount,
-  currentPage,
-  pageSize,
-}: GuardiansClientPageProps) {
-  const router = useRouter()
-  const searchParams = useSearchParams()
+export function GuardiansClientPage({ initialGuardians }: GuardiansClientPageProps) {
+  const [guardians, setGuardians] = useState(initialGuardians)
   const [selectedGuardianId, setSelectedGuardianId] = useState<string | null>(null)
   const [editGuardianId, setEditGuardianId] = useState<string | null>(null)
   const [deleteGuardianId, setDeleteGuardianId] = useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = useState(initialSearch || "")
-  const [portalFilter, setPortalFilter] = useState<string>("all")
-  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
-  const [guardians, setGuardians] = useState(initialGuardians)
-  const [isLoading, setIsLoading] = useState(false)
 
-  const totalPages = Math.ceil(totalCount / pageSize)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [portalFilter, setPortalFilter] = useState<string>("all")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [rowsPerPage, setRowsPerPage] = useState(20)
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
+
+  const filteredGuardians = guardians.filter((guardian) => {
+    let matches = true
+
+    // Search filter
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase()
+      matches =
+        matches &&
+        (guardian.first_name?.toLowerCase().includes(search) ||
+          guardian.last_name?.toLowerCase().includes(search) ||
+          guardian.phone?.includes(search) ||
+          guardian.email?.toLowerCase().includes(search))
+    }
+
+    // Portal status filter
+    if (portalFilter !== "all") {
+      if (portalFilter === "active") {
+        matches = matches && !!guardian.user_id
+      } else if (portalFilter === "inactive") {
+        matches = matches && !guardian.user_id
+      }
+    }
+
+    return matches
+  })
+
+  const totalPages = Math.ceil(filteredGuardians.length / rowsPerPage)
+  const startIndex = (currentPage - 1) * rowsPerPage
+  const endIndex = startIndex + rowsPerPage
+  const paginatedGuardians = filteredGuardians.slice(startIndex, endIndex)
 
   useEffect(() => {
-    setGuardians(initialGuardians)
-    setRowSelection({}) // Reset selection when data changes
-  }, [initialGuardians, searchParams])
-
-  const handlePageChange = (page: number) => {
-    setIsLoading(true)
-    const params = new URLSearchParams(searchParams.toString())
-    params.set("page", page.toString())
-    router.push(`?${params.toString()}`)
-  }
+    setCurrentPage(1)
+    setRowSelection({})
+  }, [searchTerm, portalFilter])
 
   const handlePageSizeChange = (size: string) => {
-    setIsLoading(true)
-    const params = new URLSearchParams(searchParams.toString())
-    params.set("pageSize", size)
-    params.set("page", "1")
-    router.push(`?${params.toString()}`)
-  }
-
-  const handleSearch = (value: string) => {
-    setSearchTerm(value)
-    setIsLoading(true)
-    const params = new URLSearchParams(searchParams.toString())
-    if (value) {
-      params.set("search", value)
-    } else {
-      params.delete("search")
-    }
-    params.set("page", "1")
-    router.push(`?${params.toString()}`)
+    setRowsPerPage(Number.parseInt(size))
+    setCurrentPage(1)
   }
 
   const handleSelectAll = (checked: boolean) => {
     const newSelection: Record<string, boolean> = {}
-    guardians.forEach((guardian) => {
+    paginatedGuardians.forEach((guardian) => {
       newSelection[guardian.id] = checked
     })
     setRowSelection(newSelection)
@@ -92,9 +87,7 @@ export function GuardiansClientPage({
   }
 
   const selectedCount = Object.values(rowSelection).filter(Boolean).length
-  const isAllSelected = guardians.length > 0 && guardians.every((g) => rowSelection[g.id])
-
-  const filteredGuardians = guardians
+  const isAllSelected = paginatedGuardians.length > 0 && paginatedGuardians.every((g) => rowSelection[g.id])
 
   const handleEditSuccess = () => {
     window.location.reload()
@@ -111,11 +104,11 @@ export function GuardiansClientPage({
       <div className="flex items-center justify-between gap-4 mt-6 px-2">
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground whitespace-nowrap">
-            Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount}{" "}
-            guardians
+            Showing {filteredGuardians.length === 0 ? 0 : startIndex + 1} to{" "}
+            {Math.min(endIndex, filteredGuardians.length)} of {filteredGuardians.length} guardians
           </span>
           {selectedCount > 0 && <span className="text-sm text-muted-foreground">({selectedCount} selected)</span>}
-          <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
+          <Select value={rowsPerPage.toString()} onValueChange={handlePageSizeChange}>
             <SelectTrigger className="w-28">
               <SelectValue />
             </SelectTrigger>
@@ -133,7 +126,7 @@ export function GuardiansClientPage({
           <Button
             variant="outline"
             size="icon"
-            onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -145,7 +138,7 @@ export function GuardiansClientPage({
           <Button
             variant="outline"
             size="icon"
-            onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage === totalPages}
           >
             <ChevronRight className="h-4 w-4" />
@@ -182,7 +175,7 @@ export function GuardiansClientPage({
                     placeholder="Search by name, phone, or email..."
                     className="pl-8"
                     value={searchTerm}
-                    onChange={(e) => handleSearch(e.target.value)}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
                 <Select value={portalFilter} onValueChange={setPortalFilter}>
@@ -198,7 +191,7 @@ export function GuardiansClientPage({
               </div>
             </div>
 
-            {!filteredGuardians || filteredGuardians.length === 0 ? (
+            {filteredGuardians.length === 0 ? (
               <div className="text-center py-6 text-muted-foreground">
                 {searchTerm
                   ? "No guardians found matching your search."
@@ -227,7 +220,7 @@ export function GuardiansClientPage({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredGuardians.map((guardian: any, index: number) => {
+                    {paginatedGuardians.map((guardian: any, index: number) => {
                       const isSelected = rowSelection[guardian.id] || false
                       return (
                         <TableRow
@@ -243,9 +236,7 @@ export function GuardiansClientPage({
                               aria-label="Select row"
                             />
                           </TableCell>
-                          <TableCell className="font-medium text-muted-foreground">
-                            {(currentPage - 1) * pageSize + index + 1}
-                          </TableCell>
+                          <TableCell className="font-medium text-muted-foreground">{startIndex + index + 1}</TableCell>
                           <TableCell className="font-medium">
                             {guardian.first_name} {guardian.last_name}
                           </TableCell>

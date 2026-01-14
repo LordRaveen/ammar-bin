@@ -26,6 +26,24 @@ export async function createClient() {
         }
       },
     },
+    global: {
+      fetch: (url, options) => {
+        return fetch(url, {
+          ...options,
+          // Don't throw on abort, just let it fail silently
+          signal: options?.signal,
+        }).catch((error) => {
+          if (error.name === "AbortError") {
+            // Return an empty response for aborted requests
+            return new Response(JSON.stringify({ data: null, error: null }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            })
+          }
+          throw error
+        })
+      },
+    },
   })
 }
 

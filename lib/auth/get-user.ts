@@ -52,6 +52,10 @@ export async function getUser(): Promise<AuthUser | null> {
       isActive: roleData.is_active,
     }
   } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      devLog.debug("Auth request aborted (navigation in progress)")
+      return null
+    }
     devLog.error("Error in getUser:", error)
     return null
   }

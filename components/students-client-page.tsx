@@ -1,7 +1,6 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Search, Trash2, Pencil, ChevronLeft, ChevronRight } from "lucide-react"
@@ -23,9 +22,6 @@ interface StudentsClientPageProps {
   terms: any[]
   classes: any[]
   userRole: string
-  totalCount: number
-  currentPage: number
-  pageSize: number
 }
 
 export function StudentsClientPage({
@@ -35,12 +31,8 @@ export function StudentsClientPage({
   terms,
   classes,
   userRole,
-  totalCount,
-  currentPage,
-  pageSize,
 }: StudentsClientPageProps) {
-  const router = useRouter()
-  const searchParams = useSearchParams()
+  const [students, setStudents] = useState(initialStudents)
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [genderFilter, setGenderFilter] = useState<string>("all")
@@ -48,24 +40,12 @@ export function StudentsClientPage({
   const [deleteStudentId, setDeleteStudentId] = useState<string | null>(null)
   const [editStudent, setEditStudent] = useState<any | null>(null)
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
-  const allStudents = initialStudents
 
-  const totalPages = Math.ceil(totalCount / pageSize)
+  const [currentPage, setCurrentPage] = useState<Record<string, number>>({ all: 1, enrolled: 1, "not-enrolled": 1 })
+  const [rowsPerPage, setRowsPerPage] = useState(20)
+  const [activeTab, setActiveTab] = useState("all")
 
-  const handlePageChange = (page: number) => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.set("page", page.toString())
-    router.push(`?${params.toString()}`)
-  }
-
-  const handlePageSizeChange = (size: string) => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.set("pageSize", size)
-    params.set("page", "1")
-    router.push(`?${params.toString()}`)
-  }
-
-  const filteredStudents = allStudents.filter((student) => {
+  const filteredStudents = students.filter((student) => {
     let matches = true
 
     if (searchTerm) {
@@ -91,14 +71,41 @@ export function StudentsClientPage({
   const enrolledStudents = filteredStudents.filter(
     (student) => student.student_enrollments && student.student_enrollments.length > 0,
   )
-
   const notEnrolledStudents = filteredStudents.filter(
     (student) => !student.student_enrollments || student.student_enrollments.length === 0,
   )
 
-  const handleSelectAll = (students: any[], checked: boolean) => {
-    const newSelection: Record<string, boolean> = { ...rowSelection }
-    students.forEach((student) => {
+  useEffect(() => {
+    setCurrentPage({ all: 1, enrolled: 1, "not-enrolled": 1 })
+    setRowSelection({})
+  }, [searchTerm, genderFilter, statusFilter])
+
+  const getTabData = () => {
+    let data = filteredStudents
+    if (activeTab === "enrolled") data = enrolledStudents
+    if (activeTab === "not-enrolled") data = notEnrolledStudents
+    return data
+  }
+
+  const tabData = getTabData()
+  const page = currentPage[activeTab] || 1
+  const totalPages = Math.ceil(tabData.length / rowsPerPage)
+  const startIndex = (page - 1) * rowsPerPage
+  const endIndex = startIndex + rowsPerPage
+  const paginatedStudents = tabData.slice(startIndex, endIndex)
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage((prev) => ({ ...prev, [activeTab]: newPage }))
+  }
+
+  const handlePageSizeChange = (size: string) => {
+    setRowsPerPage(Number.parseInt(size))
+    setCurrentPage({ all: 1, enrolled: 1, "not-enrolled": 1 })
+  }
+
+  const handleSelectAll = (checked: boolean) => {
+    const newSelection: Record<string, boolean> = {}
+    paginatedStudents.forEach((student) => {
       newSelection[student.id] = checked
     })
     setRowSelection(newSelection)
@@ -112,17 +119,22 @@ export function StudentsClientPage({
   }
 
   const selectedCount = Object.values(rowSelection).filter(Boolean).length
+  const isAllSelected = paginatedStudents.length > 0 && paginatedStudents.every((s) => rowSelection[s.id])
 
-  const renderStudentTable = (students: any[], emptyMessage: string, currentStudents: any[]) => {
-    if (!students || students.length === 0) {
+  const renderStudentTable = () => {
+    if (paginatedStudents.length === 0) {
       return (
         <div className="text-center py-6 text-muted-foreground">
-          {searchTerm ? "No students found matching your search." : emptyMessage}
+          {activeTab === "all" && searchTerm
+            ? "No students found matching your search."
+            : activeTab === "all"
+              ? "No students registered yet. Register your first student to get started."
+              : activeTab === "enrolled"
+                ? "No enrolled students found."
+                : "All students are enrolled in classes."}
         </div>
       )
     }
-
-    const isAllSelected = currentStudents.length > 0 && currentStudents.every((s) => rowSelection[s.id])
 
     return (
       <>
@@ -132,7 +144,7 @@ export function StudentsClientPage({
               <TableHead className="w-12">
                 <Checkbox
                   checked={isAllSelected}
-                  onCheckedChange={(checked) => handleSelectAll(currentStudents, !!checked)}
+                  onCheckedChange={(checked) => handleSelectAll(!!checked)}
                   aria-label="Select all"
                 />
               </TableHead>
@@ -146,7 +158,7 @@ export function StudentsClientPage({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {students.map((student: any, index: number) => {
+            {paginatedStudents.map((student: any, index: number) => {
               const activeEnrollment = student.student_enrollments?.find((e: any) => e.is_active)
               const isSelected = rowSelection[student.id] || false
 
@@ -164,7 +176,7 @@ export function StudentsClientPage({
                       aria-label="Select row"
                     />
                   </TableCell>
-                  <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
+                  <TableCell className="font-medium text-muted-foreground">{startIndex + index + 1}</TableCell>
                   <TableCell className="font-medium">{student.student_id}</TableCell>
                   <TableCell>
                     {student.first_name} {student.last_name}
@@ -218,18 +230,18 @@ export function StudentsClientPage({
     )
   }
 
-  const renderPagination = (students: any[]) => {
+  const renderPagination = () => {
     if (totalPages <= 1) return null
 
     return (
       <div className="flex items-center justify-between gap-4 mt-6 px-2">
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground whitespace-nowrap">
-            Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount}{" "}
-            students
+            Showing {tabData.length === 0 ? 0 : startIndex + 1} to {Math.min(endIndex, tabData.length)} of{" "}
+            {tabData.length} students
           </span>
           {selectedCount > 0 && <span className="text-sm text-muted-foreground">({selectedCount} selected)</span>}
-          <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
+          <Select value={rowsPerPage.toString()} onValueChange={handlePageSizeChange}>
             <SelectTrigger className="w-28">
               <SelectValue />
             </SelectTrigger>
@@ -247,20 +259,20 @@ export function StudentsClientPage({
           <Button
             variant="outline"
             size="icon"
-            onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
+            onClick={() => handlePageChange(Math.max(1, page - 1))}
+            disabled={page === 1}
           >
             <ChevronLeft className="h-4 w-4" />
             <span className="sr-only">Previous page</span>
           </Button>
           <span className="text-sm font-medium">
-            Page {currentPage} of {totalPages}
+            Page {page} of {totalPages}
           </span>
           <Button
             variant="outline"
             size="icon"
-            onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
+            onClick={() => handlePageChange(Math.min(totalPages, page + 1))}
+            disabled={page === totalPages}
           >
             <ChevronRight className="h-4 w-4" />
             <span className="sr-only">Next page</span>
@@ -328,7 +340,7 @@ export function StudentsClientPage({
               </div>
             </div>
 
-            <Tabs defaultValue="all" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="all">All Students ({filteredStudents.length})</TabsTrigger>
                 <TabsTrigger value="enrolled">Enrolled ({enrolledStudents.length})</TabsTrigger>
@@ -336,22 +348,18 @@ export function StudentsClientPage({
               </TabsList>
 
               <TabsContent value="all" className="mt-4">
-                {renderStudentTable(
-                  filteredStudents,
-                  "No students registered yet. Register your first student to get started.",
-                  filteredStudents,
-                )}
-                {renderPagination(filteredStudents)}
+                {renderStudentTable()}
+                {renderPagination()}
               </TabsContent>
 
               <TabsContent value="enrolled" className="mt-4">
-                {renderStudentTable(enrolledStudents, "No enrolled students found.", enrolledStudents)}
-                {renderPagination(enrolledStudents)}
+                {renderStudentTable()}
+                {renderPagination()}
               </TabsContent>
 
               <TabsContent value="not-enrolled" className="mt-4">
-                {renderStudentTable(notEnrolledStudents, "All students are enrolled in classes.", notEnrolledStudents)}
-                {renderPagination(notEnrolledStudents)}
+                {renderStudentTable()}
+                {renderPagination()}
               </TabsContent>
             </Tabs>
           </CardContent>
