@@ -1,14 +1,14 @@
 import { requireAdmin } from "@/lib/auth/get-user"
 import { createClient } from "@/lib/supabase/server"
 import Link from "next/link"
-import { IconUsers, IconBook, IconPlus } from "@tabler/icons-react"
+import { IconUsers, IconBook } from "@tabler/icons-react"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AddClassModal } from "@/components/add-class-modal"
 import { AddSectionModal } from "@/components/add-section-modal"
+import { AssignTeacherClientWrapper } from "@/components/assign-teacher-modal-client"
 
 export const dynamic = "force-dynamic"
 
@@ -120,6 +120,12 @@ export default async function ClassesPage({
 
   const defaultSection = searchParams.section || filteredSections[0]?.id || ""
 
+  const { data: teachersDataForModal } = await supabase
+    .from("teachers")
+    .select("id, first_name, middle_name, last_name, email")
+    .eq("status", "Active")
+    .order("first_name")
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -164,56 +170,52 @@ export default async function ClassesPage({
               ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {section.classes.map((classItem) => (
-                    <Link key={classItem.id} href={`/classes/${classItem.id}`}>
-                      <Card className="hover:border-primary transition-colors cursor-pointer h-full flex flex-col">
-                        <CardContent className="p-6 flex flex-col flex-1">
-                          <div className="space-y-4 flex-1">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <h3 className="font-bold text-lg">{classItem.name}</h3>
-                                {classItem.teacher ? (
-                                  <p className="text-muted-foreground text-sm">
-                                    {classItem.teacher.first_name} {classItem.teacher.last_name}
-                                  </p>
-                                ) : (
-                                  <p className="text-muted-foreground text-sm italic">No teacher assigned</p>
-                                )}
+                    <div key={classItem.id} className="group">
+                      <Link href={`/classes/${classItem.id}`}>
+                        <Card className="hover:border-primary transition-colors cursor-pointer h-full flex flex-col">
+                          <CardContent className="p-6 flex flex-col flex-1">
+                            <div className="space-y-4 flex-1">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <h3 className="font-bold text-lg">{classItem.name}</h3>
+                                  {classItem.teacher ? (
+                                    <p className="text-muted-foreground text-sm">
+                                      {classItem.teacher.first_name} {classItem.teacher.last_name}
+                                    </p>
+                                  ) : (
+                                    <p className="text-muted-foreground text-sm italic">No teacher assigned</p>
+                                  )}
+                                </div>
+                                <Badge variant="default" className="bg-green-500">
+                                  Active
+                                </Badge>
                               </div>
-                              <Badge variant="default" className="bg-green-500">
-                                Active
-                              </Badge>
+
+                              <div className="flex items-center gap-4 text-sm">
+                                <div className="flex items-center gap-1">
+                                  <IconUsers className="h-4 w-4" />
+                                  <span>Students: {classItem.student_count}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <IconBook className="h-4 w-4" />
+                                  <span>Subjects: {classItem.subject_count}</span>
+                                </div>
+                              </div>
                             </div>
 
-                            <div className="flex items-center gap-4 text-sm">
-                              <div className="flex items-center gap-1">
-                                <IconUsers className="h-4 w-4" />
-                                <span>Students: {classItem.student_count}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <IconBook className="h-4 w-4" />
-                                <span>Subjects: {classItem.subject_count}</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex gap-2 mt-4 pt-4 border-t">
-                            <Link href={`/classes/${classItem.id}`} className="flex-1">
-                              <Button variant="outline" size="sm" className="w-full bg-transparent">
-                                View Details
-                              </Button>
-                            </Link>
                             {!classItem.teacher && (
-                              <Link href={`/classes/${classItem.id}`} className="flex-1">
-                                <Button size="sm" className="w-full">
-                                  <IconPlus className="mr-1 h-4 w-4" />
-                                  Assign Teacher
-                                </Button>
-                              </Link>
+                              <div className="mt-4 pt-4 border-t">
+                                <AssignTeacherClientWrapper
+                                  classId={classItem.id}
+                                  sessionId="default"
+                                  teachers={teachersDataForModal || []}
+                                />
+                              </div>
                             )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </Link>
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    </div>
                   ))}
                 </div>
               )}
