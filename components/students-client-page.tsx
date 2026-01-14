@@ -51,6 +51,8 @@ export function StudentsClientPage({
   const searchParams = useSearchParams()
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
+  const [genderFilter, setGenderFilter] = useState<string>("all")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
   const [deleteStudentId, setDeleteStudentId] = useState<string | null>(null)
   const [editStudent, setEditStudent] = useState<any | null>(null)
   const allStudents = initialStudents
@@ -66,18 +68,31 @@ export function StudentsClientPage({
   const handlePageSizeChange = (size: string) => {
     const params = new URLSearchParams(searchParams.toString())
     params.set("pageSize", size)
-    params.set("page", "1") // Reset to first page
+    params.set("page", "1")
     router.push(`?${params.toString()}`)
   }
 
   const filteredStudents = allStudents.filter((student) => {
-    if (!searchTerm) return true
-    const search = searchTerm.toLowerCase()
-    return (
-      student.first_name?.toLowerCase().includes(search) ||
-      student.last_name?.toLowerCase().includes(search) ||
-      student.student_id?.toLowerCase().includes(search)
-    )
+    let matches = true
+
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase()
+      matches =
+        matches &&
+        (student.first_name?.toLowerCase().includes(search) ||
+          student.last_name?.toLowerCase().includes(search) ||
+          student.student_id?.toLowerCase().includes(search))
+    }
+
+    if (genderFilter !== "all") {
+      matches = matches && student.gender === genderFilter
+    }
+
+    if (statusFilter !== "all") {
+      matches = matches && student.status === statusFilter
+    }
+
+    return matches
   })
 
   const enrolledStudents = filteredStudents.filter(
@@ -187,14 +202,14 @@ export function StudentsClientPage({
     }
 
     return (
-      <div className="flex items-center justify-between mt-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">
+      <div className="flex items-center justify-between mt-6">
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-muted-foreground whitespace-nowrap">
             Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount}{" "}
             students
           </span>
           <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
-            <SelectTrigger className="w-24">
+            <SelectTrigger className="w-28">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -266,8 +281,8 @@ export function StudentsClientPage({
           </CardHeader>
           <CardContent>
             <div className="mb-4">
-              <div className="flex gap-2">
-                <div className="relative flex-1">
+              <div className="flex gap-2 flex-wrap">
+                <div className="relative flex-1 min-w-64">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="search"
@@ -277,6 +292,28 @@ export function StudentsClientPage({
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
+
+                <Select value={genderFilter} onValueChange={setGenderFilter}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Genders</SelectItem>
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
