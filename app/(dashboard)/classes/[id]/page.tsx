@@ -380,7 +380,7 @@ export default function ClassDetailsPage() {
         data: { user },
       } = await supabase.auth.getUser()
       if (user) {
-        const { data } = await supabase.from("users").select("role").eq("id", user.id).single()
+        const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id).single()
 
         if (data) {
           setUserRole(data.role)
