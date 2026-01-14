@@ -6,6 +6,7 @@ import { AcademicSessionTab } from "@/components/settings/academic-session-tab"
 import { FeeManagementTab } from "@/components/settings/fee-management-tab"
 import { GradingSystemTab } from "@/components/settings/grading-system-tab"
 import { FeeTemplatesTab } from "@/components/settings/fee-templates-tab"
+import { SubjectManagementTab } from "@/components/settings/subject-management-tab"
 
 export const dynamic = "force-dynamic"
 
@@ -21,6 +22,7 @@ export default async function SettingsPage() {
     { data: feeCategories },
     { data: classes },
     { data: gradingSchemes },
+    { data: subjects },
   ] = await Promise.all([
     supabase.from("school_settings").select("*").maybeSingle(),
     supabase.from("sessions").select("*, terms:terms(*)").order("start_date", { ascending: false }),
@@ -29,6 +31,7 @@ export default async function SettingsPage() {
     supabase.from("fee_categories").select("*").order("name"),
     supabase.from("classes").select("*, section:sections(name)").eq("is_active", true).order("name"),
     supabase.from("grading_schemes").select("*").order("min_score", { ascending: false }),
+    supabase.from("subjects").select("*").order("name"),
   ])
 
   let feeStructures = null
@@ -49,12 +52,13 @@ export default async function SettingsPage() {
       </div>
 
       <Tabs defaultValue="general" className="space-y-4 max-w-full">
-        <TabsList className="grid w-full grid-cols-5 lg:w-auto">
+        <TabsList className="grid w-full grid-cols-6 lg:w-auto">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="session">Academic Session</TabsTrigger>
           <TabsTrigger value="fees">Fee Management</TabsTrigger>
           <TabsTrigger value="templates">Fee Templates</TabsTrigger>
           <TabsTrigger value="grading">Grading System</TabsTrigger>
+          <TabsTrigger value="subjects">Subjects</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-4 max-w-full">
@@ -81,6 +85,10 @@ export default async function SettingsPage() {
 
         <TabsContent value="grading" className="space-y-4 max-w-full">
           <GradingSystemTab gradingSchemes={gradingSchemes || []} />
+        </TabsContent>
+
+        <TabsContent value="subjects" className="space-y-4 max-w-full">
+          <SubjectManagementTab subjects={subjects || []} />
         </TabsContent>
       </Tabs>
     </div>
