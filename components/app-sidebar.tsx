@@ -124,6 +124,11 @@ const getNavigationByRole = (role: UserRole) => {
       icon: IconUsers,
     },
     {
+      title: "Attendance",
+      url: "/teacher/attendance",
+      icon: IconCalendarEvent,
+    },
+    {
       title: "Assessments",
       url: "/assessments",
       icon: IconClipboardCheck,
