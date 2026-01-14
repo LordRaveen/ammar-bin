@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -38,17 +38,25 @@ export function GuardiansClientPage({
   const [searchTerm, setSearchTerm] = useState(initialSearch || "")
   const [portalFilter, setPortalFilter] = useState<string>("all")
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
-  const guardians = initialGuardians
+  const [guardians, setGuardians] = useState(initialGuardians)
+  const [isLoading, setIsLoading] = useState(false)
 
   const totalPages = Math.ceil(totalCount / pageSize)
 
+  useEffect(() => {
+    setGuardians(initialGuardians)
+    setRowSelection({}) // Reset selection when data changes
+  }, [initialGuardians, searchParams])
+
   const handlePageChange = (page: number) => {
+    setIsLoading(true)
     const params = new URLSearchParams(searchParams.toString())
     params.set("page", page.toString())
     router.push(`?${params.toString()}`)
   }
 
   const handlePageSizeChange = (size: string) => {
+    setIsLoading(true)
     const params = new URLSearchParams(searchParams.toString())
     params.set("pageSize", size)
     params.set("page", "1")
@@ -57,6 +65,7 @@ export function GuardiansClientPage({
 
   const handleSearch = (value: string) => {
     setSearchTerm(value)
+    setIsLoading(true)
     const params = new URLSearchParams(searchParams.toString())
     if (value) {
       params.set("search", value)

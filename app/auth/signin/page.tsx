@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { devLog } from "@/lib/logger"
 import { getRoleDashboardUrl } from "@/lib/auth/role-redirect"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -27,11 +27,22 @@ export default function SignInPage() {
   } | null>(null)
   const router = useRouter()
 
+  const supabaseRef = useRef(createClient())
+
+  const isMounted = useRef(true)
+
+  useEffect(() => {
+    isMounted.current = true
+    return () => {
+      isMounted.current = false
+    }
+  }, [])
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
     e.stopPropagation()
 
-    const supabase = createClient()
+    const supabase = supabaseRef.current
     setIsLoading(true)
     setError(null)
     setLockoutInfo(null)
@@ -39,38 +50,62 @@ export default function SignInPage() {
     devLog.debug("Attempting sign in for:", email)
 
     try {
-      const lockoutResponse = await fetch("/api/auth/check-lockout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      })
+      const lockoutController = new AbortController()
+      const lockoutTimeout = setTimeout(() => lockoutController.abort(), 5000)
 
-      if (lockoutResponse.ok) {
-        const lockoutData = await lockoutResponse.json()
+      try {
+        const lockoutResponse = await fetch("/api/auth/check-lockout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+          signal: lockoutController.signal,
+        })
+        clearTimeout(lockoutTimeout)
 
-        if (lockoutData.locked) {
-          const minutesRemaining = Math.ceil(lockoutData.minutesRemaining)
-          setLockoutInfo({ locked: true, minutesRemaining })
-          setError(
-            `Account locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minute${minutesRemaining !== 1 ? "s" : ""}.`,
-          )
-          setIsLoading(false)
-          return
+        if (lockoutResponse.ok) {
+          const lockoutData = await lockoutResponse.json()
+
+          if (lockoutData.locked) {
+            const minutesRemaining = Math.ceil(lockoutData.minutesRemaining)
+            if (isMounted.current) {
+              setLockoutInfo({ locked: true, minutesRemaining })
+              setError(
+                `Account locked due to multiple failed login attempts. Please try again in ${minutesRemaining} minute${minutesRemaining !== 1 ? "s" : ""}.`,
+              )
+            }
+            setIsLoading(false)
+            return
+          }
+        }
+      } catch (lockoutError: any) {
+        clearTimeout(lockoutTimeout)
+        if (lockoutError.name !== "AbortError") {
+          devLog.warn("Lockout check failed, continuing with login:", lockoutError)
         }
       }
 
-      // Sign in with Supabase
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
+      let signInData
+      try {
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
 
-      if (signInError) {
-        throw signInError
-      }
+        if (signInError) {
+          throw signInError
+        }
 
-      if (!data.user) {
-        throw new Error("Failed to authenticate")
+        if (!data.user) {
+          throw new Error("Failed to authenticate")
+        }
+
+        signInData = data
+      } catch (authError: any) {
+        if (authError.name === "AbortError") {
+          devLog.warn("Auth request was aborted, user may have navigated away")
+          return
+        }
+        throw authError
       }
 
       // Determine user role
@@ -81,7 +116,7 @@ export default function SignInPage() {
         const { data: teacherData, error: teacherError } = await supabase
           .from("teachers")
           .select("role")
-          .eq("user_id", data.user.id)
+          .eq("user_id", signInData.user.id)
           .maybeSingle()
 
         if (!teacherError && teacherData) {
@@ -91,7 +126,7 @@ export default function SignInPage() {
           const { data: guardianData, error: guardianError } = await supabase
             .from("guardians")
             .select("id")
-            .eq("user_id", data.user.id)
+            .eq("user_id", signInData.user.id)
             .maybeSingle()
 
           if (!guardianError && guardianData) {
@@ -111,10 +146,19 @@ export default function SignInPage() {
       const dashboardUrl = getRoleDashboardUrl(userRole)
       devLog.debug("Sign in successful, role:", userRole, "redirecting to", dashboardUrl)
 
-      router.push(dashboardUrl)
-      router.refresh()
+      if (isMounted.current) {
+        router.push(dashboardUrl)
+        router.refresh()
+      }
     } catch (error: any) {
+      if (error.name === "AbortError") {
+        devLog.warn("Request aborted, user may have navigated away")
+        return
+      }
+
       devLog.error("Sign in error:", error)
+
+      if (!isMounted.current) return
 
       try {
         const trackResponse = await fetch("/api/auth/track-login", {
@@ -148,7 +192,9 @@ export default function SignInPage() {
         setError(error.message || "Invalid email or password. Please try again.")
       }
     } finally {
-      setIsLoading(false)
+      if (isMounted.current) {
+        setIsLoading(false)
+      }
     }
   }
 
@@ -189,7 +235,7 @@ export default function SignInPage() {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      disabled={isLoading}
+                      disabled={isLoading || lockoutInfo?.locked}
                     />
                   </div>
                   <div className="flex items-center justify-end">
