@@ -4,23 +4,15 @@ import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Search, CheckCircle2, Pencil, Trash2 } from "lucide-react"
+import { Search, CheckCircle2, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
 import { AddGuardianModal } from "@/components/add-guardian-modal"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import { GuardianDetailsSheet } from "@/components/guardian-details-sheet"
 import { EditGuardianDialog } from "@/components/edit-guardian-dialog"
 import { DeleteGuardianDialog } from "@/components/delete-guardian-dialog"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-  PaginationEllipsis,
-} from "@/components/ui/pagination"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface GuardiansClientPageProps {
@@ -45,7 +37,7 @@ export function GuardiansClientPage({
   const [deleteGuardianId, setDeleteGuardianId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState(initialSearch || "")
   const [portalFilter, setPortalFilter] = useState<string>("all")
-  const [occupationFilter, setOccupationFilter] = useState<string>("all")
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
   const guardians = initialGuardians
 
   const totalPages = Math.ceil(totalCount / pageSize)
@@ -75,6 +67,24 @@ export function GuardiansClientPage({
     router.push(`?${params.toString()}`)
   }
 
+  const handleSelectAll = (checked: boolean) => {
+    const newSelection: Record<string, boolean> = {}
+    guardians.forEach((guardian) => {
+      newSelection[guardian.id] = checked
+    })
+    setRowSelection(newSelection)
+  }
+
+  const handleSelectRow = (guardianId: string, checked: boolean) => {
+    setRowSelection((prev) => ({
+      ...prev,
+      [guardianId]: checked,
+    }))
+  }
+
+  const selectedCount = Object.values(rowSelection).filter(Boolean).length
+  const isAllSelected = guardians.length > 0 && guardians.every((g) => rowSelection[g.id])
+
   const filteredGuardians = guardians
 
   const handleEditSuccess = () => {
@@ -88,36 +98,16 @@ export function GuardiansClientPage({
   const renderPagination = () => {
     if (totalPages <= 1) return null
 
-    const getPageNumbers = () => {
-      const pages = []
-      const showEllipsis = totalPages > 7
-
-      if (!showEllipsis) {
-        for (let i = 1; i <= totalPages; i++) {
-          pages.push(i)
-        }
-      } else {
-        if (currentPage <= 3) {
-          pages.push(1, 2, 3, 4, "ellipsis", totalPages)
-        } else if (currentPage >= totalPages - 2) {
-          pages.push(1, "ellipsis", totalPages - 3, totalPages - 2, totalPages - 1, totalPages)
-        } else {
-          pages.push(1, "ellipsis", currentPage - 1, currentPage, currentPage + 1, "ellipsis", totalPages)
-        }
-      }
-
-      return pages
-    }
-
     return (
-      <div className="flex items-center justify-between mt-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">
+      <div className="flex items-center justify-between gap-4 mt-6 px-2">
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-muted-foreground whitespace-nowrap">
             Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount}{" "}
             guardians
           </span>
+          {selectedCount > 0 && <span className="text-sm text-muted-foreground">({selectedCount} selected)</span>}
           <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
-            <SelectTrigger className="w-24">
+            <SelectTrigger className="w-28">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -130,39 +120,29 @@ export function GuardiansClientPage({
           </Select>
         </div>
 
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
-                className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-              />
-            </PaginationItem>
-
-            {getPageNumbers().map((page, index) => (
-              <PaginationItem key={index}>
-                {page === "ellipsis" ? (
-                  <PaginationEllipsis />
-                ) : (
-                  <PaginationLink
-                    onClick={() => handlePageChange(page as number)}
-                    isActive={currentPage === page}
-                    className="cursor-pointer"
-                  >
-                    {page}
-                  </PaginationLink>
-                )}
-              </PaginationItem>
-            ))}
-
-            <PaginationItem>
-              <PaginationNext
-                onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
-                className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
+        <div className="flex items-center gap-2 ml-auto">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="sr-only">Previous page</span>
+          </Button>
+          <span className="text-sm font-medium">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            <ChevronRight className="h-4 w-4" />
+            <span className="sr-only">Next page</span>
+          </Button>
+        </div>
       </div>
     )
   }
@@ -220,6 +200,13 @@ export function GuardiansClientPage({
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={isAllSelected}
+                          onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                          aria-label="Select all"
+                        />
+                      </TableHead>
                       <TableHead className="w-12">SN</TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Relationship Type</TableHead>
@@ -231,58 +218,69 @@ export function GuardiansClientPage({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredGuardians.map((guardian: any, index: number) => (
-                      <TableRow
-                        key={guardian.id}
-                        onClick={() => setSelectedGuardianId(guardian.id)}
-                        className="cursor-pointer hover:bg-muted/50 transition-colors"
-                      >
-                        <TableCell className="font-medium text-muted-foreground">
-                          {(currentPage - 1) * pageSize + index + 1}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {guardian.first_name} {guardian.last_name}
-                        </TableCell>
-                        <TableCell>{guardian.relationship_type}</TableCell>
-                        <TableCell>{guardian.phone}</TableCell>
-                        <TableCell>{guardian.email || "—"}</TableCell>
-                        <TableCell>{guardian.student_guardians?.[0]?.count || 0} student(s)</TableCell>
-                        <TableCell>
-                          {guardian.user_id ? (
-                            <Badge variant="default" className="gap-1">
-                              <CheckCircle2 className="h-3 w-3" />
-                              Active
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary">Inactive</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setEditGuardianId(guardian.id)
-                              }}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setDeleteGuardianId(guardian.id)
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {filteredGuardians.map((guardian: any, index: number) => {
+                      const isSelected = rowSelection[guardian.id] || false
+                      return (
+                        <TableRow
+                          key={guardian.id}
+                          onClick={() => setSelectedGuardianId(guardian.id)}
+                          className="cursor-pointer hover:bg-muted/50 transition-colors"
+                          data-state={isSelected && "selected"}
+                        >
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={(checked) => handleSelectRow(guardian.id, !!checked)}
+                              aria-label="Select row"
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium text-muted-foreground">
+                            {(currentPage - 1) * pageSize + index + 1}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {guardian.first_name} {guardian.last_name}
+                          </TableCell>
+                          <TableCell>{guardian.relationship_type}</TableCell>
+                          <TableCell>{guardian.phone}</TableCell>
+                          <TableCell>{guardian.email || "—"}</TableCell>
+                          <TableCell>{guardian.student_guardians?.[0]?.count || 0} student(s)</TableCell>
+                          <TableCell>
+                            {guardian.user_id ? (
+                              <Badge variant="default" className="gap-1">
+                                <CheckCircle2 className="h-3 w-3" />
+                                Active
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary">Inactive</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setEditGuardianId(guardian.id)
+                                }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setDeleteGuardianId(guardian.id)
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
                   </TableBody>
                 </Table>
                 {renderPagination()}

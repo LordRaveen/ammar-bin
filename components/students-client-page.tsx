@@ -4,24 +4,16 @@ import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Search, Trash2, Pencil } from "lucide-react"
+import { Search, Trash2, Pencil, ChevronLeft, ChevronRight } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RegisterStudentModal } from "@/components/register-student-modal"
 import { StudentDetailsSheet } from "@/components/student-details-sheet"
 import { DeleteStudentDialog } from "@/components/delete-student-dialog"
 import { EditStudentModal } from "@/components/edit-student-modal"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-  PaginationEllipsis,
-} from "@/components/ui/pagination"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface StudentsClientPageProps {
@@ -55,6 +47,7 @@ export function StudentsClientPage({
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [deleteStudentId, setDeleteStudentId] = useState<string | null>(null)
   const [editStudent, setEditStudent] = useState<any | null>(null)
+  const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
   const allStudents = initialStudents
 
   const totalPages = Math.ceil(totalCount / pageSize)
@@ -103,7 +96,24 @@ export function StudentsClientPage({
     (student) => !student.student_enrollments || student.student_enrollments.length === 0,
   )
 
-  const renderStudentTable = (students: any[], emptyMessage: string) => {
+  const handleSelectAll = (students: any[], checked: boolean) => {
+    const newSelection: Record<string, boolean> = { ...rowSelection }
+    students.forEach((student) => {
+      newSelection[student.id] = checked
+    })
+    setRowSelection(newSelection)
+  }
+
+  const handleSelectRow = (studentId: string, checked: boolean) => {
+    setRowSelection((prev) => ({
+      ...prev,
+      [studentId]: checked,
+    }))
+  }
+
+  const selectedCount = Object.values(rowSelection).filter(Boolean).length
+
+  const renderStudentTable = (students: any[], emptyMessage: string, currentStudents: any[]) => {
     if (!students || students.length === 0) {
       return (
         <div className="text-center py-6 text-muted-foreground">
@@ -112,111 +122,113 @@ export function StudentsClientPage({
       )
     }
 
-    return (
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-12">SN</TableHead>
-            <TableHead>Student ID</TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead>Gender</TableHead>
-            <TableHead>Current Class</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {students.map((student: any, index: number) => {
-            const activeEnrollment = student.student_enrollments?.find((e: any) => e.is_active)
+    const isAllSelected = currentStudents.length > 0 && currentStudents.every((s) => rowSelection[s.id])
 
-            return (
-              <TableRow
-                key={student.id}
-                onClick={() => setSelectedStudentId(student.id)}
-                className="cursor-pointer hover:bg-muted/50 transition-colors"
-              >
-                <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
-                <TableCell className="font-medium">{student.student_id}</TableCell>
-                <TableCell>
-                  {student.first_name} {student.last_name}
-                </TableCell>
-                <TableCell>{student.gender}</TableCell>
-                <TableCell>
-                  {activeEnrollment?.class?.name || <span className="text-muted-foreground italic">Not Enrolled</span>}
-                </TableCell>
-                <TableCell>
-                  <Badge variant={student.status === "Active" ? "default" : "secondary"}>{student.status}</Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    {(userRole === "admin" || userRole === "super_admin") && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setEditStudent(student)
-                          }}
-                          title="Edit Student"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setDeleteStudentId(student.id)
-                          }}
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          title="Delete Student"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </>
+    return (
+      <>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12">
+                <Checkbox
+                  checked={isAllSelected}
+                  onCheckedChange={(checked) => handleSelectAll(currentStudents, !!checked)}
+                  aria-label="Select all"
+                />
+              </TableHead>
+              <TableHead className="w-12">SN</TableHead>
+              <TableHead>Student ID</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Gender</TableHead>
+              <TableHead>Current Class</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {students.map((student: any, index: number) => {
+              const activeEnrollment = student.student_enrollments?.find((e: any) => e.is_active)
+              const isSelected = rowSelection[student.id] || false
+
+              return (
+                <TableRow
+                  key={student.id}
+                  onClick={() => setSelectedStudentId(student.id)}
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  data-state={isSelected && "selected"}
+                >
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={(checked) => handleSelectRow(student.id, !!checked)}
+                      aria-label="Select row"
+                    />
+                  </TableCell>
+                  <TableCell className="font-medium text-muted-foreground">{index + 1}</TableCell>
+                  <TableCell className="font-medium">{student.student_id}</TableCell>
+                  <TableCell>
+                    {student.first_name} {student.last_name}
+                  </TableCell>
+                  <TableCell>{student.gender}</TableCell>
+                  <TableCell>
+                    {activeEnrollment?.class?.name || (
+                      <span className="text-muted-foreground italic">Not Enrolled</span>
                     )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={student.status === "Active" ? "default" : "secondary"}>{student.status}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      {(userRole === "admin" || userRole === "super_admin") && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setEditStudent(student)
+                            }}
+                            title="Edit Student"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setDeleteStudentId(student.id)
+                            }}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            title="Delete Student"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+      </>
     )
   }
 
-  const renderPagination = () => {
+  const renderPagination = (students: any[]) => {
     if (totalPages <= 1) return null
 
-    const getPageNumbers = () => {
-      const pages = []
-      const showEllipsis = totalPages > 7
-
-      if (!showEllipsis) {
-        for (let i = 1; i <= totalPages; i++) {
-          pages.push(i)
-        }
-      } else {
-        if (currentPage <= 3) {
-          pages.push(1, 2, 3, 4, "ellipsis", totalPages)
-        } else if (currentPage >= totalPages - 2) {
-          pages.push(1, "ellipsis", totalPages - 3, totalPages - 2, totalPages - 1, totalPages)
-        } else {
-          pages.push(1, "ellipsis", currentPage - 1, currentPage, currentPage + 1, "ellipsis", totalPages)
-        }
-      }
-
-      return pages
-    }
-
     return (
-      <div className="flex items-center justify-between mt-6">
+      <div className="flex items-center justify-between gap-4 mt-6 px-2">
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground whitespace-nowrap">
             Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount}{" "}
             students
           </span>
+          {selectedCount > 0 && <span className="text-sm text-muted-foreground">({selectedCount} selected)</span>}
           <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
             <SelectTrigger className="w-28">
               <SelectValue />
@@ -231,39 +243,29 @@ export function StudentsClientPage({
           </Select>
         </div>
 
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
-                className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-              />
-            </PaginationItem>
-
-            {getPageNumbers().map((page, index) => (
-              <PaginationItem key={index}>
-                {page === "ellipsis" ? (
-                  <PaginationEllipsis />
-                ) : (
-                  <PaginationLink
-                    onClick={() => handlePageChange(page as number)}
-                    isActive={currentPage === page}
-                    className="cursor-pointer"
-                  >
-                    {page}
-                  </PaginationLink>
-                )}
-              </PaginationItem>
-            ))}
-
-            <PaginationItem>
-              <PaginationNext
-                onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
-                className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
+        <div className="flex items-center gap-2 ml-auto">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => currentPage > 1 && handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="sr-only">Previous page</span>
+          </Button>
+          <span className="text-sm font-medium">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => currentPage < totalPages && handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            <ChevronRight className="h-4 w-4" />
+            <span className="sr-only">Next page</span>
+          </Button>
+        </div>
       </div>
     )
   }
@@ -337,18 +339,19 @@ export function StudentsClientPage({
                 {renderStudentTable(
                   filteredStudents,
                   "No students registered yet. Register your first student to get started.",
+                  filteredStudents,
                 )}
-                {renderPagination()}
+                {renderPagination(filteredStudents)}
               </TabsContent>
 
               <TabsContent value="enrolled" className="mt-4">
-                {renderStudentTable(enrolledStudents, "No enrolled students found.")}
-                {renderPagination()}
+                {renderStudentTable(enrolledStudents, "No enrolled students found.", enrolledStudents)}
+                {renderPagination(enrolledStudents)}
               </TabsContent>
 
               <TabsContent value="not-enrolled" className="mt-4">
-                {renderStudentTable(notEnrolledStudents, "All students are enrolled in classes.")}
-                {renderPagination()}
+                {renderStudentTable(notEnrolledStudents, "All students are enrolled in classes.", notEnrolledStudents)}
+                {renderPagination(notEnrolledStudents)}
               </TabsContent>
             </Tabs>
           </CardContent>
