@@ -5,6 +5,7 @@ import { GeneralSettingsTab } from "@/components/settings/general-settings-tab"
 import { AcademicSessionTab } from "@/components/settings/academic-session-tab"
 import { FeeManagementTab } from "@/components/settings/fee-management-tab"
 import { GradingSystemTab } from "@/components/settings/grading-system-tab"
+import { FeeTemplatesTab } from "@/components/settings/fee-templates-tab"
 
 export const dynamic = "force-dynamic"
 
@@ -48,10 +49,11 @@ export default async function SettingsPage() {
       </div>
 
       <Tabs defaultValue="general" className="space-y-4 max-w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto">
+        <TabsList className="grid w-full grid-cols-5 lg:w-auto">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="session">Academic Session</TabsTrigger>
           <TabsTrigger value="fees">Fee Management</TabsTrigger>
+          <TabsTrigger value="templates">Fee Templates</TabsTrigger>
           <TabsTrigger value="grading">Grading System</TabsTrigger>
         </TabsList>
 
@@ -71,6 +73,10 @@ export default async function SettingsPage() {
             activeTerm={activeTerms}
             existingFeeStructures={feeStructures || []}
           />
+        </TabsContent>
+
+        <TabsContent value="templates" className="space-y-4 max-w-full">
+          <FeeTemplatesTab sessions={sessions || []} classes={classes || []} activeSession={activeSessions} />
         </TabsContent>
 
         <TabsContent value="grading" className="space-y-4 max-w-full">
