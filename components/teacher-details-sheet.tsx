@@ -192,10 +192,12 @@ export function TeacherDetailsSheet({ teacherId, open, onOpenChange }: TeacherDe
 
       {teacher && (
         <Dialog open={assignClassModalOpen} onOpenChange={setAssignClassModalOpen}>
-          <DialogContent>
+          <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Assign Classes</DialogTitle>
-              <DialogDescription>Select a class to assign to {teacher.first_name}</DialogDescription>
+              <DialogTitle>Assign Class to Teacher</DialogTitle>
+              <DialogDescription>
+                Select a class to assign to {teacher.first_name} {teacher.last_name}
+              </DialogDescription>
             </DialogHeader>
             <form
               onSubmit={async (e) => {
@@ -217,24 +219,24 @@ export function TeacherDetailsSheet({ teacherId, open, onOpenChange }: TeacherDe
               }}
               className="space-y-4"
             >
-              <div className="space-y-3">
+              <div className="space-y-2 max-h-[300px] overflow-y-auto border rounded-lg p-3">
                 {availableClasses.length > 0 ? (
                   availableClasses.map((cls: any) => (
                     <label
                       key={cls.id}
-                      className="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-accent"
+                      className="flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-accent transition-colors"
                     >
-                      <input type="radio" name="classId" value={cls.id} required />
-                      <span>
+                      <input type="radio" name="classId" value={cls.id} required className="h-4 w-4" />
+                      <span className="text-sm font-medium flex-1">
                         {cls.name} {cls.section?.name && `- ${cls.section.name}`}
                       </span>
                     </label>
                   ))
                 ) : (
-                  <p className="text-sm text-muted-foreground">No available classes to assign</p>
+                  <p className="text-sm text-muted-foreground text-center py-4">No available classes to assign</p>
                 )}
               </div>
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-2 pt-4">
                 <Button type="button" variant="outline" onClick={() => setAssignClassModalOpen(false)}>
                   Cancel
                 </Button>
