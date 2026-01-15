@@ -8,14 +8,27 @@ export async function markAttendanceForClass(request: BulkMarkAttendanceRequest)
   try {
     const supabase = await createServerClient()
 
-    // Get current user for recorded_by field
     const {
       data: { user },
     } = await supabase.auth.getUser()
 
-    console.log("[v0] User authenticated:", user?.id, user?.email)
+    console.log("[v0] Auth user:", user?.id, user?.email)
 
     if (!user) throw new Error("User not authenticated")
+
+    const { data: teacherData, error: teacherError } = await supabase
+      .from("teachers")
+      .select("id")
+      .eq("user_id", user.id)
+      .single()
+
+    console.log("[v0] Teacher lookup:", { teacherData, teacherError })
+
+    if (teacherError || !teacherData) {
+      throw new Error(`Teacher record not found for user ${user.id}. Error: ${teacherError?.message}`)
+    }
+
+    const teacherId = teacherData.id
 
     // Insert attendance records
     const attendanceRecords = request.records.map((record) => ({
@@ -24,14 +37,14 @@ export async function markAttendanceForClass(request: BulkMarkAttendanceRequest)
       date: request.date,
       status: record.status,
       remarks: record.remarks || null,
-      recorded_by: user.id,
+      recorded_by: teacherId,
     }))
 
     console.log("[v0] Inserting attendance records:", {
       count: attendanceRecords.length,
       date: request.date,
       class_id: request.class_id,
-      first_record: attendanceRecords[0],
+      teacherId: teacherId,
     })
 
     const { data, error } = await supabase.from("attendance").insert(attendanceRecords).select()
@@ -51,7 +64,6 @@ export async function markAttendanceForClass(request: BulkMarkAttendanceRequest)
       message: error.message,
       code: error.code,
       details: error.details,
-      hint: error.hint,
     })
     return {
       success: false,
