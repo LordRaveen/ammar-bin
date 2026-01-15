@@ -18,8 +18,6 @@ export async function markAttendanceForClass(request: BulkMarkAttendanceRequest)
     const attendanceRecords = request.records.map((record) => ({
       student_id: record.student_id,
       class_id: request.class_id,
-      session_id: request.session_id,
-      term_id: request.term_id,
       date: request.date,
       status: record.status,
       remarks: record.remarks || null,
@@ -38,9 +36,10 @@ export async function markAttendanceForClass(request: BulkMarkAttendanceRequest)
     // Revalidate cache
     revalidatePath(`/classes/[id]`)
 
+    console.log("[v0] Attendance saved successfully:", data?.length, "records")
     return { success: true, count: data?.length || 0, data }
   } catch (error: any) {
-    console.error("[v0] Error marking attendance:", error)
+    console.error("[v0] Error marking attendance:", error.message)
     return {
       success: false,
       error: error.message || "Failed to mark attendance",
@@ -52,19 +51,14 @@ export async function fetchClassAttendanceForDate(classId: string, date: string,
   try {
     const supabase = await createServerClient()
 
-    const { data, error } = await supabase
-      .from("attendance")
-      .select("*")
-      .eq("class_id", classId)
-      .eq("date", date)
-      .eq("session_id", sessionId)
-      .eq("term_id", termId)
+    const { data, error } = await supabase.from("attendance").select("*").eq("class_id", classId).eq("date", date)
 
     if (error) throw error
 
+    console.log("[v0] Attendance fetched:", data?.length, "records")
     return { success: true, data: data || [] }
   } catch (error: any) {
-    console.error("[v0] Error fetching attendance:", error)
+    console.error("[v0] Error fetching attendance:", error.message)
     return { success: false, error: error.message, data: [] }
   }
 }
@@ -84,9 +78,10 @@ export async function updateAttendanceRecord(attendanceId: string, status: strin
 
     revalidatePath(`/classes/[id]`)
 
+    console.log("[v0] Attendance updated:", attendanceId)
     return { success: true, data }
   } catch (error: any) {
-    console.error("[v0] Error updating attendance:", error)
+    console.error("[v0] Error updating attendance:", error.message)
     return { success: false, error: error.message }
   }
 }
@@ -101,9 +96,10 @@ export async function deleteAttendanceRecord(attendanceId: string) {
 
     revalidatePath(`/classes/[id]`)
 
+    console.log("[v0] Attendance deleted:", attendanceId)
     return { success: true }
   } catch (error: any) {
-    console.error("[v0] Error deleting attendance:", error)
+    console.error("[v0] Error deleting attendance:", error.message)
     return { success: false, error: error.message }
   }
 }
