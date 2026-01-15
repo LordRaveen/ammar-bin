@@ -12,6 +12,9 @@ export async function markAttendanceForClass(request: BulkMarkAttendanceRequest)
     const {
       data: { user },
     } = await supabase.auth.getUser()
+
+    console.log("[v0] User authenticated:", user?.id, user?.email)
+
     if (!user) throw new Error("User not authenticated")
 
     // Insert attendance records
@@ -24,22 +27,32 @@ export async function markAttendanceForClass(request: BulkMarkAttendanceRequest)
       recorded_by: user.id,
     }))
 
-    const { data, error } = await supabase
-      .from("attendance")
-      .upsert(attendanceRecords, {
-        onConflict: "student_id,class_id,date",
-      })
-      .select()
+    console.log("[v0] Inserting attendance records:", {
+      count: attendanceRecords.length,
+      date: request.date,
+      class_id: request.class_id,
+      first_record: attendanceRecords[0],
+    })
 
-    if (error) throw error
+    const { data, error } = await supabase.from("attendance").insert(attendanceRecords).select()
 
-    // Revalidate cache
-    revalidatePath(`/classes/[id]`)
+    if (error) {
+      console.error("[v0] Database error:", error.code, error.message, error.details)
+      throw error
+    }
 
     console.log("[v0] Attendance saved successfully:", data?.length, "records")
+
+    revalidatePath(`/classes`)
+
     return { success: true, count: data?.length || 0, data }
   } catch (error: any) {
-    console.error("[v0] Error marking attendance:", error.message)
+    console.error("[v0] Error marking attendance:", {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+    })
     return {
       success: false,
       error: error.message || "Failed to mark attendance",
@@ -76,7 +89,7 @@ export async function updateAttendanceRecord(attendanceId: string, status: strin
 
     if (error) throw error
 
-    revalidatePath(`/classes/[id]`)
+    revalidatePath(`/classes`)
 
     console.log("[v0] Attendance updated:", attendanceId)
     return { success: true, data }
@@ -94,7 +107,7 @@ export async function deleteAttendanceRecord(attendanceId: string) {
 
     if (error) throw error
 
-    revalidatePath(`/classes/[id]`)
+    revalidatePath(`/classes`)
 
     console.log("[v0] Attendance deleted:", attendanceId)
     return { success: true }
