@@ -86,19 +86,26 @@ export async function markAttendanceForClass(request: BulkMarkAttendanceRequest)
   }
 }
 
-export async function fetchClassAttendanceForDate(classId: string, date: string, sessionId: string, termId: string) {
+export async function fetchClassAttendanceForDate(request: {
+  class_id: string
+  date: string
+  session_id: string
+  term_id: string
+}) {
   try {
     const supabase = await createServerClient()
+
+    const { class_id: classId, date } = request
 
     const { data, error } = await supabase.from("attendance").select("*").eq("class_id", classId).eq("date", date)
 
     if (error) throw error
 
-    console.log("[v0] Attendance fetched:", data?.length, "records")
-    return { success: true, data: data || [] }
+    console.log("[v0] Attendance fetched:", data?.length, "records for date", date)
+    return data || []
   } catch (error: any) {
     console.error("[v0] Error fetching attendance:", error.message)
-    return { success: false, error: error.message, data: [] }
+    return []
   }
 }
 
