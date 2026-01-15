@@ -47,7 +47,7 @@ export default function AdminAttendanceClient({ classes }: Props) {
     try {
       const params = new URLSearchParams({
         date: filterDate,
-        ...(filterClass !== "all" && { classId: filterClass }),
+        ...(filterClass !== "all" && { classId: String(filterClass) }),
         ...(filterStatus !== "all" && { status: filterStatus }),
       })
 
@@ -247,7 +247,9 @@ export default function AdminAttendanceClient({ classes }: Props) {
                         <Badge className={getStatusColor(record.status)}>{record.status}</Badge>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground max-w-xs">{record.remarks || "-"}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{record.recorded_by}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {record.recorded_by ? record.recorded_by.substring(0, 8) + "..." : "-"}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

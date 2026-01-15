@@ -50,12 +50,12 @@ export async function GET(request: NextRequest) {
         id: record.id,
         date: record.date,
         student_id: record.student_id,
-        student_name: `${record.students.first_name} ${record.students.last_name}`,
+        student_name: `${record.students?.first_name || "Unknown"} ${record.students?.last_name || "Unknown"}`,
         class_id: record.class_id,
-        class_name: record.classes.name,
+        class_name: record.classes?.name || "Unknown",
         status: record.status,
         remarks: record.remarks,
-        recorded_by: record.recorded_by,
+        recorded_by: record.recorded_by.toString(), // Ensure this is a string UUID
       })) || []
 
     return NextResponse.json({ records })
