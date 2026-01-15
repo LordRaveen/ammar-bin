@@ -54,27 +54,39 @@ export function MarkAttendanceInterface({ classId, sessionId, termId, students }
   }, [students, markAllPresent])
 
   useEffect(() => {
-    loadExistingAttendance()
-  }, [attendanceDate])
+    loadAttendanceForDate()
+  }, [attendanceDate, classId, sessionId])
 
-  async function loadExistingAttendance() {
+  const loadAttendanceForDate = async () => {
     try {
-      const result = await fetchClassAttendanceForDate(classId, attendanceDate, sessionId, termId)
+      const result = await fetchClassAttendanceForDate({
+        class_id: classId,
+        date: attendanceDate,
+        session_id: sessionId,
+        term_id: termId,
+      })
 
-      if (result.success && result.data.length > 0) {
-        const statusMap: Record<string, AttendanceStatus> = {}
-        const remarksMap: Record<string, string> = {}
+      if (result && result.length > 0) {
+        const newStatus: Record<string, AttendanceStatus> = {}
+        const newRemarks: Record<string, string> = {}
 
-        result.data.forEach((record: any) => {
-          statusMap[record.student_id] = record.status
-          if (record.remarks) remarksMap[record.student_id] = record.remarks
+        result.forEach((record: any) => {
+          newStatus[record.student_id] = record.status
+          newRemarks[record.student_id] = record.remarks || ""
         })
 
-        setAttendanceStatus(statusMap)
-        setRemarks(remarksMap)
+        setAttendanceStatus(newStatus)
+        setRemarks(newRemarks)
+      } else {
+        const defaultStatus: Record<string, AttendanceStatus> = {}
+        students.forEach((student) => {
+          defaultStatus[student.id] = "Present"
+        })
+        setAttendanceStatus(defaultStatus)
+        setRemarks({})
       }
     } catch (error) {
-      console.error("[v0] Error loading attendance:", error)
+      console.error("Failed to load attendance:", error)
     }
   }
 

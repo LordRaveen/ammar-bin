@@ -23,6 +23,8 @@ export async function GET(request: NextRequest) {
         status,
         remarks,
         recorded_by,
+        class_id,
+        student_id,
         students (first_name, last_name, student_id),
         classes (name)
       `)
@@ -43,13 +45,13 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error
 
-    // Transform data
     const records =
       data?.map((record: any) => ({
         id: record.id,
         date: record.date,
-        student_id: record.students.student_id,
+        student_id: record.student_id,
         student_name: `${record.students.first_name} ${record.students.last_name}`,
+        class_id: record.class_id,
         class_name: record.classes.name,
         status: record.status,
         remarks: record.remarks,
