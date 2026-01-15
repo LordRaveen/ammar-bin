@@ -18,17 +18,31 @@ export async function markAttendanceForClass(request: BulkMarkAttendanceRequest)
 
     const { data: teacherData, error: teacherError } = await supabase
       .from("teachers")
-      .select("id")
+      .select("id, user_id, staff_id, email, first_name, last_name")
       .eq("user_id", user.id)
-      .single()
 
-    console.log("[v0] Teacher lookup:", { teacherData, teacherError })
+    console.log("[v0] Teacher lookup results:", {
+      count: Array.isArray(teacherData) ? teacherData.length : 0,
+      data: teacherData,
+      error: teacherError,
+    })
 
-    if (teacherError || !teacherData) {
-      throw new Error(`Teacher record not found for user ${user.id}. Error: ${teacherError?.message}`)
+    if (teacherError) {
+      throw new Error(`Database query error: ${teacherError.message}`)
     }
 
-    const teacherId = teacherData.id
+    if (!Array.isArray(teacherData) || teacherData.length === 0) {
+      console.error("[v0] No teacher records found for user_id:", user.id)
+      throw new Error(
+        `No teacher record found for user ${user.email}. Please contact admin to verify your teacher account is linked correctly.`,
+      )
+    }
+
+    if (teacherData.length > 1) {
+      console.warn("[v0] Multiple teacher records found for user:", user.id, teacherData.length)
+    }
+
+    const teacherId = teacherData[0].id
 
     // Insert attendance records
     const attendanceRecords = request.records.map((record) => ({
