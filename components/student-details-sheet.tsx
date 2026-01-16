@@ -10,6 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ExternalLink, Plus, Pencil, Loader2, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
+import { EditGuardianRelationDialog } from "./edit-guardian-relation-dialog"
+import { AddGuardianFromStudentModal } from "./add-guardian-from-student-modal"
+import { RemoveGuardianDialog } from "./remove-guardian-dialog"
 
 interface StudentDetailsSheetProps {
   studentId: string | null
@@ -19,7 +22,7 @@ interface StudentDetailsSheetProps {
   terms: any[]
   classes: any[]
   userRole?: string
-  guardians?: any[] // Add guardians prop for EditStudentModal
+  guardians?: any[]
 }
 
 export function StudentDetailsSheet({
@@ -30,14 +33,15 @@ export function StudentDetailsSheet({
   terms,
   classes,
   userRole,
-  guardians = [], // Add guardians prop with default
+  guardians = [],
 }: StudentDetailsSheetProps) {
   const [showEnrollModal, setShowEnrollModal] = useState(false)
   const [student, setStudent] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [editGuardianRelation, setEditGuardianRelation] = useState<any | null>(null)
   const [removeGuardianId, setRemoveGuardianId] = useState<string | null>(null)
-  const [editStudent, setEditStudent] = useState<any | null>(null) // Add state for edit modal
+  const [editStudent, setEditStudent] = useState<any | null>(null)
+  const [showAddGuardianModal, setShowAddGuardianModal] = useState(false)
 
   useEffect(() => {
     async function fetchStudent() {
@@ -87,6 +91,7 @@ export function StudentDetailsSheet({
   }
 
   const currentEnrollment = student?.student_enrollments?.find((e: any) => e.is_active)
+  const hasGuardian = student?.student_guardians && student.student_guardians.length > 0
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -198,7 +203,7 @@ export function StudentDetailsSheet({
                           <p className="text-sm text-muted-foreground">{sg.guardian.phone}</p>
                           {sg.guardian.email && <p className="text-sm text-muted-foreground">{sg.guardian.email}</p>}
                         </div>
-                        {userRole === "admin" && (
+                        {(userRole === "admin" || userRole === "super_admin") && (
                           <div className="flex gap-2">
                             <Button variant="ghost" size="sm" onClick={() => setEditGuardianRelation(sg)}>
                               <Pencil className="h-3 w-3" />
@@ -220,8 +225,13 @@ export function StudentDetailsSheet({
               ) : (
                 <p className="text-sm text-muted-foreground">No guardians linked</p>
               )}
-              {userRole === "admin" && (
-                <Button variant="outline" size="sm" className="mt-3 w-full bg-transparent" onClick={() => {}}>
+              {!hasGuardian && (userRole === "admin" || userRole === "super_admin") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 w-full bg-transparent"
+                  onClick={() => setShowAddGuardianModal(true)}
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Add/Change Guardian
                 </Button>
@@ -273,6 +283,60 @@ export function StudentDetailsSheet({
             </div>
           </div>
         ) : null}
+
+        {editGuardianRelation && (
+          <EditGuardianRelationDialog
+            relation={editGuardianRelation}
+            open={!!editGuardianRelation}
+            onOpenChange={(open) => !open && setEditGuardianRelation(null)}
+          />
+        )}
+
+        {showAddGuardianModal && (
+          <AddGuardianFromStudentModal
+            open={showAddGuardianModal}
+            onOpenChange={setShowAddGuardianModal}
+            onGuardianCreated={() => {
+              setShowAddGuardianModal(false)
+              // Refresh student data
+              if (studentId) {
+                const supabase = createClient()
+                supabase
+                  .from("students")
+                  .select(`
+                    *,
+                    student_guardians(
+                      id,
+                      relationship,
+                      is_primary,
+                      guardian:guardians(*)
+                    ),
+                    student_enrollments(
+                      enrollment_date,
+                      is_active,
+                      session:sessions(name),
+                      term:terms(name),
+                      class:classes(
+                        name,
+                        section:sections(name)
+                      )
+                    )
+                  `)
+                  .eq("id", studentId)
+                  .single()
+                  .then(({ data }) => data && setStudent(data))
+              }
+            }}
+          />
+        )}
+
+        {removeGuardianId && (
+          <RemoveGuardianDialog
+            relationshipId={removeGuardianId}
+            open={!!removeGuardianId}
+            onOpenChange={(open) => !open && setRemoveGuardianId(null)}
+          />
+        )}
       </SheetContent>
     </Sheet>
   )
