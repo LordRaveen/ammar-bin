@@ -376,6 +376,7 @@ export function StudentsClientPage({
         terms={terms}
         classes={classes}
         userRole={userRole}
+        guardians={guardians}
       />
 
       {deleteStudentId && (
