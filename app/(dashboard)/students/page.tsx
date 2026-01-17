@@ -12,11 +12,6 @@ export default async function StudentsPage({
   const user = await requireAuth()
   const supabase = await createClient()
 
-  const page = Number(searchParams.page) || 1
-  const pageSize = Number(searchParams.pageSize) || 20
-  const from = (page - 1) * pageSize
-  const to = from + pageSize - 1
-
   let studentsQuery = supabase
     .from("students")
     .select(
@@ -32,7 +27,6 @@ export default async function StudentsPage({
     )
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
-    .range(from, to)
 
   let countQuery = supabase.from("students").select("id", { count: "exact", head: true }).is("deleted_at", null)
 
@@ -66,7 +60,6 @@ export default async function StudentsPage({
           .is("deleted_at", null)
           .in("student_enrollments.class_id", classIds)
           .order("created_at", { ascending: false })
-          .range(from, to)
 
         countQuery = supabase
           .from("students")
@@ -110,8 +103,8 @@ export default async function StudentsPage({
       classes={classesData || []}
       userRole={user.role}
       totalCount={count || 0}
-      currentPage={page}
-      pageSize={pageSize}
+      currentPage={1}
+      pageSize={20}
     />
   )
 }
