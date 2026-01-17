@@ -139,82 +139,80 @@ export function TeachersClientPage({ initialTeachers, totalCount }: TeachersClie
               </div>
             ) : (
               <>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12">
-                          <Checkbox checked={allSelected} onCheckedChange={handleSelectAll} />
-                        </TableHead>
-                        <TableHead className="w-12">SN</TableHead>
-                        <TableHead>Staff ID</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Phone</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox checked={allSelected} onCheckedChange={handleSelectAll} />
+                      </TableHead>
+                      <TableHead className="w-12">SN</TableHead>
+                      <TableHead>Staff ID</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedTeachers.map((teacher: any, index: number) => (
+                      <TableRow
+                        key={teacher.id}
+                        onClick={() => handleRowClick(teacher.id)}
+                        className="cursor-pointer hover:bg-muted/50"
+                      >
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={rowSelection[teacher.id] || false}
+                            onCheckedChange={(checked) => handleSelectRow(teacher.id, checked as boolean)}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium text-muted-foreground">{startIndex + index + 1}</TableCell>
+                        <TableCell className="font-medium">{teacher.staff_id}</TableCell>
+                        <TableCell>
+                          {teacher.first_name} {teacher.last_name}
+                        </TableCell>
+                        <TableCell>{teacher.email}</TableCell>
+                        <TableCell>{teacher.phone}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{teacher.role}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={teacher.status === "Active" ? "default" : "secondary"}>
+                            {teacher.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setEditTeacherId(teacher.id)
+                              }}
+                              className="text-blue-600 hover:text-blue-700"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setDeleteTeacherId(teacher.id)
+                              }}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {paginatedTeachers.map((teacher: any, index: number) => (
-                        <TableRow
-                          key={teacher.id}
-                          onClick={() => handleRowClick(teacher.id)}
-                          className="cursor-pointer hover:bg-muted/50"
-                        >
-                          <TableCell onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              checked={rowSelection[teacher.id] || false}
-                              onCheckedChange={(checked) => handleSelectRow(teacher.id, checked as boolean)}
-                            />
-                          </TableCell>
-                          <TableCell className="font-medium text-muted-foreground">{startIndex + index + 1}</TableCell>
-                          <TableCell className="font-medium">{teacher.staff_id}</TableCell>
-                          <TableCell>
-                            {teacher.first_name} {teacher.last_name}
-                          </TableCell>
-                          <TableCell>{teacher.email}</TableCell>
-                          <TableCell>{teacher.phone}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{teacher.role}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={teacher.status === "Active" ? "default" : "secondary"}>
-                              {teacher.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setEditTeacherId(teacher.id)
-                                }}
-                                className="text-blue-600 hover:text-blue-700"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setDeleteTeacherId(teacher.id)
-                                }}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                    ))}
+                  </TableBody>
+                </Table>
 
                 <div className="flex items-center justify-between mt-4">
                   <div className="flex items-center gap-2">
