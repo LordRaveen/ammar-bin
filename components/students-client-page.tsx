@@ -231,8 +231,6 @@ export function StudentsClientPage({
   }
 
   const renderPagination = () => {
-    if (totalPages <= 1) return null
-
     return (
       <div className="flex items-center justify-between gap-4 mt-6 px-2">
         <div className="flex items-center gap-4">
