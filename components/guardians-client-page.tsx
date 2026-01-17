@@ -16,15 +16,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 interface GuardiansClientPageProps {
   initialGuardians: any[]
+  initialSearch?: string
+  totalCount?: number
 }
 
-export function GuardiansClientPage({ initialGuardians }: GuardiansClientPageProps) {
+export function GuardiansClientPage({ initialGuardians, initialSearch = "" }: GuardiansClientPageProps) {
   const [guardians, setGuardians] = useState(initialGuardians)
   const [selectedGuardianId, setSelectedGuardianId] = useState<string | null>(null)
   const [editGuardianId, setEditGuardianId] = useState<string | null>(null)
   const [deleteGuardianId, setDeleteGuardianId] = useState<string | null>(null)
 
-  const [searchTerm, setSearchTerm] = useState("")
+  const [searchTerm, setSearchTerm] = useState(initialSearch)
   const [portalFilter, setPortalFilter] = useState<string>("all")
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(20)
@@ -98,8 +100,6 @@ export function GuardiansClientPage({ initialGuardians }: GuardiansClientPagePro
   }
 
   const renderPagination = () => {
-    if (totalPages <= 1) return null
-
     return (
       <div className="flex items-center justify-between gap-4 mt-6 px-2">
         <div className="flex items-center gap-4">

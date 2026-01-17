@@ -12,11 +12,6 @@ export default async function GuardiansPage({
   await requireAdmin()
   const supabase = await createClient()
 
-  const page = Number(searchParams.page) || 1
-  const pageSize = Number(searchParams.pageSize) || 20
-  const from = (page - 1) * pageSize
-  const to = from + pageSize - 1
-
   let query = supabase
     .from("guardians")
     .select(
@@ -28,7 +23,6 @@ export default async function GuardiansPage({
     )
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
-    .range(from, to)
 
   if (searchParams.search) {
     query = query.or(
@@ -43,8 +37,6 @@ export default async function GuardiansPage({
       initialGuardians={guardians || []}
       initialSearch={searchParams.search}
       totalCount={count || 0}
-      currentPage={page}
-      pageSize={pageSize}
     />
   )
 }
