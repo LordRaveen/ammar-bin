@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Search, Trash2, Pencil } from "lucide-react"
+import { Search, Pencil, Trash2, ChevronLeft, ChevronRight } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -51,15 +51,6 @@ export function TeachersClientPage({ initialTeachers, totalCount }: TeachersClie
     setRowSelection({})
   }, [searchTerm])
 
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage)
-  }
-
-  const handleRowsPerPageChange = (size: string) => {
-    setRowsPerPage(Number.parseInt(size))
-    setCurrentPage(1)
-  }
-
   const handleRowClick = (teacherId: string) => {
     setSelectedTeacherId(teacherId)
     setSheetOpen(true)
@@ -97,7 +88,63 @@ export function TeachersClientPage({ initialTeachers, totalCount }: TeachersClie
     }))
   }
 
+  const handleRowsPerPageChange = (size: string) => {
+    setRowsPerPage(Number.parseInt(size))
+    setCurrentPage(1)
+  }
+
   const allSelected = paginatedTeachers.length > 0 && paginatedTeachers.every((t) => rowSelection[t.id])
+  const selectedCount = Object.values(rowSelection).filter(Boolean).length
+
+  const renderPagination = () => {
+    return (
+      <div className="flex items-center justify-between gap-4 mt-6 px-2">
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-muted-foreground whitespace-nowrap">
+            Showing {filteredTeachers.length === 0 ? 0 : startIndex + 1} to{" "}
+            {Math.min(endIndex, filteredTeachers.length)} of {filteredTeachers.length} teachers
+          </span>
+          {selectedCount > 0 && <span className="text-sm text-muted-foreground">({selectedCount} selected)</span>}
+          <Select value={rowsPerPage.toString()} onValueChange={handleRowsPerPageChange}>
+            <SelectTrigger className="w-28">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[10, 20, 50, 100].map((size) => (
+                <SelectItem key={size} value={size.toString()}>
+                  {size} / page
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center gap-2 ml-auto">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="sr-only">Previous page</span>
+          </Button>
+          <span className="text-sm font-medium">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage === totalPages}
+          >
+            <ChevronRight className="h-4 w-4" />
+            <span className="sr-only">Next page</span>
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -183,8 +230,8 @@ export function TeachersClientPage({ initialTeachers, totalCount }: TeachersClie
                             {teacher.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-2">
                             <Button
                               variant="ghost"
                               size="sm"
@@ -213,72 +260,20 @@ export function TeachersClientPage({ initialTeachers, totalCount }: TeachersClie
                     ))}
                   </TableBody>
                 </Table>
-
-                <div className="flex items-center justify-between mt-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">
-                      Showing {startIndex + 1} to {Math.min(endIndex, filteredTeachers.length)} of{" "}
-                      {filteredTeachers.length} teachers
-                    </span>
-                    <Select value={rowsPerPage.toString()} onValueChange={handleRowsPerPageChange}>
-                      <SelectTrigger className="w-24">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[10, 20, 50, 100].map((size) => (
-                          <SelectItem key={size} value={size.toString()}>
-                            {size} / page
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">
-                      Page {currentPage} of {totalPages}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(1)}
-                      disabled={currentPage === 1}
-                    >
-                      {"<<"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      {"<"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                      disabled={currentPage === totalPages}
-                    >
-                      {">"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(totalPages)}
-                      disabled={currentPage === totalPages}
-                    >
-                      {">>"}
-                    </Button>
-                  </div>
-                </div>
+                {renderPagination()}
               </>
             )}
           </CardContent>
         </Card>
       </div>
 
-      <TeacherDetailsSheet teacherId={selectedTeacherId} open={sheetOpen} onOpenChange={handleSheetClose} />
+      <TeacherDetailsSheet
+        teacherId={selectedTeacherId}
+        open={selectedTeacherId !== null}
+        onOpenChange={(open) => {
+          if (!open) handleSheetClose()
+        }}
+      />
 
       {editTeacherId && (
         <EditTeacherDialog
@@ -294,7 +289,6 @@ export function TeachersClientPage({ initialTeachers, totalCount }: TeachersClie
       {deleteTeacherId && (
         <DeleteTeacherDialog
           teacherId={deleteTeacherId}
-          teacher={teachers.find((t) => t.id === deleteTeacherId)}
           open={!!deleteTeacherId}
           onOpenChange={(open) => {
             if (!open) setDeleteTeacherId(null)
