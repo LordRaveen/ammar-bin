@@ -8,72 +8,67 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
-import { AddTeacherModal } from "@/components/add-teacher-modal"
 import { TeacherDetailsSheet } from "@/components/teacher-details-sheet"
 import { EditTeacherDialog } from "@/components/edit-teacher-dialog"
 import { DeleteTeacherDialog } from "@/components/delete-teacher-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-interface TeachersClientPageProps {
-  initialTeachers: any[]
+interface UsersClientPageProps {
+  initialUsers: any[]
   totalCount: number
 }
 
-export function TeachersClientPage({ initialTeachers, totalCount }: TeachersClientPageProps) {
-  const [teachers] = useState(initialTeachers)
+export function UsersClientPage({ initialUsers, totalCount }: UsersClientPageProps) {
+  const [users] = useState(initialUsers)
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null)
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const [editTeacherId, setEditTeacherId] = useState<string | null>(null)
-  const [deleteTeacherId, setDeleteTeacherId] = useState<string | null>(null)
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
+  const [editUserId, setEditUserId] = useState<string | null>(null)
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null)
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
 
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
 
-  const filteredTeachers = teachers.filter((teacher) => {
+  const filteredUsers = users.filter((user) => {
     const search = searchTerm.toLowerCase()
     return (
-      teacher.first_name?.toLowerCase().includes(search) ||
-      teacher.last_name?.toLowerCase().includes(search) ||
-      teacher.email?.toLowerCase().includes(search) ||
-      teacher.staff_id?.toLowerCase().includes(search)
+      user.first_name?.toLowerCase().includes(search) ||
+      user.last_name?.toLowerCase().includes(search) ||
+      user.staff_id?.toLowerCase().includes(search)
     )
   })
 
-  const totalPages = Math.ceil(filteredTeachers.length / rowsPerPage)
+  const totalPages = Math.ceil(filteredUsers.length / rowsPerPage)
   const startIndex = (currentPage - 1) * rowsPerPage
   const endIndex = startIndex + rowsPerPage
-  const paginatedTeachers = filteredTeachers.slice(startIndex, endIndex)
+  const paginatedUsers = filteredUsers.slice(startIndex, endIndex)
 
   useEffect(() => {
     setCurrentPage(1)
     setRowSelection({})
   }, [searchTerm])
 
-  const handleRowClick = (teacherId: string) => {
-    setSelectedTeacherId(teacherId)
-    setSheetOpen(true)
+  const handleRowClick = (userId: string) => {
+    setSelectedUserId(userId)
   }
 
   const handleSheetClose = () => {
-    setSheetOpen(false)
-    setSelectedTeacherId(null)
+    setSelectedUserId(null)
   }
 
-  const handleTeacherUpdated = () => {
+  const handleUserUpdated = () => {
     window.location.reload()
   }
 
-  const handleTeacherDeleted = () => {
+  const handleUserDeleted = () => {
     window.location.reload()
   }
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       const newSelection: Record<string, boolean> = {}
-      paginatedTeachers.forEach((teacher) => {
-        newSelection[teacher.id] = true
+      paginatedUsers.forEach((user) => {
+        newSelection[user.id] = true
       })
       setRowSelection(newSelection)
     } else {
@@ -81,10 +76,10 @@ export function TeachersClientPage({ initialTeachers, totalCount }: TeachersClie
     }
   }
 
-  const handleSelectRow = (teacherId: string, checked: boolean) => {
+  const handleSelectRow = (userId: string, checked: boolean) => {
     setRowSelection((prev) => ({
       ...prev,
-      [teacherId]: checked,
+      [userId]: checked,
     }))
   }
 
@@ -93,7 +88,7 @@ export function TeachersClientPage({ initialTeachers, totalCount }: TeachersClie
     setCurrentPage(1)
   }
 
-  const allSelected = paginatedTeachers.length > 0 && paginatedTeachers.every((t) => rowSelection[t.id])
+  const allSelected = paginatedUsers.length > 0 && paginatedUsers.every((u) => rowSelection[u.id])
   const selectedCount = Object.values(rowSelection).filter(Boolean).length
 
   const renderPagination = () => {
@@ -101,8 +96,8 @@ export function TeachersClientPage({ initialTeachers, totalCount }: TeachersClie
       <div className="flex items-center justify-between gap-4 mt-6 px-2">
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground whitespace-nowrap">
-            Showing {filteredTeachers.length === 0 ? 0 : startIndex + 1} to{" "}
-            {Math.min(endIndex, filteredTeachers.length)} of {filteredTeachers.length} teachers
+            Showing {filteredUsers.length === 0 ? 0 : startIndex + 1} to {Math.min(endIndex, filteredUsers.length)} of{" "}
+            {filteredUsers.length} users
           </span>
           {selectedCount > 0 && <span className="text-sm text-muted-foreground">({selectedCount} selected)</span>}
           <Select value={rowsPerPage.toString()} onValueChange={handleRowsPerPageChange}>
@@ -151,16 +146,15 @@ export function TeachersClientPage({ initialTeachers, totalCount }: TeachersClie
       <div className="flex flex-1 flex-col gap-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Teachers & Staff</h1>
-            <p className="text-muted-foreground">Manage teaching staff and user accounts</p>
+            <h1 className="text-3xl font-bold tracking-tight">Users & Staff</h1>
+            <p className="text-muted-foreground">Manage admin, accounting, cashier, and other staff accounts</p>
           </div>
-          <AddTeacherModal />
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>All Teachers</CardTitle>
-            <CardDescription>View and search all registered teachers</CardDescription>
+            <CardTitle>All Non-Teaching Staff</CardTitle>
+            <CardDescription>View and search all registered admin and support staff</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="mb-4">
@@ -169,7 +163,7 @@ export function TeachersClientPage({ initialTeachers, totalCount }: TeachersClie
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="search"
-                    placeholder="Search by name, staff ID, or email..."
+                    placeholder="Search by name or staff ID..."
                     className="pl-8"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -178,11 +172,11 @@ export function TeachersClientPage({ initialTeachers, totalCount }: TeachersClie
               </div>
             </div>
 
-            {paginatedTeachers.length === 0 ? (
+            {paginatedUsers.length === 0 ? (
               <div className="text-center py-6 text-muted-foreground">
                 {searchTerm
-                  ? "No teachers found matching your search."
-                  : "No teachers registered yet. Add your first teacher to get started."}
+                  ? "No users found matching your search."
+                  : "No non-teaching staff registered yet."}
               </div>
             ) : (
               <>
@@ -202,31 +196,29 @@ export function TeachersClientPage({ initialTeachers, totalCount }: TeachersClie
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedTeachers.map((teacher: any, index: number) => (
+                    {paginatedUsers.map((user: any, index: number) => (
                       <TableRow
-                        key={teacher.id}
-                        onClick={() => handleRowClick(teacher.id)}
+                        key={user.id}
+                        onClick={() => handleRowClick(user.id)}
                         className="cursor-pointer hover:bg-muted/50"
                       >
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <Checkbox
-                            checked={rowSelection[teacher.id] || false}
-                            onCheckedChange={(checked) => handleSelectRow(teacher.id, checked as boolean)}
+                            checked={rowSelection[user.id] || false}
+                            onCheckedChange={(checked) => handleSelectRow(user.id, checked as boolean)}
                           />
                         </TableCell>
                         <TableCell className="font-medium text-muted-foreground">{startIndex + index + 1}</TableCell>
-                        <TableCell className="font-medium">{teacher.staff_id}</TableCell>
+                        <TableCell className="font-medium">{user.staff_id}</TableCell>
                         <TableCell className="min-w-48">
-                          {teacher.first_name} {teacher.last_name}
+                          {user.first_name} {user.last_name}
                         </TableCell>
-                        <TableCell>{teacher.phone}</TableCell>
+                        <TableCell>{user.phone}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">{teacher.role}</Badge>
+                          <Badge variant="outline">{user.role}</Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={teacher.status === "Active" ? "default" : "secondary"}>
-                            {teacher.status}
-                          </Badge>
+                          <Badge variant={user.status === "Active" ? "default" : "secondary"}>{user.status}</Badge>
                         </TableCell>
                         <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-2">
@@ -235,7 +227,7 @@ export function TeachersClientPage({ initialTeachers, totalCount }: TeachersClie
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation()
-                                setEditTeacherId(teacher.id)
+                                setEditUserId(user.id)
                               }}
                               className="text-blue-600 hover:text-blue-700"
                             >
@@ -246,7 +238,7 @@ export function TeachersClientPage({ initialTeachers, totalCount }: TeachersClie
                               size="sm"
                               onClick={(e) => {
                                 e.stopPropagation()
-                                setDeleteTeacherId(teacher.id)
+                                setDeleteUserId(user.id)
                               }}
                               className="text-red-600 hover:text-red-700"
                             >
@@ -266,32 +258,32 @@ export function TeachersClientPage({ initialTeachers, totalCount }: TeachersClie
       </div>
 
       <TeacherDetailsSheet
-        teacherId={selectedTeacherId}
-        open={selectedTeacherId !== null}
+        teacherId={selectedUserId}
+        open={selectedUserId !== null}
         onOpenChange={(open) => {
           if (!open) handleSheetClose()
         }}
       />
 
-      {editTeacherId && (
+      {editUserId && (
         <EditTeacherDialog
-          teacherId={editTeacherId}
-          open={!!editTeacherId}
+          teacherId={editUserId}
+          open={!!editUserId}
           onOpenChange={(open) => {
-            if (!open) setEditTeacherId(null)
+            if (!open) setEditUserId(null)
           }}
-          onSuccess={handleTeacherUpdated}
+          onSuccess={handleUserUpdated}
         />
       )}
 
-      {deleteTeacherId && (
+      {deleteUserId && (
         <DeleteTeacherDialog
-          teacherId={deleteTeacherId}
-          open={!!deleteTeacherId}
+          teacherId={deleteUserId}
+          open={!!deleteUserId}
           onOpenChange={(open) => {
-            if (!open) setDeleteTeacherId(null)
+            if (!open) setDeleteUserId(null)
           }}
-          onSuccess={handleTeacherDeleted}
+          onSuccess={handleUserDeleted}
         />
       )}
     </>

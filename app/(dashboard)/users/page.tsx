@@ -1,10 +1,10 @@
 import { requireAdmin } from "@/lib/auth/get-user"
 import { createClient } from "@/lib/supabase/server"
-import { TeachersClientPage } from "@/components/teachers-client-page"
+import { UsersClientPage } from "@/components/users-client-page"
 
 export const dynamic = "force-dynamic"
 
-export default async function TeachersPage({
+export default async function UsersPage({
   searchParams,
 }: {
   searchParams: Promise<{ search?: string }>
@@ -18,13 +18,13 @@ export default async function TeachersPage({
   const { count } = await supabase
     .from("teachers")
     .select("*", { count: "exact", head: true })
-    .eq("role", "Teacher")
+    .neq("role", "Teacher")
     .is("deleted_at", null)
 
   let query = supabase
     .from("teachers")
     .select("*")
-    .eq("role", "Teacher")
+    .neq("role", "Teacher")
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
 
@@ -34,7 +34,7 @@ export default async function TeachersPage({
     )
   }
 
-  const { data: teachers } = await query
+  const { data: users } = await query
 
-  return <TeachersClientPage initialTeachers={teachers || []} totalCount={count || 0} />
+  return <UsersClientPage initialUsers={users || []} totalCount={count || 0} />
 }
