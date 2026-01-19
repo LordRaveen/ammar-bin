@@ -65,6 +65,11 @@ const getNavigationByRole = (role: UserRole) => {
       icon: IconUsersGroup,
     },
     {
+      title: "Users",
+      url: "/users",
+      icon: IconUsersGroup,
+    },
+    {
       title: "Guardians",
       url: "/guardians",
       icon: IconUser,
