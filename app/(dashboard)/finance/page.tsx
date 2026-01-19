@@ -29,9 +29,6 @@ export default async function FinancePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Finance</h1>
-      </div>
 
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="grid w-full max-w-2xl grid-cols-7 lg:max-w-4xl">
@@ -45,61 +42,56 @@ export default async function FinancePage() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          {/* KPI Cards - 5 columns */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Collected Today</CardTitle>
+          {/* KPI Cards - 5 columns - Compact */}
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-5">
+            <Card className="border shadow-none py-3 px-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Total Collected Today</p>
+                  <p className="text-lg font-bold text-green-600">₦{totalRevenue.toLocaleString()}</p>
+                </div>
                 <DollarSign className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">₦{totalRevenue.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground">{payments?.length || 0} payment(s)</p>
-              </CardContent>
+              </div>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Outstanding Balance</CardTitle>
+            <Card className="border shadow-none py-3 px-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Outstanding Balance</p>
+                  <p className="text-lg font-bold text-orange-600">₦{totalPending.toLocaleString()}</p>
+                </div>
                 <TrendingUp className="h-4 w-4 text-orange-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">₦{totalPending.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground">{invoices?.filter((i) => i.status === "Pending").length || 0} pending</p>
-              </CardContent>
+              </div>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Paid Invoices</CardTitle>
+            <Card className="border shadow-none py-3 px-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Paid Invoices</p>
+                  <p className="text-lg font-bold text-blue-600">{paidInvoices}</p>
+                </div>
                 <Receipt className="h-4 w-4 text-blue-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{paidInvoices}</div>
-                <p className="text-xs text-muted-foreground">Total: {invoices?.length || 0}</p>
-              </CardContent>
+              </div>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Collection Rate</CardTitle>
+            <Card className="border shadow-none py-3 px-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Collection Rate</p>
+                  <p className="text-lg font-bold text-purple-600">{collectionRate}%</p>
+                </div>
                 <FileText className="h-4 w-4 text-purple-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{collectionRate}%</div>
-                <p className="text-xs text-muted-foreground">{paidInvoices} of {invoices?.length || 0}</p>
-              </CardContent>
+              </div>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Invoices Generated Today</CardTitle>
+            <Card className="border shadow-none py-3 px-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Invoices Generated Today</p>
+                  <p className="text-lg font-bold text-teal-600">{todayInvoices}</p>
+                </div>
                 <Calendar className="h-4 w-4 text-teal-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{todayInvoices}</div>
-                <p className="text-xs text-muted-foreground">New invoices today</p>
-              </CardContent>
+              </div>
             </Card>
           </div>
 
