@@ -260,7 +260,7 @@ export function BulkGenerateModal({ open, onOpenChange }: BulkGenerateModalProps
                 balance: totalAmount,
                 due_date: dueDate,
                 status: "Pending",
-                invoice_number: `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                invoice_number: `INV-${Math.floor(Math.random() * 900000000) + 100000000}`,
                 generated_at: new Date().toISOString(),
               })
               .select()

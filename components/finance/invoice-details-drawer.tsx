@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { toast } from "sonner"
 import { createBrowserClient } from "@/lib/supabase/client"
 import {
   Sheet,
@@ -13,7 +14,16 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { CreditCard, FileText, History } from "lucide-react"
+import { CreditCard, FileText, History, Trash2 } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface InvoiceDetailsDrawerProps {
   invoiceId: string | null
@@ -32,6 +42,8 @@ export function InvoiceDetailsDrawer({
   const [invoiceItems, setInvoiceItems] = useState<any[]>([])
   const [payments, setPayments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const supabase = createBrowserClient()
 
   useEffect(() => {
@@ -93,9 +105,35 @@ export function InvoiceDetailsDrawer({
     }
   }
 
+  const handleDeleteInvoice = async () => {
+    if (!invoice) return
+    setDeleting(true)
+    try {
+      const { error } = await supabase
+        .from("invoices")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", invoice.id)
+
+      if (error) {
+        toast.error("Failed to delete invoice")
+        console.error("[v0] Delete error:", error)
+        return
+      }
+
+      toast.success("Invoice deleted successfully")
+      setDeleteDialogOpen(false)
+      onOpenChange(false)
+    } catch (error) {
+      console.error("[v0] Error deleting invoice:", error)
+      toast.error("Error deleting invoice")
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="max-w-2xl overflow-y-auto">
+      <SheetContent className="max-w-2xl overflow-y-auto px-6">
         {loading ? (
           <div className="py-12 text-center text-muted-foreground">Loading invoice details...</div>
         ) : invoice ? (
@@ -253,10 +291,43 @@ export function InvoiceDetailsDrawer({
                 Collect Payment (₦{Number.parseFloat(invoice.balance).toLocaleString()})
               </Button>
             )}
+
+            {/* Delete Invoice Button - Only if no payments made */}
+            {userRole === "admin" && Number.parseFloat(invoice.amount_paid) === 0 && (
+              <Button
+                variant="destructive"
+                className="w-full gap-2"
+                size="lg"
+                onClick={() => setDeleteDialogOpen(true)}
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete Invoice
+              </Button>
+            )}
           </div>
         ) : (
           <div className="py-12 text-center text-muted-foreground">Invoice not found</div>
         )}
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Invoice</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this invoice? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteInvoice}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogContent>
+        </AlertDialog>
       </SheetContent>
     </Sheet>
   )

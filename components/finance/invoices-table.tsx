@@ -47,7 +47,7 @@ export function InvoicesTable({ onSelectInvoice, filters }: InvoicesTableProps) 
         }
 
         // Apply class filter
-        if (filters.class) {
+        if (filters.class && filters.class !== "") {
           const { data: enrollments } = await supabase
             .from("student_enrollments")
             .select("student_id")
@@ -162,7 +162,7 @@ export function InvoicesTable({ onSelectInvoice, filters }: InvoicesTableProps) 
                     {invoice.status}
                   </Badge>
                 </TableCell>
-                <TableCell className="py-2 px-3 text-sm">{new Date(invoice.due_date).toLocaleDateString()}</TableCell>
+                <TableCell className="py-2 px-3 text-sm">{new Date(invoice.due_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</TableCell>
                 <TableCell className="py-2 px-3 text-right">
                   <div className="flex items-center justify-end gap-1">
                     <Button
