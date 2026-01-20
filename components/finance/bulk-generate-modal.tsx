@@ -205,10 +205,10 @@ export function BulkGenerateModal({ open, onOpenChange }: BulkGenerateModalProps
 
         if (studentsToProcess.length === 0) continue
 
-        // Fetch fee structures for this class
+        // Fetch fee structures for this class with category names
         const { data: feeStructures } = await supabase
           .from("fee_structures")
-          .select("*")
+          .select("*, fee_categories(name)")
           .eq("session_id", session)
           .eq("term_id", term)
           .eq("class_id", currentClassId)
@@ -268,16 +268,26 @@ export function BulkGenerateModal({ open, onOpenChange }: BulkGenerateModalProps
 
             if (invoiceError) continue
 
-            const invoiceItems = feeStructures.map((fs) => ({
+            const invoiceItems = feeStructures.map((fs: any) => ({
               invoice_id: invoice.id,
               fee_category_id: fs.fee_category_id,
-              description: fs.name,
+              description: fs.fee_categories?.name || "Fee Item",
               amount: fs.amount,
             }))
 
-            const { error: itemsError } = await supabase.from("invoice_items").insert(invoiceItems)
+            console.log("[v0] Creating invoice items:", invoiceItems)
+            
+            const { data: itemsResult, error: itemsError } = await supabase
+              .from("invoice_items")
+              .insert(invoiceItems)
+              .select()
+
+            console.log("[v0] Invoice items result:", itemsResult, "Error:", itemsError)
+            
             if (!itemsError) {
               totalInvoicesCreated++
+            } else {
+              console.error("[v0] Error creating invoice items:", itemsError)
             }
           } catch (error) {
             console.error("[v0] Error processing student:", error)
