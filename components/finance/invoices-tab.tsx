@@ -14,6 +14,7 @@ import { Plus, Download, FileText } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { InvoicesTable } from "@/components/finance/invoices-table"
 import { InvoiceDetailsDrawer } from "@/components/finance/invoice-details-drawer"
+import { BulkGenerateModal } from "@/components/finance/bulk-generate-modal"
 
 interface InvoicesTabProps {
   userRole?: "admin" | "accountant" | "parent"
@@ -32,6 +33,7 @@ export function InvoicesTab({ userRole = "admin" }: InvoicesTabProps) {
   const [selectedStatus, setSelectedStatus] = useState("All")
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedInvoice, setSelectedInvoice] = useState<string | null>(null)
+  const [bulkGenerateOpen, setBulkGenerateOpen] = useState(false)
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
     sessions: [],
     terms: [],
@@ -46,7 +48,7 @@ export function InvoicesTab({ userRole = "admin" }: InvoicesTabProps) {
       try {
         const [sessionsResult, classesResult] = await Promise.all([
           supabase.from("sessions").select("*").eq("is_active", true).order("name", { ascending: false }),
-          supabase.from("classes").select("*").eq("is_active", true).order("name", { ascending: true }),
+          supabase.from("classes").select("*, sections(name)").eq("is_active", true).order("name", { ascending: true }),
         ])
 
         const sessions = sessionsResult.data || []
@@ -148,9 +150,9 @@ export function InvoicesTab({ userRole = "admin" }: InvoicesTabProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Classes</SelectItem>
-                {filterOptions.classes.map((classItem) => (
+                {filterOptions.classes.map((classItem: any) => (
                   <SelectItem key={classItem.id} value={classItem.id}>
-                    {classItem.name}
+                    {classItem.name} {classItem.sections?.name ? `- ${classItem.sections.name}` : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -190,7 +192,12 @@ export function InvoicesTab({ userRole = "admin" }: InvoicesTabProps) {
               <Plus className="h-4 w-4" />
               Generate Invoice
             </Button>
-            <Button className="gap-2 bg-transparent" size="sm" variant="outline">
+            <Button
+              className="gap-2 bg-transparent"
+              size="sm"
+              variant="outline"
+              onClick={() => setBulkGenerateOpen(true)}
+            >
               <FileText className="h-4 w-4" />
               Bulk Generate
             </Button>
@@ -227,6 +234,9 @@ export function InvoicesTab({ userRole = "admin" }: InvoicesTabProps) {
           userRole={userRole}
         />
       )}
+
+      {/* Bulk Generate Modal */}
+      <BulkGenerateModal open={bulkGenerateOpen} onOpenChange={setBulkGenerateOpen} />
     </div>
   )
 }
