@@ -132,7 +132,7 @@ export function FeesTab() {
     try {
       const { data } = await supabase
         .from("classes")
-        .select("*, sections(name)")
+        .select("*, section:section_id(name)")
         .eq("is_active", true)
         .order("name", { ascending: true })
 
@@ -154,7 +154,7 @@ export function FeesTab() {
         .eq("session_id", selectedSession)
         .eq("term_id", selectedTerm)
         .eq("class_id", selectedClass)
-        .order("created_at", { ascending: true })
+        .order("fee_categories(name)", { ascending: true })
 
       setFeeStructures(data || [])
     } catch (error) {
@@ -450,6 +450,7 @@ export function FeesTab() {
         session={selectedSession}
         term={selectedTerm}
         classId={selectedClass}
+        className={currentClass ? `${currentClass.name}${currentClass.section?.name ? ` - ${currentClass.section.name}` : ""}` : ""}
         feeStructures={feeStructures}
       />
 
