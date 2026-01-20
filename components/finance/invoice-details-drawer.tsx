@@ -14,7 +14,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { CreditCard, FileText, History, Trash2, User } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { CreditCard, FileText, History, Trash2, User, Plus } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +52,9 @@ export function InvoiceDetailsDrawer({
   const [deleting, setDeleting] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [studentDetailsOpen, setStudentDetailsOpen] = useState(false)
+  const [addFeeDialogOpen, setAddFeeDialogOpen] = useState(false)
+  const [availableFees, setAvailableFees] = useState<any[]>([])
+  const [deletingItemId, setDeletingItemId] = useState<string | null>(null)
   const supabase = createBrowserClient()
 
   useEffect(() => {
@@ -130,6 +139,144 @@ export function InvoiceDetailsDrawer({
       toast.error("Error deleting invoice")
     } finally {
       setDeleting(false)
+    }
+  }
+
+  const handleDeleteInvoiceItem = async (itemId: string) => {
+    setDeletingItemId(itemId)
+    try {
+      const { error } = await supabase
+        .from("invoice_items")
+        .delete()
+        .eq("id", itemId)
+
+      if (error) {
+        toast.error("Failed to remove fee")
+        return
+      }
+
+      const itemToDelete = invoiceItems.find(i => i.id === itemId)
+      const newTotal = Number(invoice.total_amount) - Number(itemToDelete?.amount || 0)
+      const newBalance = Number(invoice.balance) - Number(itemToDelete?.amount || 0)
+
+      // Update invoice totals
+      await supabase
+        .from("invoices")
+        .update({
+          total_amount: newTotal,
+          balance: newBalance,
+        })
+        .eq("id", invoice.id)
+
+      // Refresh invoice items
+      const { data: items } = await supabase
+        .from("invoice_items")
+        .select("*")
+        .eq("invoice_id", invoice.id)
+
+      setInvoiceItems(items || [])
+
+      // Update invoice display
+      setInvoice({
+        ...invoice,
+        total_amount: newTotal,
+        balance: newBalance,
+      })
+
+      toast.success("Fee removed successfully")
+    } catch (error) {
+      console.error("[v0] Error deleting invoice item:", error)
+      toast.error("Error removing fee")
+    } finally {
+      setDeletingItemId(null)
+    }
+  }
+
+  const handleOpenAddFeeDialog = async () => {
+    if (!invoice) return
+
+    try {
+      // Get all fee structures for this class/term/session
+      const { data: allFees } = await supabase
+        .from("fee_structures")
+        .select("*, fee_categories(name)")
+        .eq("session_id", invoice.session_id)
+        .eq("term_id", invoice.term_id)
+        .eq("class_id", invoice.students?.current_class_id)
+        .eq("active", true)
+
+      if (!allFees) {
+        toast.error("No available fees to add")
+        return
+      }
+
+      // Filter out fees already in this invoice and zero-amount fees
+      const addedFeeIds = invoiceItems.map(i => i.fee_category_id)
+      const available = allFees.filter(fs => 
+        !addedFeeIds.includes(fs.fee_category_id) && Number(fs.amount) > 0
+      )
+
+      setAvailableFees(available)
+      setAddFeeDialogOpen(true)
+    } catch (error) {
+      console.error("[v0] Error fetching available fees:", error)
+      toast.error("Error loading available fees")
+    }
+  }
+
+  const handleAddFee = async (feeStructure: any) => {
+    if (!invoice) return
+
+    try {
+      // Create new invoice item
+      const { data: newItem, error: itemError } = await supabase
+        .from("invoice_items")
+        .insert({
+          invoice_id: invoice.id,
+          fee_category_id: feeStructure.fee_category_id,
+          description: feeStructure.fee_categories?.name || "Fee Item",
+          amount: feeStructure.amount,
+        })
+        .select()
+        .single()
+
+      if (itemError) {
+        toast.error("Failed to add fee")
+        return
+      }
+
+      // Update invoice totals
+      const newTotal = Number(invoice.total_amount) + Number(feeStructure.amount)
+      const newBalance = Number(invoice.balance) + Number(feeStructure.amount)
+
+      const { error: updateError } = await supabase
+        .from("invoices")
+        .update({
+          total_amount: newTotal,
+          balance: newBalance,
+        })
+        .eq("id", invoice.id)
+
+      if (updateError) {
+        toast.error("Failed to update invoice total")
+        return
+      }
+
+      // Update local state
+      setInvoiceItems([...invoiceItems, newItem])
+      setInvoice({
+        ...invoice,
+        total_amount: newTotal,
+        balance: newBalance,
+      })
+
+      // Remove from available fees
+      setAvailableFees(availableFees.filter(f => f.fee_category_id !== feeStructure.fee_category_id))
+
+      toast.success("Fee added successfully")
+    } catch (error) {
+      console.error("[v0] Error adding fee:", error)
+      toast.error("Error adding fee")
     }
   }
 
@@ -219,16 +366,43 @@ export function InvoiceDetailsDrawer({
                 ) : (
                   <div className="space-y-2">
                     {invoiceItems.map((item) => (
-                      <div key={item.id} className="flex justify-between items-center p-3 rounded-lg bg-muted">
-                        <div>
+                      <div key={item.id} className="flex justify-between items-center p-3 rounded-lg bg-muted group hover:bg-muted/80 transition-colors">
+                        <div className="flex-1">
                           <p className="font-medium text-sm">{item.description}</p>
                           <p className="text-xs text-muted-foreground">{item.fee_category_id}</p>
                         </div>
-                        <p className="font-semibold">
-                          ₦{Number.parseFloat(item.amount).toLocaleString()}
-                        </p>
+                        <div className="flex items-center gap-3">
+                          <p className="font-semibold">
+                            ₦{Number.parseFloat(item.amount).toLocaleString()}
+                          </p>
+                          {userRole === "admin" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => handleDeleteInvoiceItem(item.id)}
+                              disabled={deletingItemId === item.id}
+                              title="Remove fee"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     ))}
+
+                    {/* Add Fee Button */}
+                    {userRole === "admin" && (
+                      <Button
+                        variant="outline"
+                        className="w-full mt-4 gap-2 bg-transparent"
+                        onClick={handleOpenAddFeeDialog}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add Fee
+                      </Button>
+                    )}
+
                     <div className="border-t pt-3 mt-3 flex justify-between items-center font-bold">
                       <span>Total</span>
                       <span>₦{Number.parseFloat(invoice.total_amount).toLocaleString()}</span>
@@ -313,40 +487,75 @@ export function InvoiceDetailsDrawer({
         ) : (
           <div className="py-12 text-center text-muted-foreground">Invoice not found</div>
         )}
-
-        {/* Delete Confirmation Dialog */}
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Invoice</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete this invoice? This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteInvoice}
-              disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleting ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        {/* Student Details Sheet */}
-        {invoice?.student_id && (
-          <StudentDetailsSheet
-            studentId={invoice.student_id}
-            open={studentDetailsOpen}
-            onOpenChange={setStudentDetailsOpen}
-            sessions={[]}
-            terms={[]}
-            classes={[]}
-            userRole={userRole}
-          />
-        )}
       </SheetContent>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Invoice</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this invoice? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleDeleteInvoice}
+            disabled={deleting}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {deleting ? "Deleting..." : "Delete"}
+          </AlertDialogAction>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Student Details Sheet */}
+      {invoice?.student_id && (
+        <StudentDetailsSheet
+          studentId={invoice.student_id}
+          open={studentDetailsOpen}
+          onOpenChange={setStudentDetailsOpen}
+          sessions={[]}
+          terms={[]}
+          classes={[]}
+          userRole={userRole}
+        />
+      )}
+
+      {/* Add Fee Dialog */}
+      <Dialog open={addFeeDialogOpen} onOpenChange={setAddFeeDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Fee</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 max-h-96 overflow-y-auto">
+            {availableFees.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No additional fees available to add
+              </p>
+            ) : (
+              availableFees.map((fee) => (
+                <button
+                  key={fee.id}
+                  onClick={() => {
+                    handleAddFee(fee)
+                    setAddFeeDialogOpen(false)
+                  }}
+                  className="w-full p-3 rounded-lg border hover:border-blue-500 hover:bg-blue-50 transition-colors text-left"
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-medium text-sm">{fee.fee_categories?.name}</p>
+                      <p className="text-xs text-muted-foreground mt-1">Amount: ₦{Number(fee.amount).toLocaleString()}</p>
+                    </div>
+                    <Plus className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Sheet>
   )
 }

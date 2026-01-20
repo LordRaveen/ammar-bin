@@ -232,7 +232,7 @@ export function BulkGenerateModal({ open, onOpenChange }: BulkGenerateModalProps
 
             const { data: student } = await supabase
               .from("students")
-              .select("id, first_name, last_name, student_id")
+              .select("id, first_name, last_name, student_id, gender")
               .eq("id", studentId)
               .single()
 
@@ -245,8 +245,20 @@ export function BulkGenerateModal({ open, onOpenChange }: BulkGenerateModalProps
               .eq("is_primary", true)
               .single()
 
-            const totalAmount = feeStructures.reduce((sum, fs) => sum + Number(fs.amount), 0)
-            const dueDate = feeStructures[0]?.due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+            // Filter fee structures by gender and amount
+            const applicableFees = feeStructures.filter((fs: any) => {
+              // Skip if amount is 0
+              if (Number(fs.amount) === 0) return false
+              // Include if no gender_specific or gender matches
+              if (!fs.gender_specific || fs.gender_specific === student.gender) return true
+              return false
+            })
+
+            const totalAmount = applicableFees.reduce((sum, fs) => sum + Number(fs.amount), 0)
+
+            if (totalAmount === 0) continue // Skip if no applicable fees
+
+            const dueDate = applicableFees[0]?.due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
 
             const { data: invoice, error: invoiceError } = await supabase
               .from("invoices")
@@ -268,26 +280,19 @@ export function BulkGenerateModal({ open, onOpenChange }: BulkGenerateModalProps
 
             if (invoiceError) continue
 
-            const invoiceItems = feeStructures.map((fs: any) => ({
+            const invoiceItems = applicableFees.map((fs: any) => ({
               invoice_id: invoice.id,
               fee_category_id: fs.fee_category_id,
               description: fs.fee_categories?.name || "Fee Item",
               amount: fs.amount,
             }))
-
-            console.log("[v0] Creating invoice items:", invoiceItems)
             
-            const { data: itemsResult, error: itemsError } = await supabase
+            const { error: itemsError } = await supabase
               .from("invoice_items")
               .insert(invoiceItems)
-              .select()
 
-            console.log("[v0] Invoice items result:", itemsResult, "Error:", itemsError)
-            
             if (!itemsError) {
               totalInvoicesCreated++
-            } else {
-              console.error("[v0] Error creating invoice items:", itemsError)
             }
           } catch (error) {
             console.error("[v0] Error processing student:", error)
