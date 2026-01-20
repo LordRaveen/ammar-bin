@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DollarSign, FileText, Receipt, TrendingUp, Calendar, Search, Plus, CreditCard, FileCheck, InboxIcon } from "lucide-react"
 import Link from "next/link"
+import { CollectPayment } from "@/components/finance/collect-payment"
 
 export const dynamic = "force-dynamic"
 
@@ -245,15 +246,7 @@ export default async function FinancePage() {
 
         {/* Other Tabs */}
         <TabsContent value="collect">
-          <Card>
-            <CardHeader>
-              <CardTitle>Collect Payment</CardTitle>
-              <CardDescription>Record and manage student payments</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Payment collection interface coming soon</p>
-            </CardContent>
-          </Card>
+          <CollectPayment userRole="admin" />
         </TabsContent>
 
         <TabsContent value="invoices">
