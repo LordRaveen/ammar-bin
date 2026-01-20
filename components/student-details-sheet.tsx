@@ -70,7 +70,7 @@ export function StudentDetailsSheet({
             term:terms(name),
             class:classes(
               name,
-              section:sections(name)
+              section:section_id(name)
             )
           )
         `)

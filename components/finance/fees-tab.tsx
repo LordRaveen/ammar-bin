@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Plus, Eye, Edit2, Trash2, RotateCw } from "lucide-react"
+import { Plus, Eye, Edit2, Trash2, RotateCw, EyeOff } from "lucide-react"
 import { FeeStructureModal } from "@/components/finance/fee-structure-modal"
 import { PreviewImpactModal } from "@/components/finance/preview-impact-modal"
 import { BulkGenerateModal } from "@/components/finance/bulk-generate-modal"
@@ -401,8 +401,13 @@ export function FeesTab() {
                               size="sm"
                               className="h-8 w-8 p-0"
                               onClick={() => handleToggleActive(fee)}
+                              title={fee.active ? "Deactivate" : "Activate"}
                             >
-                              <RotateCw className="h-3 w-3" />
+                              {fee.active ? (
+                                <Eye className="h-4 w-4" />
+                              ) : (
+                                <EyeOff className="h-4 w-4 text-muted-foreground" />
+                              )}
                             </Button>
                             <Button
                               variant="ghost"

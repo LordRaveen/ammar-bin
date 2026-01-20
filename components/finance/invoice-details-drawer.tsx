@@ -196,16 +196,30 @@ export function InvoiceDetailsDrawer({
     if (!invoice) return
 
     try {
+      // Get the student's current class for context
+      const { data: studentData } = await supabase
+        .from("students")
+        .select("*")
+        .eq("id", invoice.student_id)
+        .single()
+
+      const studentClassId = studentData?.current_class_id
+
+      if (!studentClassId) {
+        toast.error("Could not determine student's class")
+        return
+      }
+
       // Get all fee structures for this class/term/session
       const { data: allFees } = await supabase
         .from("fee_structures")
         .select("*, fee_categories(name)")
         .eq("session_id", invoice.session_id)
         .eq("term_id", invoice.term_id)
-        .eq("class_id", invoice.students?.current_class_id)
+        .eq("class_id", studentClassId)
         .eq("active", true)
 
-      if (!allFees) {
+      if (!allFees || allFees.length === 0) {
         toast.error("No available fees to add")
         return
       }
@@ -215,6 +229,11 @@ export function InvoiceDetailsDrawer({
       const available = allFees.filter(fs => 
         !addedFeeIds.includes(fs.fee_category_id) && Number(fs.amount) > 0
       )
+
+      if (available.length === 0) {
+        toast.error("All applicable fees have been added to this invoice")
+        return
+      }
 
       setAvailableFees(available)
       setAddFeeDialogOpen(true)
