@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { DollarSign, FileText, Receipt, TrendingUp, Calendar, Search, Plus, CreditCard, FileCheck, InboxIcon } from "lucide-react"
 import Link from "next/link"
 import { CollectPayment } from "@/components/finance/collect-payment"
+import { InvoicesTab } from "@/components/finance/invoices-tab"
 
 export const dynamic = "force-dynamic"
 
@@ -34,8 +35,8 @@ export default async function FinancePage() {
       <Tabs defaultValue="overview" className="w-full py-3">
         <TabsList className="grid w-full max-w-2xl grid-cols-7 lg:max-w-4xl">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="collect">Collect payment</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
+          <TabsTrigger value="collect">Collect payment</TabsTrigger>
           <TabsTrigger value="students">Students</TabsTrigger>
           <TabsTrigger value="payments">Payments</TabsTrigger>
           <TabsTrigger value="reversals">Reversals</TabsTrigger>
@@ -243,22 +244,15 @@ export default async function FinancePage() {
             </Card>
           </div>
         </TabsContent>
-
+        
         {/* Other Tabs */}
-        <TabsContent value="collect">
-          <CollectPayment userRole="admin" />
-        </TabsContent>
 
         <TabsContent value="invoices">
-          <Card>
-            <CardHeader>
-              <CardTitle>Invoices</CardTitle>
-              <CardDescription>Generate and manage student invoices</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Invoice management interface coming soon</p>
-            </CardContent>
-          </Card>
+          <InvoicesTab userRole="admin" />
+        </TabsContent>
+
+        <TabsContent value="collect">
+          <CollectPayment userRole="admin" />
         </TabsContent>
 
         <TabsContent value="students">
