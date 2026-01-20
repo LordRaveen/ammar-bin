@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Loader2 } from "lucide-react"
+import { toast } from "sonner"
 
 interface BulkGenerateModalProps {
   open: boolean
@@ -140,34 +141,162 @@ export function BulkGenerateModal({ open, onOpenChange }: BulkGenerateModalProps
 
   const handleGenerateInvoices = async () => {
     if (!session || !term || !classId) {
-      alert("Please select session, term, and class")
+      toast.error("Please select session, term, and class")
       return
     }
 
     if (studentMode === "selected" && selectedStudents.size === 0) {
-      alert("Please select at least one student")
+      toast.error("Please select at least one student")
       return
     }
 
     setGenerating(true)
+    const loadingToastId = toast.loading("Generating invoices...")
+    
     try {
-      // TODO: Call API to generate invoices
-      console.log("[v0] Generating invoices for:", {
-        session,
-        term,
-        classId,
-        studentMode,
-        students: studentMode === "all" ? "all" : Array.from(selectedStudents),
-      })
+      const students = studentMode === "all" ? "all" : Array.from(selectedStudents)
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      // Fetch fee structures for the selected class/term/session
+      const { data: feeStructures } = await supabase
+        .from("fee_structures")
+        .select("*")
+        .eq("session_id", session)
+        .eq("term_id", term)
+        .eq("class_id", classId)
+        .eq("active", true)
+
+      if (!feeStructures || feeStructures.length === 0) {
+        toast.dismiss(loadingToastId)
+        toast.error("No fee structures found for the selected class/term")
+        setGenerating(false)
+        return
+      }
+
+      // Get students to generate invoices for
+      let studentIdsToProcess: string[] = []
+      if (students === "all") {
+        const { data: enrollments } = await supabase
+          .from("student_enrollments")
+          .select("student_id")
+          .eq("class_id", classId)
+          .eq("term_id", term)
+
+        studentIdsToProcess = enrollments?.map((e) => e.student_id) || []
+      } else {
+        studentIdsToProcess = students as string[]
+      }
+
+      if (studentIdsToProcess.length === 0) {
+        toast.dismiss(loadingToastId)
+        toast.error("No students found for invoice generation")
+        setGenerating(false)
+        return
+      }
+
+      let invoicesCreated = 0
+
+      // Create invoices for each student
+      for (const studentId of studentIdsToProcess) {
+        try {
+          // Check if invoice already exists for this student/term/session
+          const { data: existingInvoice } = await supabase
+            .from("invoices")
+            .select("id")
+            .eq("student_id", studentId)
+            .eq("session_id", session)
+            .eq("term_id", term)
+            .single()
+
+          if (existingInvoice) {
+            continue // Skip if invoice already exists
+          }
+
+          // Get student and parent info
+          const { data: student } = await supabase
+            .from("students")
+            .select("id, first_name, last_name, student_id")
+            .eq("id", studentId)
+            .single()
+
+          if (!student) continue
+
+          // Get student's guardian
+          const { data: guardianLink } = await supabase
+            .from("student_guardians")
+            .select("guardian_id")
+            .eq("student_id", studentId)
+            .eq("is_primary", true)
+            .single()
+
+          // Calculate total amount from fee structures
+          const totalAmount = feeStructures.reduce((sum, fs) => sum + Number(fs.amount), 0)
+
+          // Get earliest due date
+          const dueDate = feeStructures[0]?.due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+
+          // Create invoice
+          const { data: invoice, error: invoiceError } = await supabase
+            .from("invoices")
+            .insert({
+              student_id: studentId,
+              parent_id: guardianLink?.guardian_id || null,
+              session_id: session,
+              term_id: term,
+              total_amount: totalAmount,
+              amount_paid: 0,
+              balance: totalAmount,
+              due_date: dueDate,
+              status: "Pending",
+              invoice_number: `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              generated_at: new Date().toISOString(),
+            })
+            .select()
+            .single()
+
+          if (invoiceError) {
+            console.error("[v0] Error creating invoice:", invoiceError)
+            continue
+          }
+
+          // Create invoice items from fee structures
+          const invoiceItems = feeStructures.map((fs) => ({
+            invoice_id: invoice.id,
+            fee_category_id: fs.fee_category_id,
+            description: fs.name,
+            amount: fs.amount,
+          }))
+
+          const { error: itemsError } = await supabase.from("invoice_items").insert(invoiceItems)
+
+          if (!itemsError) {
+            invoicesCreated++
+          }
+        } catch (error) {
+          console.error("[v0] Error processing student:", error)
+        }
+      }
+
+      toast.dismiss(loadingToastId)
+      
+      if (invoicesCreated > 0) {
+        toast.success(`Successfully generated ${invoicesCreated} invoice(s)`)
+      } else {
+        toast.warning("No new invoices were created (may already exist)")
+      }
 
       onOpenChange(false)
-      alert("Invoices generated successfully!")
+      
+      // Reset form
+      setSession("")
+      setTerm("")
+      setClassId("")
+      setStudentMode("all")
+      setSelectedStudents(new Set())
+      setSelectAll(false)
     } catch (error) {
       console.error("[v0] Error generating invoices:", error)
-      alert("Error generating invoices")
+      toast.dismiss(loadingToastId)
+      toast.error("Error generating invoices. Please try again.")
     } finally {
       setGenerating(false)
     }

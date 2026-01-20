@@ -32,8 +32,7 @@ export function InvoicesTable({ onSelectInvoice, filters }: InvoicesTableProps) 
           .from("invoices")
           .select(`
             *,
-            students(first_name, last_name, student_id),
-            guardians(first_name, last_name, phone)
+            students(first_name, last_name, student_id)
           `)
           .is("deleted_at", null)
 
