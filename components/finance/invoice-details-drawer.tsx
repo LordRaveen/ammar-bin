@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { CreditCard, FileText, History, Trash2 } from "lucide-react"
+import { CreditCard, FileText, History, Trash2, User } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { StudentDetailsSheet } from "@/components/student-details-sheet"
 
 interface InvoiceDetailsDrawerProps {
   invoiceId: string | null
@@ -44,6 +45,7 @@ export function InvoiceDetailsDrawer({
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [studentDetailsOpen, setStudentDetailsOpen] = useState(false)
   const supabase = createBrowserClient()
 
   useEffect(() => {
@@ -133,7 +135,7 @@ export function InvoiceDetailsDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="max-w-2xl overflow-y-auto px-6">
+      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto px-6">
         {loading ? (
           <div className="py-12 text-center text-muted-foreground">Loading invoice details...</div>
         ) : invoice ? (
@@ -149,9 +151,12 @@ export function InvoiceDetailsDrawer({
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Student</p>
-                    <p className="font-semibold">
+                    <button
+                      onClick={() => setStudentDetailsOpen(true)}
+                      className="font-semibold hover:text-blue-600 hover:underline cursor-pointer transition-colors"
+                    >
                       {invoice.students?.first_name} {invoice.students?.last_name}
-                    </p>
+                    </button>
                     <p className="text-xs text-muted-foreground mt-1">
                       ID: {invoice.students?.student_id}
                     </p>
@@ -242,7 +247,7 @@ export function InvoiceDetailsDrawer({
                       <div key={payment.id} className="flex justify-between items-center p-3 rounded-lg bg-green-50 border border-green-200">
                         <div>
                           <p className="font-medium text-sm">Payment Received</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-sm text-muted-foreground">
                             {new Date(payment.payment_date).toLocaleDateString()} • {payment.payment_method}
                           </p>
                         </div>
@@ -328,6 +333,19 @@ export function InvoiceDetailsDrawer({
             </AlertDialogAction>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Student Details Sheet */}
+        {invoice?.student_id && (
+          <StudentDetailsSheet
+            studentId={invoice.student_id}
+            open={studentDetailsOpen}
+            onOpenChange={setStudentDetailsOpen}
+            sessions={[]}
+            terms={[]}
+            classes={[]}
+            userRole={userRole}
+          />
+        )}
       </SheetContent>
     </Sheet>
   )

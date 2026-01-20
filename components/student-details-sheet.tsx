@@ -136,6 +136,7 @@ export function StudentDetailsSheet({
                     <span className="text-sm text-muted-foreground">Current Class:</span>
                     <Badge variant="outline" className="font-medium">
                       {currentEnrollment.class.name}
+                      {currentEnrollment.class.section?.name && ` - ${currentEnrollment.class.section.name}`}
                     </Badge>
                   </div>
                 ) : (
@@ -258,6 +259,7 @@ export function StudentDetailsSheet({
                         <TableHead>Session</TableHead>
                         <TableHead>Term</TableHead>
                         <TableHead>Class</TableHead>
+                        <TableHead>Section</TableHead>
                         <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -267,6 +269,7 @@ export function StudentDetailsSheet({
                           <TableCell className="text-sm">{enrollment.session?.name}</TableCell>
                           <TableCell className="text-sm">{enrollment.term?.name}</TableCell>
                           <TableCell className="text-sm font-medium">{enrollment.class?.name}</TableCell>
+                          <TableCell className="text-sm">{enrollment.class?.section?.name || "—"}</TableCell>
                           <TableCell>
                             <Badge variant={enrollment.is_active ? "default" : "secondary"}>
                               {enrollment.is_active ? "Active" : "Inactive"}
