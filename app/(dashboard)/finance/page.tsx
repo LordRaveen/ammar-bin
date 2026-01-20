@@ -8,6 +8,7 @@ import { DollarSign, FileText, Receipt, TrendingUp, Calendar, Search, Plus, Cred
 import Link from "next/link"
 import { CollectPayment } from "@/components/finance/collect-payment"
 import { InvoicesTab } from "@/components/finance/invoices-tab"
+import { FeesTab } from "@/components/finance/fees-tab"
 
 export const dynamic = "force-dynamic"
 
@@ -33,8 +34,9 @@ export default async function FinancePage() {
     <div className="space-y-6">
 
       <Tabs defaultValue="overview" className="w-full py-3">
-        <TabsList className="grid w-full max-w-2xl grid-cols-7 lg:max-w-4xl">
+        <TabsList className="grid w-full max-w-full grid-cols-8 lg:max-w-6xl">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="fees">Fees</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
           <TabsTrigger value="collect">Collect payment</TabsTrigger>
           <TabsTrigger value="students">Students</TabsTrigger>
@@ -246,6 +248,10 @@ export default async function FinancePage() {
         </TabsContent>
         
         {/* Other Tabs */}
+
+        <TabsContent value="fees">
+          <FeesTab />
+        </TabsContent>
 
         <TabsContent value="invoices">
           <InvoicesTab userRole="admin" />
