@@ -283,12 +283,12 @@ export function FeesTab() {
           </div>
 
           {/* Class Selector Chips */}
-          <div className="flex gap-2 overflow-x-auto pb-2">
+          <div className="flex flex-wrap gap-2">
             {classes.map(cls => (
               <button
                 key={cls.id}
                 onClick={() => setSelectedClass(cls.id)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                   selectedClass === cls.id
                     ? "bg-blue-600 text-white"
                     : "bg-muted hover:bg-muted/80 text-foreground"
