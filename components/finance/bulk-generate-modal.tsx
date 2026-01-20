@@ -315,12 +315,12 @@ export function BulkGenerateModal({ open, onOpenChange }: BulkGenerateModalProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-96">
+      <DialogContent className="max-w-4xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Generate Invoices</DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 gap-6 max-h-80 overflow-y-auto">
+        <div className="grid grid-cols-2 gap-8 min-h-96 overflow-y-auto pr-4">
           {/* Left Column - Filters */}
           <div className="space-y-4">
             {/* Session */}

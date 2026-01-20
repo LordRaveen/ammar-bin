@@ -45,8 +45,7 @@ export function InvoiceDetailsDrawer({
           .from("invoices")
           .select(`
             *,
-            students(first_name, last_name, student_id, current_class:student_enrollments(class_id)),
-            guardians(first_name, last_name, phone, email)
+            students(first_name, last_name, student_id)
           `)
           .eq("id", invoiceId)
           .single()

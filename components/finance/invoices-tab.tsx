@@ -34,16 +34,53 @@ export function InvoicesTab({ userRole = "admin" }: InvoicesTabProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedInvoice, setSelectedInvoice] = useState<string | null>(null)
   const [bulkGenerateOpen, setBulkGenerateOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
     sessions: [],
     terms: [],
     classes: [],
   })
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const supabase = createBrowserClient()
+
+  // Initialize from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem("invoices-tab-state")
+    if (saved) {
+      try {
+        const state = JSON.parse(saved)
+        setSelectedSession(state.session || "")
+        setSelectedTerm(state.term || "")
+        setSelectedClass(state.class || "")
+        setSelectedStatus(state.status || "All")
+        setSearchTerm(state.search || "")
+      } catch (e) {
+        console.error("[v0] Error parsing saved state:", e)
+      }
+    }
+    setMounted(true)
+  }, [])
+
+  // Save state to localStorage when filters change
+  useEffect(() => {
+    if (mounted) {
+      localStorage.setItem(
+        "invoices-tab-state",
+        JSON.stringify({
+          session: selectedSession,
+          term: selectedTerm,
+          class: selectedClass,
+          status: selectedStatus,
+          search: searchTerm,
+        })
+      )
+    }
+  }, [selectedSession, selectedTerm, selectedClass, selectedStatus, searchTerm, mounted])
 
   // Fetch filter options from database
   useEffect(() => {
+    if (!mounted) return
+
     const fetchFilterOptions = async () => {
       try {
         const [sessionsResult, classesResult] = await Promise.all([
@@ -60,19 +97,17 @@ export function InvoicesTab({ userRole = "admin" }: InvoicesTabProps) {
           classes,
         }))
 
-        // Set default session to first active one
+        // Set default session to first active one if not already set
         if (sessions.length > 0 && !selectedSession) {
           setSelectedSession(sessions[0].id)
         }
       } catch (error) {
         console.error("[v0] Error fetching filter options:", error)
-      } finally {
-        setLoading(false)
       }
     }
 
     fetchFilterOptions()
-  }, [supabase, selectedSession])
+  }, [supabase, mounted, selectedSession])
 
   // Fetch terms when session changes
   useEffect(() => {
@@ -210,7 +245,7 @@ export function InvoicesTab({ userRole = "admin" }: InvoicesTabProps) {
       </div>
 
       {/* Invoices Table */}
-      {!loading && selectedSession && selectedTerm && (
+      {mounted && selectedSession && selectedTerm && (
         <InvoicesTable
           onSelectInvoice={setSelectedInvoice}
           filters={{
