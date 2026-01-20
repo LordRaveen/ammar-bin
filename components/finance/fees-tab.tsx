@@ -301,7 +301,7 @@ export function FeesTab() {
 
           {/* Fee Structures Table */}
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <CardTitle>
                 {currentClass
                   ? `Fee Structures - ${currentClass.name}${
@@ -309,6 +309,17 @@ export function FeesTab() {
                     }`
                   : "Fee Structures"}
               </CardTitle>
+              <Button
+                onClick={() => {
+                  setEditingFee(null)
+                  setFeeModalOpen(true)
+                }}
+                className="gap-2"
+                size="sm"
+              >
+                <Plus className="h-4 w-4" />
+                Add Fee
+              </Button>
             </CardHeader>
             <CardContent>
               {loading ? (

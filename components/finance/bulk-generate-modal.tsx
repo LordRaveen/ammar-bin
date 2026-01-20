@@ -249,8 +249,8 @@ export function BulkGenerateModal({ open, onOpenChange }: BulkGenerateModalProps
             const applicableFees = feeStructures.filter((fs: any) => {
               // Skip if amount is 0
               if (Number(fs.amount) === 0) return false
-              // Include if no gender_specific or gender matches
-              if (!fs.gender_specific || fs.gender_specific === student.gender) return true
+              // Include if no gender_specific, "Both", or gender matches student
+              if (!fs.gender_specific || fs.gender_specific === "Both" || fs.gender_specific === student.gender) return true
               return false
             })
 
