@@ -2,10 +2,10 @@
 
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
-import { Card } from "@/components/ui/card"
 import { Search } from "lucide-react"
 import { FamilyCard } from "@/components/finance/family-card"
 import { PaymentBuilder } from "@/components/finance/payment-builder"
+import { SearchResultsModal } from "@/components/finance/search-results-modal"
 
 interface CollectPaymentProps {
   userRole?: "admin" | "parent" | "accountant"
@@ -13,45 +13,64 @@ interface CollectPaymentProps {
 }
 
 export function CollectPayment({ userRole = "admin", parentId }: CollectPaymentProps) {
-  const [searchTerm, setSearchTerm] = useState("")
+  const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [selectedFamily, setSelectedFamily] = useState<any>(null)
 
-  return (
-    <div className="space-y-4">
-      {/* Search Bar */}
-      <div className="relative max-w-lg">
-        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search parent or students by name, ID or phone"
-          className="pl-10"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
+  const handleSelectResult = (result: any, type: "parent" | "student") => {
+    setSelectedFamily({
+      ...result,
+      type,
+    })
+  }
 
+  return (
+    <>
       {/* Two Column Layout */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Left Column - Family Card */}
+        {/* Left Column - Search and Family Card */}
         <div className="space-y-4">
-          <h3 className="font-semibold text-sm">Family card</h3>
-          <FamilyCard
-            searchTerm={searchTerm}
-            selectedFamily={selectedFamily}
-            onSelectFamily={setSelectedFamily}
-            userRole={userRole}
-            parentId={parentId}
-          />
+          {/* Search Bar */}
+          <div
+            className="relative cursor-pointer"
+            onClick={() => setSearchModalOpen(true)}
+          >
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search parent or students by name, ID or phone"
+              className="pl-10 cursor-pointer"
+              readOnly
+              onClick={() => setSearchModalOpen(true)}
+            />
+          </div>
+
+          {/* Family Card */}
+          <div>
+            <h3 className="font-semibold text-sm mb-3">Family card</h3>
+            <FamilyCard
+              selectedFamily={selectedFamily}
+              onSelectFamily={setSelectedFamily}
+              userRole={userRole}
+              parentId={parentId}
+            />
+          </div>
         </div>
 
         {/* Right Column - Payment Builder */}
-        <div className="space-y-4">
-          <h3 className="font-semibold text-sm">Payment builder</h3>
+        <div>
+          <h3 className="font-semibold text-sm mb-3">Payment builder</h3>
           <PaymentBuilder
             selectedFamily={selectedFamily}
             userRole={userRole}
           />
         </div>
       </div>
-    </div>
+
+      {/* Search Results Modal */}
+      <SearchResultsModal
+        open={searchModalOpen}
+        onOpenChange={setSearchModalOpen}
+        onSelectResult={handleSelectResult}
+      />
+    </>
   )
 }
