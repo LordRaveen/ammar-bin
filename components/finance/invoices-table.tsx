@@ -37,13 +37,38 @@ export function InvoicesTable({ onSelectInvoice, filters }: InvoicesTableProps) 
           `)
           .is("deleted_at", null)
 
-        if (filters.status) {
+        // Apply session filter
+        if (filters.session) {
+          query = query.eq("session_id", filters.session)
+        }
+
+        // Apply term filter
+        if (filters.term) {
+          query = query.eq("term_id", filters.term)
+        }
+
+        // Apply class filter
+        if (filters.class) {
+          const { data: enrollments } = await supabase
+            .from("student_enrollments")
+            .select("student_id")
+            .eq("class_id", filters.class)
+
+          const studentIds = enrollments?.map((e) => e.student_id) || []
+          if (studentIds.length > 0) {
+            query = query.in("student_id", studentIds)
+          }
+        }
+
+        // Apply status filter
+        if (filters.status && filters.status !== "All") {
           query = query.eq("status", filters.status)
         }
 
+        // Apply search filter
         if (filters.search) {
           query = query.or(
-            `students.first_name.ilike.%${filters.search}%,students.last_name.ilike.%${filters.search}%,students.student_id.ilike.%${filters.search}%`
+            `students.first_name.ilike.%${filters.search}%,students.last_name.ilike.%${filters.search}%,students.student_id.ilike.%${filters.search}%`,
           )
         }
 

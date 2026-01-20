@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Plus, Download, FileText } from "lucide-react"
+import { createBrowserClient } from "@/lib/supabase/client"
 import { InvoicesTable } from "@/components/finance/invoices-table"
 import { InvoiceDetailsDrawer } from "@/components/finance/invoice-details-drawer"
 
@@ -18,13 +19,88 @@ interface InvoicesTabProps {
   userRole?: "admin" | "accountant" | "parent"
 }
 
+interface FilterOptions {
+  sessions: any[]
+  terms: any[]
+  classes: any[]
+}
+
 export function InvoicesTab({ userRole = "admin" }: InvoicesTabProps) {
-  const [selectedSession, setSelectedSession] = useState("2024")
-  const [selectedTerm, setSelectedTerm] = useState("1")
-  const [selectedClass, setSelectedClass] = useState("jss1")
+  const [selectedSession, setSelectedSession] = useState("")
+  const [selectedTerm, setSelectedTerm] = useState("")
+  const [selectedClass, setSelectedClass] = useState("")
   const [selectedStatus, setSelectedStatus] = useState("All")
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedInvoice, setSelectedInvoice] = useState<string | null>(null)
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>({
+    sessions: [],
+    terms: [],
+    classes: [],
+  })
+  const [loading, setLoading] = useState(true)
+  const supabase = createBrowserClient()
+
+  // Fetch filter options from database
+  useEffect(() => {
+    const fetchFilterOptions = async () => {
+      try {
+        const [sessionsResult, classesResult] = await Promise.all([
+          supabase.from("sessions").select("*").eq("is_active", true).order("name", { ascending: false }),
+          supabase.from("classes").select("*").eq("is_active", true).order("name", { ascending: true }),
+        ])
+
+        const sessions = sessionsResult.data || []
+        const classes = classesResult.data || []
+
+        setFilterOptions((prev) => ({
+          ...prev,
+          sessions,
+          classes,
+        }))
+
+        // Set default session to first active one
+        if (sessions.length > 0 && !selectedSession) {
+          setSelectedSession(sessions[0].id)
+        }
+      } catch (error) {
+        console.error("[v0] Error fetching filter options:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchFilterOptions()
+  }, [supabase, selectedSession])
+
+  // Fetch terms when session changes
+  useEffect(() => {
+    if (!selectedSession) return
+
+    const fetchTerms = async () => {
+      try {
+        const { data: terms } = await supabase
+          .from("terms")
+          .select("*")
+          .eq("session_id", selectedSession)
+          .eq("is_active", true)
+          .order("term_number", { ascending: true })
+
+        setFilterOptions((prev) => ({
+          ...prev,
+          terms: terms || [],
+        }))
+
+        // Auto-select first term
+        if (terms && terms.length > 0 && !selectedTerm) {
+          setSelectedTerm(terms[0].id)
+        }
+      } catch (error) {
+        console.error("[v0] Error fetching terms:", error)
+      }
+    }
+
+    fetchTerms()
+  }, [selectedSession, selectedTerm, supabase])
 
   return (
     <div className="space-y-6">
@@ -39,8 +115,11 @@ export function InvoicesTab({ userRole = "admin" }: InvoicesTabProps) {
                 <SelectValue placeholder="Select session" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="2024">2024</SelectItem>
-                <SelectItem value="2025">2025</SelectItem>
+                {filterOptions.sessions.map((session) => (
+                  <SelectItem key={session.id} value={session.id}>
+                    {session.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -52,9 +131,11 @@ export function InvoicesTab({ userRole = "admin" }: InvoicesTabProps) {
                 <SelectValue placeholder="Select term" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="1">Term 1</SelectItem>
-                <SelectItem value="2">Term 2</SelectItem>
-                <SelectItem value="3">Term 3</SelectItem>
+                {filterOptions.terms.map((term) => (
+                  <SelectItem key={term.id} value={term.id}>
+                    {term.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -66,9 +147,12 @@ export function InvoicesTab({ userRole = "admin" }: InvoicesTabProps) {
                 <SelectValue placeholder="Select class" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="jss1">JSS 1</SelectItem>
-                <SelectItem value="jss2">JSS 2</SelectItem>
-                <SelectItem value="jss3">JSS 3</SelectItem>
+                <SelectItem value="all">All Classes</SelectItem>
+                {filterOptions.classes.map((classItem) => (
+                  <SelectItem key={classItem.id} value={classItem.id}>
+                    {classItem.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -107,10 +191,6 @@ export function InvoicesTab({ userRole = "admin" }: InvoicesTabProps) {
               Generate Invoice
             </Button>
             <Button className="gap-2 bg-transparent" size="sm" variant="outline">
-              <Plus className="h-4 w-4" />
-              Generate Group Invoice
-            </Button>
-            <Button className="gap-2 bg-transparent" size="sm" variant="outline">
               <FileText className="h-4 w-4" />
               Bulk Generate
             </Button>
@@ -123,16 +203,18 @@ export function InvoicesTab({ userRole = "admin" }: InvoicesTabProps) {
       </div>
 
       {/* Invoices Table */}
-      <InvoicesTable
-        onSelectInvoice={setSelectedInvoice}
-        filters={{
-          session: selectedSession,
-          term: selectedTerm,
-          class: selectedClass,
-          status: selectedStatus,
-          search: searchTerm,
-        }}
-      />
+      {!loading && selectedSession && selectedTerm && (
+        <InvoicesTable
+          onSelectInvoice={setSelectedInvoice}
+          filters={{
+            session: selectedSession,
+            term: selectedTerm,
+            class: selectedClass,
+            status: selectedStatus,
+            search: searchTerm,
+          }}
+        />
+      )}
 
       {/* Invoice Details Drawer */}
       {selectedInvoice && (
