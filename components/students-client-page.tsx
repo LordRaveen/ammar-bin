@@ -169,28 +169,28 @@ export function StudentsClientPage({
                   className="cursor-pointer hover:bg-muted/50 transition-colors"
                   data-state={isSelected && "selected"}
                 >
-                  <TableCell onClick={(e) => e.stopPropagation()}>
+                  <TableCell onClick={(e) => e.stopPropagation()} className="px-2 py-2">
                     <Checkbox
                       checked={isSelected}
                       onCheckedChange={(checked) => handleSelectRow(student.id, !!checked)}
                       aria-label="Select row"
                     />
                   </TableCell>
-                  <TableCell className="font-medium text-muted-foreground">{startIndex + index + 1}</TableCell>
-                  <TableCell className="font-medium">{student.student_id}</TableCell>
-                  <TableCell>
+                  <TableCell className="font-medium text-muted-foreground px-2 py-2">{startIndex + index + 1}</TableCell>
+                  <TableCell className="font-medium px-2 py-2">{student.student_id}</TableCell>
+                  <TableCell className="px-2 py-2">
                     {student.first_name} {student.last_name}
                   </TableCell>
-                  <TableCell>{student.gender}</TableCell>
-                  <TableCell>
+                  <TableCell className="px-2 py-2">{student.gender}</TableCell>
+                  <TableCell className="px-2 py-2">
                     {activeEnrollment?.class?.name || (
-                      <span className="text-muted-foreground italic">Not Enrolled</span>
+                      <span className="text-muted-foreground italic ">Not Enrolled</span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="px-2 py-2">
                     <Badge variant={student.status === "Active" ? "default" : "secondary"}>{student.status}</Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right px-2 py-2">
                     <div className="flex items-center justify-end gap-2">
                       {(userRole === "admin" || userRole === "super_admin") && (
                         <>

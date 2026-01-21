@@ -39,6 +39,11 @@ interface FamilyCardProps {
   parentId?: string
 }
 
+function calculateDueDate(dueDate: string) {
+  // Placeholder implementation for calculateDueDate
+  return dueDate;
+}
+
 export function FamilyCard({
   selectedFamily,
   onSelectFamily,
@@ -106,7 +111,7 @@ export function FamilyCard({
       const studentIds = studentGuardianData.map((sg) => sg.student_id)
 
       // Fetch students with their current enrollment and invoices
-      const { data: studentsWithInvoices } = await supabase
+      const { data: studentsWithInvoices, error: invoiceError } = await supabase
         .from("students")
         .select(
           `
@@ -124,6 +129,7 @@ export function FamilyCard({
             invoice_number,
             session_id,
             term_id,
+            due_date,
             balance,
             status,
             invoice_items(
@@ -136,7 +142,12 @@ export function FamilyCard({
         `
         )
         .in("id", studentIds)
-        .eq("invoices.deleted_at", null)
+        .is("invoices.deleted_at", null)
+
+      if (invoiceError) {
+        console.error("[v0] Invoice query error:", invoiceError)
+        return
+      }
 
       // Transform data to StudentData format
       const transformed = studentsWithInvoices
@@ -155,11 +166,12 @@ export function FamilyCard({
               studentId: student.id,
               invoiceId: invoice.id,
               invoiceNumber: invoice.invoice_number,
+              dueDate: calculateDueDate(invoice.due_date),
               items: invoice.invoice_items?.map((item: any) => ({
                 id: item.id,
                 description: item.fee_categories?.name || item.description,
-                dueDate: "N/A", // Will calculate from invoice due_date
-                balance: item.amount,
+                dueDate: calculateDueDate(invoice.due_date),
+                balance: Number(item.amount),
                 status: invoice.status === "Paid" ? "paid" : "pending",
               })),
             }))
@@ -191,7 +203,7 @@ export function FamilyCard({
     setGuardianInfo(null)
 
     // Fetch student with enrollments and invoices
-    const { data: studentData } = await supabase
+    const { data: studentData, error: invoiceError } = await supabase
       .from("students")
       .select(
         `
@@ -209,6 +221,7 @@ export function FamilyCard({
           invoice_number,
           session_id,
           term_id,
+          due_date,
           balance,
           status,
           invoice_items(
@@ -221,8 +234,13 @@ export function FamilyCard({
       `
       )
       .eq("id", studentId)
-      .eq("invoices.deleted_at", null)
+      .is("invoices.deleted_at", null)
       .single()
+
+    if (invoiceError) {
+      console.error("[v0] Student invoice query error:", invoiceError)
+      return
+    }
 
     if (studentData) {
       const activeEnrollment = studentData.student_enrollments?.find(
@@ -239,11 +257,12 @@ export function FamilyCard({
           studentId: studentData.id,
           invoiceId: invoice.id,
           invoiceNumber: invoice.invoice_number,
+          dueDate: invoice.due_date,
           items: invoice.invoice_items?.map((item: any) => ({
             id: item.id,
             description: item.fee_categories?.name || item.description,
-            dueDate: "N/A",
-            balance: item.amount,
+            dueDate: calculateDueDate(invoice.due_date),
+            balance: Number(item.amount),
             status: invoice.status === "Paid" ? "paid" : "pending",
           })),
         }))
@@ -291,6 +310,35 @@ export function FamilyCard({
     onItemsSelected?.(items)
   }
 
+  const calculateDueDate = (dueDateString: string | null): string => {
+    if (!dueDateString) return "N/A"
+
+    try {
+      const dueDate = new Date(dueDateString)
+      const today = new Date()
+      const diffTime = dueDate.getTime() - today.getTime()
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+      if (diffDays < 0) {
+        return "Overdue"
+      } else if (diffDays === 0) {
+        return "Today"
+      } else if (diffDays === 1) {
+        return "Tomorrow"
+      } else if (diffDays <= 7) {
+        return `${diffDays} days`
+      } else if (diffDays <= 30) {
+        const weeks = Math.ceil(diffDays / 7)
+        return `${weeks} week${weeks > 1 ? "s" : ""}`
+      } else {
+        const months = Math.ceil(diffDays / 30)
+        return `${months} month${months > 1 ? "s" : ""}`
+      }
+    } catch (error) {
+      return "N/A"
+    }
+  }
+
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -311,8 +359,8 @@ export function FamilyCard({
       ) : guardianInfo ? (
         <>
           {/* Guardian/Parent Card */}
-          <Card className="border shadow-none">
-            <CardContent className="p-4">
+          <Card className="border shadow-none py-2">
+            <CardContent className="p-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-12 w-12 bg-green-500">
