@@ -367,7 +367,9 @@ export function FeesTab() {
                               {fee.gender_specific}
                             </Badge>
                           ) : (
-                            <span className="text-sm text-muted-foreground">Both</span>
+                            <Badge variant="outline" className="text-xs">
+                              Both
+                            </Badge>
                           )}
                         </TableCell>
                         <TableCell>
