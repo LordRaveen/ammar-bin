@@ -146,9 +146,9 @@ export function FamilyCard({
       {guardianInfo ? (
         <>
           {/* Guardian/Parent Card */}
-          <Card className="border-l-4 border-l-green-500">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
+          <Card className="border shadow-none py-2">
+            <CardContent className="p-0">
+              <div className="flex items-center justify-between p-2">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-12 w-12 bg-green-500">
                     <AvatarFallback className="bg-green-500 text-white font-semibold">
