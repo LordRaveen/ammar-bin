@@ -55,10 +55,10 @@ export function StudentInvoiceCard({
   }
 
   return (
-    <Card className="border shadow-none">
+    <Card className="border py-4 shadow-none">
       <CardContent className="p-0">
         {/* Student Header */}
-        <div className="flex items-center justify-between p- border-b">
+        <div className="flex items-center justify-between p-2 border-b">
           <div className="flex items-center gap-3 flex-1">
             <Checkbox
               checked={studentChecked}
@@ -75,14 +75,14 @@ export function StudentInvoiceCard({
         </div>
 
         {/* Invoice Items Table */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto mt-3">
           <Table className="border-collapse">
             <TableHeader>
-              <TableRow className="bg-muted/50 hover:bg-muted/50">
+              <TableRow className="bg-muted/50 hover:bg-muted/50 h-8">
                 <TableHead className="w-12"></TableHead>
-                <TableHead className="px-2 py-1 text-xs font-semibold">Invoice item</TableHead>
-                <TableHead className="px-2 py-1 text-xs font-semibold text-right">Due date</TableHead>
-                <TableHead className="px-2 py-1 text-xs font-semibold text-right">Balance</TableHead>
+                <TableHead className="px-2 py-1 text-xs font-semibold font-mono">Invoice item</TableHead>
+                <TableHead className="px-2 py-1 text-xs font-semibold text-right font-mono">Due date</TableHead>
+                <TableHead className="px-2 py-1 text-xs font-semibold text-right font-mono">Balance</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -103,8 +103,8 @@ export function StudentInvoiceCard({
                       <CheckCircle2 className="h-4 w-4 text-green-600" />
                     )}
                   </TableCell>
-                  <TableCell className="text-sm font-medium px-2 py-1 ">{item.description}</TableCell>
-                  <TableCell className="text-sm text-right px-2 py-1 ">
+                  <TableCell className="text-sm font-medium px-2 py-1 font-mono">{item.description}</TableCell>
+                  <TableCell className="text-sm text-right px-2 py-1 font-mono">
                     {item.status === "paid" ? (
                       <span className="text-green-600 font-medium">Paid</span>
                     ) : (
@@ -117,7 +117,7 @@ export function StudentInvoiceCard({
                       </span>
                     )}
                   </TableCell>
-                  <TableCell className="text-sm text-right font-semibold px-2 py-1 ">
+                  <TableCell className="text-sm text-right font-semibold font-mono px-2 py-1 ">
                     ₦{item.balance.toLocaleString()}
                   </TableCell>
                 </TableRow>
