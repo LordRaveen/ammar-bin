@@ -55,7 +55,7 @@ export function StudentInvoiceCard({
   }
 
   return (
-    <Card className="border py-4 shadow-none">
+    <Card className="border py-2 shadow-none">
       <CardContent className="p-0">
         {/* Student Header */}
         <div className="flex items-center justify-between p-2 border-b">
@@ -78,11 +78,11 @@ export function StudentInvoiceCard({
         <div className="overflow-x-auto mt-3">
           <Table className="border-collapse">
             <TableHeader>
-              <TableRow className="bg-muted/50 hover:bg-muted/50 h-8">
-                <TableHead className="w-12"></TableHead>
-                <TableHead className="px-2 py-1 text-xs font-semibold font-mono">Invoice item</TableHead>
-                <TableHead className="px-2 py-1 text-xs font-semibold text-right font-mono">Due date</TableHead>
-                <TableHead className="px-2 py-1 text-xs font-semibold text-right font-mono">Balance</TableHead>
+              <TableRow className="bg-muted/50 hover:bg-muted/50 ">
+                <TableHead className="w-12 h-8"></TableHead>
+                <TableHead className="px-2 py-1 text-xs font-semibold font-mono h-8">Invoice item</TableHead>
+                <TableHead className="px-2 py-1 text-xs font-semibold text-right font-mono h-8">Due date</TableHead>
+                <TableHead className="px-2 py-1 text-xs font-semibold text-right font-mono h-8">Balance</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
