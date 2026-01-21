@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { InboxIcon, MoreVertical } from "lucide-react"
+import { InboxIcon, MoreVertical, Loader2 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { StudentInvoiceCard } from "./student-invoice-card"
+import { createBrowserClient } from "@/lib/supabase/client"
 
 interface StudentInvoiceItem {
   id: string
@@ -46,69 +47,226 @@ export function FamilyCard({
   parentId,
 }: FamilyCardProps) {
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set())
+  const [studentsData, setStudentsData] = useState<StudentData[]>([])
+  const [guardianInfo, setGuardianInfo] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
+  const supabase = createBrowserClient()
 
-  // Mock data for guardian
-  const guardianInfo = selectedFamily?.type === "parent" ? {
-    name: selectedFamily.first_name + " " + selectedFamily.last_name,
-    relationship: "Guardian",
-    phone: selectedFamily.phone || "0801 234 5678",
-    type: selectedFamily.type,
-  } : null
+  useEffect(() => {
+    if (!selectedFamily) {
+      setStudentsData([])
+      setGuardianInfo(null)
+      return
+    }
 
-  // Mock data for students with invoices
-  const studentsData: StudentData[] = selectedFamily?.type === "parent" ? [
-    {
-      id: "1",
-      name: "Aisha Aliyu",
-      class: "Class 2 - Islamiya",
-      invoiceNumber: "INV-9920192881",
-      invoices: [
-        {
-          id: "item-1",
-          description: "School Fees",
-          dueDate: "8 days",
-          balance: 20000,
-          status: "pending",
-        },
-        {
-          id: "item-2",
-          description: "Project Fee",
-          dueDate: "1 Month",
-          balance: 15000,
-          status: "pending",
-        },
-        {
-          id: "item-3",
-          description: "Books",
-          dueDate: "N/A",
-          balance: 0,
-          status: "paid",
-        },
-      ],
-    },
-    {
-      id: "2",
-      name: "Sadiq Aliyu",
-      class: "Class 1 - Islamiya",
-      invoiceNumber: "INV-0192881271",
-      invoices: [
-        {
-          id: "item-4",
-          description: "Uniform Male",
-          dueDate: "Overdue",
-          balance: 39000,
-          status: "pending",
-        },
-        {
-          id: "item-5",
-          description: "Exam Fee",
-          dueDate: "1 Month",
-          balance: 2000,
-          status: "pending",
-        },
-      ],
-    },
-  ] : []
+    fetchFamilyData()
+  }, [selectedFamily])
+
+  const fetchFamilyData = async () => {
+    setLoading(true)
+    try {
+      if (selectedFamily.type === "parent") {
+        // Parent selected - fetch all their children and invoices
+        await fetchParentData()
+      } else if (selectedFamily.type === "student") {
+        // Direct student selection - fetch that student's invoices
+        await fetchStudentData(selectedFamily.id)
+      }
+    } catch (error) {
+      console.error("[v0] Error fetching family data:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchParentData = async () => {
+    // Get parent/guardian info
+    const { data: guardianData } = await supabase
+      .from("guardians")
+      .select("*")
+      .eq("id", selectedFamily.id)
+      .single()
+
+    if (guardianData) {
+      setGuardianInfo({
+        name: `${guardianData.first_name} ${guardianData.last_name}`,
+        relationship: guardianData.relationship_type || "Guardian",
+        phone: guardianData.phone || guardianData.whatsapp_number || "N/A",
+        type: "parent",
+      })
+    }
+
+    // Get all students linked to this parent
+    const { data: studentGuardianData } = await supabase
+      .from("student_guardians")
+      .select("student_id")
+      .eq("guardian_id", selectedFamily.id)
+
+    if (studentGuardianData && studentGuardianData.length > 0) {
+      const studentIds = studentGuardianData.map((sg) => sg.student_id)
+
+      // Fetch students with their current enrollment and invoices
+      const { data: studentsWithInvoices } = await supabase
+        .from("students")
+        .select(
+          `
+          id,
+          first_name,
+          last_name,
+          student_enrollments(
+            class_id,
+            session_id,
+            term_id,
+            classes(name, section:section_id(name))
+          ),
+          invoices(
+            id,
+            invoice_number,
+            session_id,
+            term_id,
+            balance,
+            status,
+            invoice_items(
+              id,
+              description,
+              amount,
+              fee_categories(name)
+            )
+          )
+        `
+        )
+        .in("id", studentIds)
+        .eq("invoices.deleted_at", null)
+
+      // Transform data to StudentData format
+      const transformed = studentsWithInvoices
+        ?.map((student: any) => {
+          const activeEnrollment = student.student_enrollments?.find(
+            (e: any) => e.session_id && e.term_id
+          )
+          const className = activeEnrollment?.classes?.name || "N/A"
+          const sectionName = activeEnrollment?.classes?.section?.name
+          const classWithSection = sectionName ? `${className} - ${sectionName}` : className
+
+          // Get active invoices for this student
+          const invoices = student.invoices
+            ?.filter((inv: any) => inv.status !== "Paid")
+            .map((invoice: any) => ({
+              studentId: student.id,
+              invoiceId: invoice.id,
+              invoiceNumber: invoice.invoice_number,
+              items: invoice.invoice_items?.map((item: any) => ({
+                id: item.id,
+                description: item.fee_categories?.name || item.description,
+                dueDate: "N/A", // Will calculate from invoice due_date
+                balance: item.amount,
+                status: invoice.status === "Paid" ? "paid" : "pending",
+              })),
+            }))
+
+          // Flatten invoice items to create list of all items
+          const allInvoiceItems: StudentInvoiceItem[] = invoices
+            ?.flatMap((inv: any) => inv.items)
+            .map((item: any, idx: number) => ({
+              ...item,
+              id: `${student.id}-item-${idx}`,
+            })) || []
+
+          return {
+            id: student.id,
+            name: `${student.first_name} ${student.last_name}`,
+            class: classWithSection,
+            invoiceNumber: invoices?.[0]?.invoiceNumber || "N/A",
+            invoices: allInvoiceItems,
+          }
+        })
+        .filter((s: StudentData) => s.invoices.length > 0) || []
+
+      setStudentsData(transformed)
+    }
+  }
+
+  const fetchStudentData = async (studentId: string) => {
+    // No guardian info when student is selected directly
+    setGuardianInfo(null)
+
+    // Fetch student with enrollments and invoices
+    const { data: studentData } = await supabase
+      .from("students")
+      .select(
+        `
+        id,
+        first_name,
+        last_name,
+        student_enrollments(
+          class_id,
+          session_id,
+          term_id,
+          classes(name, section:section_id(name))
+        ),
+        invoices(
+          id,
+          invoice_number,
+          session_id,
+          term_id,
+          balance,
+          status,
+          invoice_items(
+            id,
+            description,
+            amount,
+            fee_categories(name)
+          )
+        )
+      `
+      )
+      .eq("id", studentId)
+      .eq("invoices.deleted_at", null)
+      .single()
+
+    if (studentData) {
+      const activeEnrollment = studentData.student_enrollments?.find(
+        (e: any) => e.session_id && e.term_id
+      )
+      const className = activeEnrollment?.classes?.name || "N/A"
+      const sectionName = activeEnrollment?.classes?.section?.name
+      const classWithSection = sectionName ? `${className} - ${sectionName}` : className
+
+      // Get active invoices
+      const invoices = studentData.invoices
+        ?.filter((inv: any) => inv.status !== "Paid")
+        .map((invoice: any) => ({
+          studentId: studentData.id,
+          invoiceId: invoice.id,
+          invoiceNumber: invoice.invoice_number,
+          items: invoice.invoice_items?.map((item: any) => ({
+            id: item.id,
+            description: item.fee_categories?.name || item.description,
+            dueDate: "N/A",
+            balance: item.amount,
+            status: invoice.status === "Paid" ? "paid" : "pending",
+          })),
+        }))
+
+      // Flatten items
+      const allInvoiceItems: StudentInvoiceItem[] = invoices
+        ?.flatMap((inv: any) => inv.items)
+        .map((item: any, idx: number) => ({
+          ...item,
+          id: `item-${idx}`,
+        })) || []
+
+      const transformed: StudentData = {
+        id: studentData.id,
+        name: `${studentData.first_name} ${studentData.last_name}`,
+        class: classWithSection,
+        invoiceNumber: invoices?.[0]?.invoiceNumber || "N/A",
+        invoices: allInvoiceItems,
+      }
+
+      setStudentsData([transformed])
+    }
+  }
 
   const handleItemToggle = (itemId: string) => {
     const newSelected = new Set(selectedItemIds)
@@ -143,12 +301,19 @@ export function FamilyCard({
 
   return (
     <div className="space-y-3">
-      {guardianInfo ? (
+      {loading ? (
+        <Card>
+          <CardContent className="p-8 flex items-center justify-center">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <p className="ml-2 text-sm text-muted-foreground">Loading invoices...</p>
+          </CardContent>
+        </Card>
+      ) : guardianInfo ? (
         <>
           {/* Guardian/Parent Card */}
-          <Card className="border shadow-none py-2">
-            <CardContent className="p-0">
-              <div className="flex items-center justify-between p-2">
+          <Card className="border shadow-none">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-12 w-12 bg-green-500">
                     <AvatarFallback className="bg-green-500 text-white font-semibold">
@@ -181,21 +346,47 @@ export function FamilyCard({
           </Card>
 
           {/* Student Invoice Cards */}
-          <div className="space-y-3">
-            {studentsData.map((student) => (
-              <StudentInvoiceCard
-                key={student.id}
-                studentId={student.id}
-                studentName={student.name}
-                studentClass={student.class}
-                invoiceNumber={student.invoiceNumber}
-                invoices={student.invoices}
-                selectedItemIds={selectedItemIds}
-                onItemToggle={handleItemToggle}
-              />
-            ))}
-          </div>
+          {studentsData.length > 0 ? (
+            <div className="space-y-3">
+              {studentsData.map((student) => (
+                <StudentInvoiceCard
+                  key={student.id}
+                  studentId={student.id}
+                  studentName={student.name}
+                  studentClass={student.class}
+                  invoiceNumber={student.invoiceNumber}
+                  invoices={student.invoices}
+                  selectedItemIds={selectedItemIds}
+                  onItemToggle={handleItemToggle}
+                />
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-6 text-center">
+                <p className="text-sm text-muted-foreground">
+                  No pending invoices for this family
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </>
+      ) : studentsData.length > 0 ? (
+        // Direct student selection - show only that student's card
+        <div className="space-y-3">
+          {studentsData.map((student) => (
+            <StudentInvoiceCard
+              key={student.id}
+              studentId={student.id}
+              studentName={student.name}
+              studentClass={student.class}
+              invoiceNumber={student.invoiceNumber}
+              invoices={student.invoices}
+              selectedItemIds={selectedItemIds}
+              onItemToggle={handleItemToggle}
+            />
+          ))}
+        </div>
       ) : !selectedFamily ? (
         <Card>
           <CardContent className="p-12">
@@ -208,7 +399,13 @@ export function FamilyCard({
             </div>
           </CardContent>
         </Card>
-      ) : null}
+      ) : (
+        <Card>
+          <CardContent className="p-6 text-center">
+            <p className="text-sm text-muted-foreground">No pending invoices found</p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
