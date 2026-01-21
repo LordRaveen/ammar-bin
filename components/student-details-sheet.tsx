@@ -7,12 +7,14 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ExternalLink, Plus, Pencil, Loader2, Trash2 } from "lucide-react"
+import { ExternalLink, Plus, Pencil, Loader2, Trash2, Receipt } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { EditGuardianRelationDialog } from "./edit-guardian-relation-dialog"
-import { AddGuardianFromStudentModal } from "./add-guardian-from-student-modal"
+import { LinkGuardianModal } from "./link-guardian-modal"
 import { RemoveGuardianDialog } from "./remove-guardian-dialog"
+import { InvoiceDetailsDrawer } from "@/components/finance/invoice-details-drawer"
+import { AddGuardianFromStudentModal } from "./add-guardian-from-student-modal" // Import the missing component
 
 interface StudentDetailsSheetProps {
   studentId: string | null
@@ -41,7 +43,11 @@ export function StudentDetailsSheet({
   const [editGuardianRelation, setEditGuardianRelation] = useState<any | null>(null)
   const [removeGuardianId, setRemoveGuardianId] = useState<string | null>(null)
   const [editStudent, setEditStudent] = useState<any | null>(null)
-  const [showAddGuardianModal, setShowAddGuardianModal] = useState(false)
+  const [showLinkGuardianModal, setShowLinkGuardianModal] = useState(false)
+  const [invoices, setInvoices] = useState<any[]>([])
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null)
+  const [invoiceDetailsOpen, setInvoiceDetailsOpen] = useState(false)
+  const [showAddGuardianModal, setShowAddGuardianModal] = useState(false) // Declare the variable
 
   useEffect(() => {
     async function fetchStudent() {
@@ -66,8 +72,8 @@ export function StudentDetailsSheet({
           student_enrollments(
             enrollment_date,
             is_active,
-            session:sessions(name),
-            term:terms(name),
+            session:sessions(name, id),
+            term:terms(name, id),
             class:classes(
               name,
               section:section_id(name)
@@ -79,6 +85,21 @@ export function StudentDetailsSheet({
 
       if (!error && data) {
         setStudent(data)
+        
+        // Fetch invoices for current session/term
+        const currentEnrollment = data.student_enrollments?.find((e: any) => e.is_active)
+        if (currentEnrollment) {
+          const { data: invoiceData } = await supabase
+            .from("invoices")
+            .select("*")
+            .eq("student_id", studentId)
+            .eq("session_id", currentEnrollment.session.id)
+            .eq("term_id", currentEnrollment.term.id)
+            .is("deleted_at", null)
+            .order("created_at", { ascending: false })
+          
+          setInvoices(invoiceData || [])
+        }
       }
       setLoading(false)
     }
@@ -231,10 +252,10 @@ export function StudentDetailsSheet({
                   variant="outline"
                   size="sm"
                   className="mt-3 w-full bg-transparent"
-                  onClick={() => setShowAddGuardianModal(true)}
+                  onClick={() => setShowLinkGuardianModal(true)}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add/Change Guardian
+                  Link Guardian
                 </Button>
               )}
             </div>
@@ -295,11 +316,64 @@ export function StudentDetailsSheet({
           />
         )}
 
+        {showLinkGuardianModal && (
+          <LinkGuardianModal
+            open={showLinkGuardianModal}
+            onOpenChange={setShowLinkGuardianModal}
+            studentId={studentId || ""}
+            onGuardianLinked={() => {
+              setShowLinkGuardianModal(false)
+              // Refresh student data
+              if (studentId) {
+                const supabase = createClient()
+                supabase
+                  .from("students")
+                  .select(`
+                    *,
+                    student_guardians(
+                      id,
+                      relationship,
+                      is_primary,
+                      guardian:guardians(*)
+                    ),
+                    student_enrollments(
+                      enrollment_date,
+                      is_active,
+                      session:sessions(name, id),
+                      term:terms(name, id),
+                      class:classes(
+                        name,
+                        section:section_id(name)
+                      )
+                    )
+                  `)
+                  .eq("id", studentId)
+                  .single()
+                  .then(({ data }) => {
+                    if (data) {
+                      setStudent(data)
+                    }
+                  })
+              }
+            }}
+          />
+        )}
+
+        {selectedInvoiceId && (
+          <InvoiceDetailsDrawer
+            invoiceId={selectedInvoiceId}
+            open={invoiceDetailsOpen}
+            onOpenChange={setInvoiceDetailsOpen}
+            userRole={userRole}
+          />
+        )}
+
         {showAddGuardianModal && (
           <AddGuardianFromStudentModal
             open={showAddGuardianModal}
             onOpenChange={setShowAddGuardianModal}
-            onGuardianCreated={() => {
+            studentId={studentId || ""}
+            onGuardianAdded={() => {
               setShowAddGuardianModal(false)
               // Refresh student data
               if (studentId) {
@@ -317,17 +391,21 @@ export function StudentDetailsSheet({
                     student_enrollments(
                       enrollment_date,
                       is_active,
-                      session:sessions(name),
-                      term:terms(name),
+                      session:sessions(name, id),
+                      term:terms(name, id),
                       class:classes(
                         name,
-                        section:sections(name)
+                        section:section_id(name)
                       )
                     )
                   `)
                   .eq("id", studentId)
                   .single()
-                  .then(({ data }) => data && setStudent(data))
+                  .then(({ data }) => {
+                    if (data) {
+                      setStudent(data)
+                    }
+                  })
               }
             }}
           />
