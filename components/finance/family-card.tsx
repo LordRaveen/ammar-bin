@@ -1,11 +1,34 @@
-'use client';
+'use client'
 
 import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { InboxIcon, Users, GraduationCap, CheckSquare } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { InboxIcon, MoreVertical } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { InvoiceItemSelector } from "./invoice-item-selector"
+import { Badge } from "@/components/ui/badge"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { StudentInvoiceCard } from "./student-invoice-card"
+
+interface StudentInvoiceItem {
+  id: string
+  description: string
+  dueDate: string
+  balance: number
+  status: "pending" | "paid" | "partial"
+}
+
+interface StudentData {
+  id: string
+  name: string
+  class: string
+  invoiceNumber: string
+  invoices: StudentInvoiceItem[]
+}
 
 interface FamilyCardProps {
   selectedFamily: any
@@ -22,115 +45,170 @@ export function FamilyCard({
   userRole = "admin",
   parentId,
 }: FamilyCardProps) {
-  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(
-    new Set()
-  )
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set())
 
-  // Mock data for demonstration - will be replaced with real data
-  const parentRelations = selectedFamily?.type === "parent" ? [
-    { id: 1, first_name: "Student", last_name: "One", student_id: "STU001", current_class: "Class 1" },
-    { id: 2, first_name: "Student", last_name: "Two", student_id: "STU002", current_class: "Class 2" },
+  // Mock data for guardian
+  const guardianInfo = selectedFamily?.type === "parent" ? {
+    name: selectedFamily.first_name + " " + selectedFamily.last_name,
+    relationship: "Guardian",
+    phone: selectedFamily.phone || "0801 234 5678",
+    type: selectedFamily.type,
+  } : null
+
+  // Mock data for students with invoices
+  const studentsData: StudentData[] = selectedFamily?.type === "parent" ? [
+    {
+      id: "1",
+      name: "Aisha Aliyu",
+      class: "Class 2 - Islamiya",
+      invoiceNumber: "INV-9920192881",
+      invoices: [
+        {
+          id: "item-1",
+          description: "School Fees",
+          dueDate: "8 days",
+          balance: 20000,
+          status: "pending",
+        },
+        {
+          id: "item-2",
+          description: "Project Fee",
+          dueDate: "1 Month",
+          balance: 15000,
+          status: "pending",
+        },
+        {
+          id: "item-3",
+          description: "Books",
+          dueDate: "N/A",
+          balance: 0,
+          status: "paid",
+        },
+      ],
+    },
+    {
+      id: "2",
+      name: "Sadiq Aliyu",
+      class: "Class 1 - Islamiya",
+      invoiceNumber: "INV-0192881271",
+      invoices: [
+        {
+          id: "item-4",
+          description: "Uniform Male",
+          dueDate: "Overdue",
+          balance: 39000,
+          status: "pending",
+        },
+        {
+          id: "item-5",
+          description: "Exam Fee",
+          dueDate: "1 Month",
+          balance: 2000,
+          status: "pending",
+        },
+      ],
+    },
   ] : []
 
-  const getInitials = (firstName: string, lastName?: string) => {
-    return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase()
+  const handleItemToggle = (itemId: string) => {
+    const newSelected = new Set(selectedItemIds)
+    if (newSelected.has(itemId)) {
+      newSelected.delete(itemId)
+    } else {
+      newSelected.add(itemId)
+    }
+    setSelectedItemIds(newSelected)
+
+    // Callback with selected items
+    const items = studentsData
+      .flatMap((student) =>
+        student.invoices
+          .filter((item) => newSelected.has(item.id))
+          .map((item) => ({
+            ...item,
+            studentId: student.id,
+            studentName: student.name,
+          }))
+      )
+    onItemsSelected?.(items)
   }
 
-  const handleStudentToggle = (studentId: string) => {
-    const newSelected = new Set(selectedStudents)
-    if (newSelected.has(studentId)) {
-      newSelected.delete(studentId)
-    } else {
-      newSelected.add(studentId)
-    }
-    setSelectedStudents(newSelected)
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
   }
 
   return (
-    <Card className="min-h-96">
-      <CardContent className="p-6">
-        {!selectedFamily ? (
-          <div className="flex flex-col items-center justify-center h-80 text-center">
-            <InboxIcon className="h-12 w-12 text-muted-foreground mb-3 opacity-50" />
-            <p className="font-medium text-muted-foreground">No family selected</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Search and select a parent or student to view their family information
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {/* Header with family info */}
-            <div className="flex items-center gap-3 pb-4 border-b">
-              <Avatar className="h-12 w-12">
-                <AvatarFallback className={selectedFamily.type === "parent" ? "bg-green-500 text-white" : "bg-blue-500 text-white"}>
-                  {getInitials(selectedFamily.first_name, selectedFamily.last_name)}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-semibold">
-                  {selectedFamily.first_name} {selectedFamily.last_name}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {selectedFamily.type === "parent" ? "Guardian" : "Student"} • {selectedFamily.phone || selectedFamily.student_id}
-                </p>
-              </div>
-            </div>
-
-            {/* Tabs for related data */}
-            {selectedFamily.type === "parent" && (
-              <Tabs defaultValue="students" className="w-full">
-                <TabsList className="grid w-full grid-cols-1">
-                  <TabsTrigger value="students" className="flex items-center gap-2">
-                    <GraduationCap className="h-4 w-4" />
-                    Students ({parentRelations.length})
-                  </TabsTrigger>
-                </TabsList>
-                <TabsContent value="students" className="space-y-2 max-h-64 overflow-y-auto">
-                  {parentRelations.map((student) => (
-                    <div
-                      key={student.id}
-                      onClick={() => handleStudentToggle(student.id)}
-                      className="flex items-center gap-3 p-2 rounded-lg bg-muted hover:bg-muted/70 cursor-pointer transition-colors"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedStudents.has(student.id)}
-                        onChange={() => {}} // Handled by parent div click
-                        className="rounded"
-                      />
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-blue-500 text-white text-xs">
-                          {getInitials(student.first_name, student.last_name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {student.first_name} {student.last_name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">{student.current_class}</p>
-                      </div>
+    <div className="space-y-3">
+      {guardianInfo ? (
+        <>
+          {/* Guardian/Parent Card */}
+          <Card className="border-l-4 border-l-green-500">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-12 w-12 bg-green-500">
+                    <AvatarFallback className="bg-green-500 text-white font-semibold">
+                      {getInitials(guardianInfo.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-sm">{guardianInfo.name}</p>
+                      <Badge variant="outline" className="text-xs">
+                        {guardianInfo.relationship}
+                      </Badge>
                     </div>
-                  ))}
-                </TabsContent>
-              </Tabs>
-            )}
-
-            {/* Invoice Item Selector */}
-            {selectedFamily.type === "parent" && selectedStudents.size > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium flex items-center gap-2">
-                  <CheckSquare className="h-4 w-4" />
-                  Select Items to Pay
-                </p>
-                <InvoiceItemSelector
-                  studentIds={Array.from(selectedStudents)}
-                  onItemsSelected={onItemsSelected || (() => {})}
-                />
+                    <p className="text-sm text-muted-foreground">{guardianInfo.phone}</p>
+                  </div>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem>View Profile</DropdownMenuItem>
+                    <DropdownMenuItem>Payment History</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-            )}
+            </CardContent>
+          </Card>
+
+          {/* Student Invoice Cards */}
+          <div className="space-y-3">
+            {studentsData.map((student) => (
+              <StudentInvoiceCard
+                key={student.id}
+                studentId={student.id}
+                studentName={student.name}
+                studentClass={student.class}
+                invoiceNumber={student.invoiceNumber}
+                invoices={student.invoices}
+                selectedItemIds={selectedItemIds}
+                onItemToggle={handleItemToggle}
+              />
+            ))}
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </>
+      ) : !selectedFamily ? (
+        <Card>
+          <CardContent className="p-12">
+            <div className="flex flex-col items-center justify-center text-center">
+              <InboxIcon className="h-12 w-12 text-muted-foreground mb-3 opacity-50" />
+              <p className="font-medium text-muted-foreground">No family selected</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Search and select a parent or student to view their invoices
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+    </div>
   )
 }
