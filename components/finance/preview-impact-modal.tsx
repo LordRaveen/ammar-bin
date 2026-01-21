@@ -105,8 +105,8 @@ export function PreviewImpactModal({
 
             {/* Summary Cards - Compact */}
             <div className="grid grid-cols-2 gap-3">
-              <Card className="border-2">
-                <CardContent className="p-4">
+              <Card className="border shadow-none">
+                <CardContent className="p-2">
                   <div className="text-center">
                     <p className="text-3xl font-bold">{studentCount}</p>
                     <p className="text-xs text-muted-foreground mt-1">Students</p>
@@ -114,8 +114,8 @@ export function PreviewImpactModal({
                 </CardContent>
               </Card>
 
-              <Card className="border-2">
-                <CardContent className="p-4">
+              <Card className="border shadow-none">
+                <CardContent className="p-2">
                   <div className="text-center">
                     <p className="text-2xl font-bold">
                       ₦{expectedRevenue.toLocaleString()}
@@ -137,10 +137,7 @@ export function PreviewImpactModal({
                   >
                     <div>
                       <p className="font-medium text-sm">
-                        {fee.fee_categories?.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        ₦{Number(fee.amount).toLocaleString()}
+                        {fee.fee_categories?.name} - <span className="text-xs text-muted-foreground">₦{Number(fee.amount).toLocaleString()}</span>
                       </p>
                     </div>
                     <p className="font-semibold text-sm">
