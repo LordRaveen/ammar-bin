@@ -15,6 +15,7 @@ interface CollectPaymentProps {
 export function CollectPayment({ userRole = "admin", parentId }: CollectPaymentProps) {
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [selectedFamily, setSelectedFamily] = useState<any>(null)
+  const [selectedItems, setSelectedItems] = useState<any[]>([])
 
   const handleSelectResult = (result: any, type: "parent" | "student") => {
     setSelectedFamily({
@@ -49,6 +50,7 @@ export function CollectPayment({ userRole = "admin", parentId }: CollectPaymentP
             <FamilyCard
               selectedFamily={selectedFamily}
               onSelectFamily={setSelectedFamily}
+              onItemsSelected={setSelectedItems}
               userRole={userRole}
               parentId={parentId}
             />
@@ -60,6 +62,7 @@ export function CollectPayment({ userRole = "admin", parentId }: CollectPaymentP
           <h3 className="font-semibold text-sm mb-3">Payment builder</h3>
           <PaymentBuilder
             selectedFamily={selectedFamily}
+            selectedItems={selectedItems}
             userRole={userRole}
           />
         </div>

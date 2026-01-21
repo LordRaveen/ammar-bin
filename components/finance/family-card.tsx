@@ -1,11 +1,16 @@
+'use client';
+
+import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { InboxIcon, Users, GraduationCap } from "lucide-react"
+import { InboxIcon, Users, GraduationCap, CheckSquare } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { InvoiceItemSelector } from "./invoice-item-selector"
 
 interface FamilyCardProps {
   selectedFamily: any
   onSelectFamily: (family: any) => void
+  onItemsSelected?: (items: any[]) => void
   userRole?: "admin" | "parent" | "accountant"
   parentId?: string
 }
@@ -13,9 +18,14 @@ interface FamilyCardProps {
 export function FamilyCard({
   selectedFamily,
   onSelectFamily,
+  onItemsSelected,
   userRole = "admin",
   parentId,
 }: FamilyCardProps) {
+  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(
+    new Set()
+  )
+
   // Mock data for demonstration - will be replaced with real data
   const parentRelations = selectedFamily?.type === "parent" ? [
     { id: 1, first_name: "Student", last_name: "One", student_id: "STU001", current_class: "Class 1" },
@@ -24,6 +34,16 @@ export function FamilyCard({
 
   const getInitials = (firstName: string, lastName?: string) => {
     return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase()
+  }
+
+  const handleStudentToggle = (studentId: string) => {
+    const newSelected = new Set(selectedStudents)
+    if (newSelected.has(studentId)) {
+      newSelected.delete(studentId)
+    } else {
+      newSelected.add(studentId)
+    }
+    setSelectedStudents(newSelected)
   }
 
   return (
@@ -67,7 +87,17 @@ export function FamilyCard({
                 </TabsList>
                 <TabsContent value="students" className="space-y-2 max-h-64 overflow-y-auto">
                   {parentRelations.map((student) => (
-                    <div key={student.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted hover:bg-muted/70">
+                    <div
+                      key={student.id}
+                      onClick={() => handleStudentToggle(student.id)}
+                      className="flex items-center gap-3 p-2 rounded-lg bg-muted hover:bg-muted/70 cursor-pointer transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedStudents.has(student.id)}
+                        onChange={() => {}} // Handled by parent div click
+                        className="rounded"
+                      />
                       <Avatar className="h-8 w-8">
                         <AvatarFallback className="bg-blue-500 text-white text-xs">
                           {getInitials(student.first_name, student.last_name)}
@@ -83,6 +113,20 @@ export function FamilyCard({
                   ))}
                 </TabsContent>
               </Tabs>
+            )}
+
+            {/* Invoice Item Selector */}
+            {selectedFamily.type === "parent" && selectedStudents.size > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <CheckSquare className="h-4 w-4" />
+                  Select Items to Pay
+                </p>
+                <InvoiceItemSelector
+                  studentIds={Array.from(selectedStudents)}
+                  onItemsSelected={onItemsSelected || (() => {})}
+                />
+              </div>
             )}
           </div>
         )}
