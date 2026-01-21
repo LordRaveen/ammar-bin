@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Card, CardContent } from "@/components/ui/card"
-import { Users, TrendingUp } from "lucide-react"
+import { Users, TrendingUp, DollarSign } from "lucide-react"
 
 interface FeeStructure {
   fee_category_id: string
@@ -105,24 +105,34 @@ export function PreviewImpactModal({
 
             {/* Summary Cards - Compact */}
             <div className="grid grid-cols-2 gap-3">
-              <Card className="border shadow-none">
-                <CardContent className="p-2">
-                  <div className="text-center">
-                    <p className="text-3xl font-bold">{studentCount}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Students</p>
+              {/* Students */}
+              <Card className="border shadow-none py-3 px-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Students
+                    </p>
+                    <p className="text-lg font-bold text-blue-600">
+                      {studentCount}
+                    </p>
                   </div>
-                </CardContent>
+                  <Users className="h-4 w-4 text-blue-600" />
+                </div>
               </Card>
 
-              <Card className="border shadow-none">
-                <CardContent className="p-2">
-                  <div className="text-center">
-                    <p className="text-2xl font-bold">
+              {/* Expected Revenue */}
+              <Card className="border shadow-none py-3 px-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Expected Revenue
+                    </p>
+                    <p className="text-lg font-bold text-green-600">
                       ₦{expectedRevenue.toLocaleString()}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">Expected Revenue</p>
                   </div>
-                </CardContent>
+                  <DollarSign className="h-4 w-4 text-green-600" />
+                </div>
               </Card>
             </div>
 
