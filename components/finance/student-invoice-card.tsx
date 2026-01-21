@@ -55,10 +55,10 @@ export function StudentInvoiceCard({
   }
 
   return (
-    <Card className="border-l-4 border-l-green-500">
+    <Card className="border shadow-none">
       <CardContent className="p-0">
         {/* Student Header */}
-        <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center justify-between p- border-b">
           <div className="flex items-center gap-3 flex-1">
             <Checkbox
               checked={studentChecked}
@@ -66,35 +66,23 @@ export function StudentInvoiceCard({
               className="h-5 w-5"
             />
             <div className="flex-1">
-              <p className="font-semibold text-sm">{studentName}</p>
-              <p className="text-xs text-muted-foreground">{studentClass}</p>
+              <p className="font-semibold text-sm">{studentName} <span className="text-xs text-muted-foreground">{studentClass}</span> </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <p className="text-xs text-muted-foreground font-mono">{invoiceNumber}</p>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem>View Details</DropdownMenuItem>
-                <DropdownMenuItem>Print Invoice</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </div>
 
         {/* Invoice Items Table */}
         <div className="overflow-x-auto">
-          <Table>
+          <Table className="border-collapse">
             <TableHeader>
               <TableRow className="bg-muted/50 hover:bg-muted/50">
                 <TableHead className="w-12"></TableHead>
-                <TableHead className="text-xs font-semibold">Invoice item</TableHead>
-                <TableHead className="text-xs font-semibold text-right">Due date</TableHead>
-                <TableHead className="text-xs font-semibold text-right">Balance</TableHead>
+                <TableHead className="px-2 py-1 text-xs font-semibold">Invoice item</TableHead>
+                <TableHead className="px-2 py-1 text-xs font-semibold text-right">Due date</TableHead>
+                <TableHead className="px-2 py-1 text-xs font-semibold text-right">Balance</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -103,7 +91,7 @@ export function StudentInvoiceCard({
                   key={item.id}
                   className={`${item.status === "paid" ? "bg-muted/30" : ""} hover:bg-muted/50`}
                 >
-                  <TableCell className="w-12">
+                  <TableCell className="w-12 px-2 py-1 ">
                     {item.status !== "paid" ? (
                       <Checkbox
                         checked={selectedItemIds.has(item.id)}
@@ -115,8 +103,8 @@ export function StudentInvoiceCard({
                       <CheckCircle2 className="h-4 w-4 text-green-600" />
                     )}
                   </TableCell>
-                  <TableCell className="text-sm font-medium">{item.description}</TableCell>
-                  <TableCell className="text-sm text-right">
+                  <TableCell className="text-sm font-medium px-2 py-1 ">{item.description}</TableCell>
+                  <TableCell className="text-sm text-right px-2 py-1 ">
                     {item.status === "paid" ? (
                       <span className="text-green-600 font-medium">Paid</span>
                     ) : (
@@ -129,7 +117,7 @@ export function StudentInvoiceCard({
                       </span>
                     )}
                   </TableCell>
-                  <TableCell className="text-sm text-right font-semibold">
+                  <TableCell className="text-sm text-right font-semibold px-2 py-1 ">
                     ₦{item.balance.toLocaleString()}
                   </TableCell>
                 </TableRow>
