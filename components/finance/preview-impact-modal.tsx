@@ -104,23 +104,27 @@ export function PreviewImpactModal({
             </div>
 
             {/* Summary Cards - Compact */}
-            <div className="grid grid-cols-2 gap-3">
-              <Card className="border-2">
-                <CardContent className="p-4">
+            <div className="grid grid-cols-2 gap-2">
+              <Card className="border shadow-none">
+                <CardContent className="p-3">
                   <div className="text-center">
-                    <p className="text-3xl font-bold">{studentCount}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Students</p>
+                    <p className="text-2xl font-semibold leading-none">
+                      {studentCount}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-1">Students</p>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-2">
-                <CardContent className="p-4">
+              <Card className="border shadow-none">
+                <CardContent className="p-3">
                   <div className="text-center">
-                    <p className="text-2xl font-bold">
+                    <p className="text-lg font-semibold leading-none">
                       ₦{expectedRevenue.toLocaleString()}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">Expected Revenue</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      Expected Revenue
+                    </p>
                   </div>
                 </CardContent>
               </Card>
