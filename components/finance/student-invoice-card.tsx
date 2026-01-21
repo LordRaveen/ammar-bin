@@ -1,0 +1,143 @@
+"use client"
+
+import { useState } from "react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { CheckCircle2, MoreVertical } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+
+interface StudentInvoiceItem {
+  id: string
+  description: string
+  dueDate: string
+  balance: number
+  status: "pending" | "paid" | "partial"
+  selected?: boolean
+}
+
+interface StudentInvoiceCardProps {
+  studentId: string
+  studentName: string
+  studentClass: string
+  invoiceNumber: string
+  invoices: StudentInvoiceItem[]
+  selectedItemIds: Set<string>
+  onItemToggle: (itemId: string) => void
+}
+
+export function StudentInvoiceCard({
+  studentId,
+  studentName,
+  studentClass,
+  invoiceNumber,
+  invoices,
+  selectedItemIds,
+  onItemToggle,
+}: StudentInvoiceCardProps) {
+  const [studentChecked, setStudentChecked] = useState(false)
+
+  const handleStudentCheckAll = () => {
+    setStudentChecked(!studentChecked)
+    // Toggle all items for this student
+    invoices.forEach((item) => {
+      if (item.status !== "paid") {
+        onItemToggle(item.id)
+      }
+    })
+  }
+
+  return (
+    <Card className="border-l-4 border-l-green-500">
+      <CardContent className="p-0">
+        {/* Student Header */}
+        <div className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center gap-3 flex-1">
+            <Checkbox
+              checked={studentChecked}
+              onCheckedChange={handleStudentCheckAll}
+              className="h-5 w-5"
+            />
+            <div className="flex-1">
+              <p className="font-semibold text-sm">{studentName}</p>
+              <p className="text-xs text-muted-foreground">{studentClass}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <p className="text-xs text-muted-foreground font-mono">{invoiceNumber}</p>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem>View Details</DropdownMenuItem>
+                <DropdownMenuItem>Print Invoice</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {/* Invoice Items Table */}
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableHead className="w-12"></TableHead>
+                <TableHead className="text-xs font-semibold">Invoice item</TableHead>
+                <TableHead className="text-xs font-semibold text-right">Due date</TableHead>
+                <TableHead className="text-xs font-semibold text-right">Balance</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {invoices.map((item) => (
+                <TableRow
+                  key={item.id}
+                  className={`${item.status === "paid" ? "bg-muted/30" : ""} hover:bg-muted/50`}
+                >
+                  <TableCell className="w-12">
+                    {item.status !== "paid" ? (
+                      <Checkbox
+                        checked={selectedItemIds.has(item.id)}
+                        onCheckedChange={() => onItemToggle(item.id)}
+                        disabled={item.status === "paid"}
+                        className="h-4 w-4"
+                      />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    )}
+                  </TableCell>
+                  <TableCell className="text-sm font-medium">{item.description}</TableCell>
+                  <TableCell className="text-sm text-right">
+                    {item.status === "paid" ? (
+                      <span className="text-green-600 font-medium">Paid</span>
+                    ) : (
+                      <span
+                        className={`${
+                          item.dueDate === "Overdue" ? "text-red-600 font-medium" : ""
+                        }`}
+                      >
+                        {item.dueDate}
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-sm text-right font-semibold">
+                    ₦{item.balance.toLocaleString()}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
