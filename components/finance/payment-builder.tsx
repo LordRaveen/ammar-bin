@@ -351,7 +351,7 @@ export function PaymentBuilder({
         <Separator />
         <div className="flex items-center justify-between text-base font-semibold font mono">
           <span>Total to pay</span>
-          <span>₦{totals.total.toLocaleString()}</span>
+          <span classNAme="font-mono">₦{totals.total.toLocaleString()}</span>
         </div>
       </div>
 

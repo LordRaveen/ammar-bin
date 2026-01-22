@@ -359,7 +359,7 @@ export function FamilyCard({
       ) : guardianInfo ? (
         <>
           {/* Guardian/Parent Card */}
-          <Card className="border shadow-none py-2">
+          <Card className="border shadow-none p-2">
             <CardContent className="p-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
