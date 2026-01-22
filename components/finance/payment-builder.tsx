@@ -188,11 +188,11 @@ export function PaymentBuilder({
           const isExpanded = expandedStudents.has(studentId)
 
           return (
-            <Card key={studentId} className="overflow-hidden shadow-none border py-0 gap-3">
+            <Card key={studentId} className="overflow-hidden shadow-none border py-0 gap-1">
               {/* Student Header */}
               <div
                 onClick={() => toggleStudentExpand(studentId)}
-                className="flex items-center justify-between px-4 py2 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
+                className="flex items-center justify-between px-4 py-2 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
               >
                 <h4 className="font-semibold text-sm">{studentName}</h4>
                 <ChevronDown
@@ -206,7 +206,7 @@ export function PaymentBuilder({
                   {items.map((item) => {
                     const amount = paymentAmounts[item.id]
                     return (
-                      <div key={item.id} className="space-y-3 pb-3 border-b last:border-b-0">
+                      <div key={item.id} className="space-y-2 pb-3 border-b last:border-b-0">
                         {/* Item Display */}
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
