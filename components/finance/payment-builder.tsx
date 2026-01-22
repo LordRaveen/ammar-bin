@@ -10,7 +10,7 @@ import { ChevronDown, InboxIcon } from "lucide-react"
 
 interface InvoiceItem {
   id: string
-  description: string font-mono
+  description: string
   balance: number
   status: "pending" | "paid" | "partial"
   studentId: string
