@@ -85,28 +85,30 @@ export default function SignInPage() {
       }
 
       let signInData
-      try {
-        const { data, error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-        if (signInError) {
-          throw signInError
-        }
+      // Check if component unmounted during auth
+      if (!isMounted.current) {
+        return
+      }
 
-        if (!data.user) {
-          throw new Error("Failed to authenticate")
-        }
-
-        signInData = data
-      } catch (authError: any) {
-        if (authError.name === "AbortError") {
-          devLog.warn("Auth request was aborted, user may have navigated away")
+      if (signInError) {
+        // Handle abort errors silently
+        if (signInError.message?.includes("abort") || signInError.name === "AbortError") {
+          devLog.warn("Auth request was aborted")
           return
         }
-        throw authError
+        throw signInError
       }
+
+      if (!data.user) {
+        throw new Error("Failed to authenticate")
+      }
+
+      signInData = data
 
       // Determine user role
       let userRole = "admin"
@@ -151,8 +153,14 @@ export default function SignInPage() {
         router.refresh()
       }
     } catch (error: any) {
-      if (error.name === "AbortError") {
+      // Handle abort errors silently - these occur when component unmounts
+      if (error.name === "AbortError" || error.message?.includes("abort")) {
         devLog.warn("Request aborted, user may have navigated away")
+        return
+      }
+
+      // Check if component is still mounted before updating state
+      if (!isMounted.current) {
         return
       }
 

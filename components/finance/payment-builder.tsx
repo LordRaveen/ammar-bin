@@ -188,11 +188,11 @@ export function PaymentBuilder({
           const isExpanded = expandedStudents.has(studentId)
 
           return (
-            <Card key={studentId} className="overflow-hidden border">
+            <Card key={studentId} className="overflow-hidden shadow-none border py-0 gap-3">
               {/* Student Header */}
               <div
                 onClick={() => toggleStudentExpand(studentId)}
-                className="flex items-center justify-between p-4 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
+                className="flex items-center justify-between px-4 py2 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
               >
                 <h4 className="font-semibold text-sm">{studentName}</h4>
                 <ChevronDown
