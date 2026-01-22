@@ -9,6 +9,7 @@ import Link from "next/link"
 import { CollectPayment } from "@/components/finance/collect-payment"
 import { InvoicesTab } from "@/components/finance/invoices-tab"
 import { FeesTab } from "@/components/finance/fees-tab"
+import { PaymentsTab } from "@/components/finance/payments-tab"
 
 export const dynamic = "force-dynamic"
 
@@ -274,15 +275,7 @@ export default async function FinancePage() {
         </TabsContent>
 
         <TabsContent value="payments">
-          <Card>
-            <CardHeader>
-              <CardTitle>Payments</CardTitle>
-              <CardDescription>Track and manage all payments</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Payment tracking interface coming soon</p>
-            </CardContent>
-          </Card>
+          <PaymentsTab userRole="admin" />
         </TabsContent>
 
         <TabsContent value="reversals">
