@@ -10,7 +10,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ExternalLink, Plus, Pencil, Loader2, Trash2, Receipt } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
-import { EditGuardianRelationDialog } from "./edit-guardian-relation-dialog"
 import { LinkGuardianModal } from "./link-guardian-modal"
 import { RemoveGuardianDialog } from "./remove-guardian-dialog"
 import { InvoiceDetailsDrawer } from "@/components/finance/invoice-details-drawer"
@@ -308,14 +307,57 @@ export function StudentDetailsSheet({
           </div>
         ) : null}
 
+        {/* Edit Guardian Modal (using LinkGuardianModal in edit mode) */}
         {editGuardianRelation && (
-          <EditGuardianRelationDialog
-            relation={editGuardianRelation}
+          <LinkGuardianModal
             open={!!editGuardianRelation}
             onOpenChange={(open) => !open && setEditGuardianRelation(null)}
+            studentId={studentId || ""}
+            existingRelation={{
+              id: editGuardianRelation.id,
+              guardian_id: editGuardianRelation.guardian?.id,
+              relationship: editGuardianRelation.relationship,
+              is_primary: editGuardianRelation.is_primary,
+            }}
+            onGuardianLinked={() => {
+              setEditGuardianRelation(null)
+              // Refresh student data
+              if (studentId) {
+                const supabase = createClient()
+                supabase
+                  .from("students")
+                  .select(`
+                    *,
+                    student_guardians(
+                      id,
+                      relationship,
+                      is_primary,
+                      guardian:guardians(*)
+                    ),
+                    student_enrollments(
+                      enrollment_date,
+                      is_active,
+                      session:sessions(name, id),
+                      term:terms(name, id),
+                      class:classes(
+                        name,
+                        section:section_id(name)
+                      )
+                    )
+                  `)
+                  .eq("id", studentId)
+                  .single()
+                  .then(({ data }) => {
+                    if (data) {
+                      setStudent(data)
+                    }
+                  })
+              }
+            }}
           />
         )}
 
+        {/* Link Guardian Modal (for adding new guardian) */}
         {showLinkGuardianModal && (
           <LinkGuardianModal
             open={showLinkGuardianModal}

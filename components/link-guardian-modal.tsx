@@ -15,6 +15,13 @@ interface LinkGuardianModalProps {
   onOpenChange: (open: boolean) => void
   studentId: string
   onGuardianLinked: () => void
+  /** If provided, modal operates in edit mode to update existing relation */
+  existingRelation?: {
+    id: string
+    guardian_id: string
+    relationship: string
+    is_primary: boolean
+  }
 }
 
 export function LinkGuardianModal({
@@ -22,21 +29,36 @@ export function LinkGuardianModal({
   onOpenChange,
   studentId,
   onGuardianLinked,
+  existingRelation,
 }: LinkGuardianModalProps) {
   const [guardians, setGuardians] = useState<any[]>([])
   const [filteredGuardians, setFilteredGuardians] = useState<any[]>([])
-  const [selectedGuardianId, setSelectedGuardianId] = useState("")
-  const [relationship, setRelationship] = useState("")
+  const [selectedGuardianId, setSelectedGuardianId] = useState(existingRelation?.guardian_id || "")
+  const [relationship, setRelationship] = useState(existingRelation?.relationship || "")
+  const [isPrimary, setIsPrimary] = useState(existingRelation?.is_primary || false)
   const [searchTerm, setSearchTerm] = useState("")
   const [loading, setLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const supabase = createBrowserClient()
+  
+  const isEditMode = !!existingRelation
 
   useEffect(() => {
     if (open) {
       fetchGuardians()
+      // Set initial values for edit mode
+      if (existingRelation) {
+        setSelectedGuardianId(existingRelation.guardian_id)
+        setRelationship(existingRelation.relationship)
+        setIsPrimary(existingRelation.is_primary)
+      } else {
+        // Reset for new link
+        setSelectedGuardianId("")
+        setRelationship("")
+        setIsPrimary(false)
+      }
     }
-  }, [open])
+  }, [open, existingRelation])
 
   useEffect(() => {
     if (searchTerm) {
@@ -83,22 +105,44 @@ export function LinkGuardianModal({
 
     setIsSubmitting(true)
     try {
-      const { error } = await supabase
-        .from("student_guardians")
-        .insert({
-          student_id: studentId,
-          guardian_id: selectedGuardianId,
-          relationship,
-          is_primary: false,
-        })
+      if (isEditMode && existingRelation) {
+        // Update existing relation
+        const { error } = await supabase
+          .from("student_guardians")
+          .update({
+            guardian_id: selectedGuardianId,
+            relationship,
+            is_primary: isPrimary,
+          })
+          .eq("id", existingRelation.id)
 
-      if (error) {
-        console.error("[v0] Error linking guardian:", error)
-        toast.error("Failed to link guardian")
-        return
+        if (error) {
+          console.error("[v0] Error updating guardian relation:", error)
+          toast.error("Failed to update guardian")
+          return
+        }
+
+        toast.success("Guardian updated successfully")
+      } else {
+        // Create new relation
+        const { error } = await supabase
+          .from("student_guardians")
+          .insert({
+            student_id: studentId,
+            guardian_id: selectedGuardianId,
+            relationship,
+            is_primary: isPrimary,
+          })
+
+        if (error) {
+          console.error("[v0] Error linking guardian:", error)
+          toast.error("Failed to link guardian")
+          return
+        }
+
+        toast.success("Guardian linked successfully")
       }
 
-      toast.success("Guardian linked successfully")
       onOpenChange(false)
       onGuardianLinked()
       
@@ -106,9 +150,10 @@ export function LinkGuardianModal({
       setSelectedGuardianId("")
       setRelationship("")
       setSearchTerm("")
+      setIsPrimary(false)
     } catch (error) {
-      console.error("[v0] Error linking guardian:", error)
-      toast.error("Error linking guardian")
+      console.error("[v0] Error:", error)
+      toast.error(isEditMode ? "Error updating guardian" : "Error linking guardian")
     } finally {
       setIsSubmitting(false)
     }
@@ -118,9 +163,11 @@ export function LinkGuardianModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Link Guardian</DialogTitle>
+          <DialogTitle>{isEditMode ? "Edit Guardian" : "Link Guardian"}</DialogTitle>
           <DialogDescription>
-            Select an existing guardian and their relationship to the student
+            {isEditMode
+              ? "Change the guardian or update their relationship to the student"
+              : "Select an existing guardian and their relationship to the student"}
           </DialogDescription>
         </DialogHeader>
 
@@ -191,6 +238,20 @@ export function LinkGuardianModal({
             </Select>
           </div>
 
+          {/* Primary Checkbox */}
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="is_primary"
+              checked={isPrimary}
+              onChange={(e) => setIsPrimary(e.target.checked)}
+              className="rounded border-input"
+            />
+            <Label htmlFor="is_primary" className="font-normal cursor-pointer">
+              Set as primary guardian
+            </Label>
+          </div>
+
           {/* Action Buttons */}
           <div className="flex gap-2 pt-4">
             <Button
@@ -206,7 +267,7 @@ export function LinkGuardianModal({
               className="flex-1"
             >
               {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Link Guardian
+              {isEditMode ? "Update Guardian" : "Link Guardian"}
             </Button>
           </div>
         </div>
