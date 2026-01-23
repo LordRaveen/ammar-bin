@@ -54,19 +54,7 @@ export function PaymentsTable({ onSelectPayment, filters }: PaymentsTableProps) 
             `
             *,
             students(first_name, last_name, student_id),
-            invoices(
-              invoice_number,
-              parent_id,
-              students(
-                student_guardians(
-                  is_primary,
-                  guardian:guardians(first_name, last_name)
-                )
-              )
-            ),
-            received_by_user:received_by(
-              teachers(first_name, last_name)
-            )
+            teacher:received_by(first_name, last_name)
           `,
             { count: "exact" }
           )
