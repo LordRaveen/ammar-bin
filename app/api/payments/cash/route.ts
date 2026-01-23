@@ -163,11 +163,16 @@ export async function POST(request: Request) {
     }
 
     // Create payment allocations for each item
-    const allocations = items.map((item) => ({
-      payment_id: payment.id,
-      invoice_item_id: item.invoice_item_id,
-      amount: item.amount,
-    }))
+    const allocations = items.map((item) => {
+      const invoiceItem = invoiceItems.find((ii) => ii.id === item.invoice_item_id)
+      return {
+        payment_id: payment.id,
+        invoice_item_id: item.invoice_item_id,
+        invoice_id: invoiceItem?.invoice_id,
+        student_id: studentId,
+        amount: item.amount,
+      }
+    })
 
     const { error: allocError } = await supabase
       .from("payment_allocations")
@@ -175,9 +180,10 @@ export async function POST(request: Request) {
 
     if (allocError) {
       console.error("[v0] Error creating allocations:", allocError)
+      console.error("[v0] Allocation data:", allocations)
       // Delete payment record to rollback
       await supabase.from("payments").delete().eq("id", payment.id)
-      return Response.json({ error: "Failed to allocate payment" }, { status: 500 })
+      return Response.json({ error: `Failed to allocate payment: ${allocError.message}` }, { status: 500 })
     }
 
     // Update invoice item statuses
