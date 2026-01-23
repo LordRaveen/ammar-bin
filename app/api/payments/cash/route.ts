@@ -52,7 +52,7 @@ export async function POST(request: Request) {
         amount,
         status,
         invoice_id,
-        invoices(id, invoice_number, status, balance, total_amount, amount_paid)
+        invoices(id, invoice_number, status, balance, total_amount, amount_paid, student_id)
       `
       )
       .in(
@@ -111,15 +111,23 @@ export async function POST(request: Request) {
     const refNumber = `PAY-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${nanoid(4).toUpperCase()}`
 
     // Create payment record
+    const invoiceData = invoiceItems[0]?.invoices as any
+    const studentId = invoiceData?.student_id
+    
+    if (!studentId) {
+      console.error("[v0] Student ID not found in invoice items")
+      return Response.json({ error: "Could not determine student from invoices" }, { status: 400 })
+    }
+
     const { data: payment, error: paymentError } = await supabase
       .from("payments")
       .insert({
         reference_number: refNumber,
         amount: totalAmount,
-        payment_method,
-        status: "completed",
+        payment_method: "Cash",
+        status: "Completed",
         paid_at: new Date().toISOString(),
-        student_id: items[0]?.student_id, // Get student ID from first item
+        student_id: studentId,
         received_by: user.id,
         payment_date: new Date().toISOString().split('T')[0],
         remarks: total_discount > 0 || total_waiver > 0 ? `Discount: ₦${total_discount}, Waiver: ₦${total_waiver}` : null,
@@ -129,7 +137,15 @@ export async function POST(request: Request) {
 
     if (paymentError) {
       console.error("[v0] Error creating payment:", paymentError)
-      return Response.json({ error: "Failed to create payment record" }, { status: 500 })
+      console.error("[v0] Payment data:", { 
+        reference_number: refNumber,
+        amount: totalAmount,
+        payment_method: "Cash",
+        status: "Completed",
+        student_id: studentId,
+        received_by: user.id,
+      })
+      return Response.json({ error: `Failed to create payment record: ${paymentError.message}` }, { status: 500 })
     }
 
     // Create payment allocations for each item
