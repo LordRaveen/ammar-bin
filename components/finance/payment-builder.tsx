@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { ChevronDown, InboxIcon } from "lucide-react"
+import { CashPaymentConfirmModal } from "./cash-payment-confirm-modal"
+import { useToast } from "@/hooks/use-toast"
 
 interface InvoiceItem {
   id: string
@@ -47,6 +49,8 @@ export function PaymentBuilder({
   const [expandedStudents, setExpandedStudents] = useState<Set<string>>(
     new Set(selectedItems.map((item) => item.studentId))
   )
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const { toast } = useToast()
 
   // Group items by student
   const groupedByStudent = useMemo(() => {
@@ -161,6 +165,38 @@ export function PaymentBuilder({
       newExpanded.add(studentId)
     }
     setExpandedStudents(newExpanded)
+  }
+
+  const handleConfirmPayment = () => {
+    // Validation
+    if (selectedItems.length === 0) {
+      toast.error("No items selected")
+      return
+    }
+
+    if (totals.total === 0) {
+      toast.error("Total amount must be greater than 0")
+      return
+    }
+
+    // Check that at least one item has an amount
+    const hasAmount = Object.values(paymentAmounts).some((pa) => pa.amount > 0)
+    if (!hasAmount) {
+      toast.error("Please enter an amount for at least one item")
+      return
+    }
+
+    // Show confirmation modal
+    setShowConfirmModal(true)
+  }
+
+  const handlePaymentSuccess = () => {
+    // Reset form
+    setPaymentAmounts({})
+    setGlobalDiscount(0)
+    setGlobalDiscountReason("")
+    setPaymentMethod("cash")
+    toast.success("Payment collected successfully!")
   }
 
   if (!selectedFamily || selectedItems.length === 0) {
@@ -387,9 +423,35 @@ export function PaymentBuilder({
       </div>
 
       {/* Confirm Button */}
-      <Button className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold h-10">
+      <Button 
+        onClick={handleConfirmPayment}
+        className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold h-10"
+      >
         Confirm & Collect Payment
       </Button>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <CashPaymentConfirmModal
+          open={showConfirmModal}
+          onOpenChange={setShowConfirmModal}
+          items={selectedItems.map((item) => ({
+            id: item.id,
+            studentName: item.studentName,
+            description: item.description,
+            amount: paymentAmounts[item.id]?.amount || item.balance,
+            discount: paymentAmounts[item.id]?.discount || 0,
+            waiver: paymentAmounts[item.id]?.waiver || 0,
+          }))}
+          subtotal={totals.subtotal}
+          totalDiscount={totals.discount}
+          totalWaiver={totals.waiver}
+          totalToPay={totals.total}
+          paymentMethod={paymentMethod}
+          guardianId={selectedFamily?.id || ""}
+          onConfirm={handlePaymentSuccess}
+        />
+      )}
     </div>
   )
 }
