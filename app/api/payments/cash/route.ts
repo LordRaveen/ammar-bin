@@ -51,7 +51,8 @@ export async function POST(request: Request) {
         id,
         amount,
         status,
-        invoice:invoice_id(id, invoice_number, status)
+        invoice_id,
+        invoices(id, invoice_number, status, balance, total_amount, amount_paid)
       `
       )
       .in(
@@ -77,11 +78,19 @@ export async function POST(request: Request) {
       )
     }
 
-    // Validate items exist and are not fully paid
+    // Validate items exist and their invoices are not fully paid
     for (const item of invoiceItems) {
+      const invoice = item.invoices as any
+      if (invoice?.status === "Paid") {
+        return Response.json(
+          { error: `Invoice ${invoice.invoice_number} is already fully paid` },
+          { status: 400 }
+        )
+      }
+
       if (item.status === "Paid") {
         return Response.json(
-          { error: `Item ${item.id} is already fully paid` },
+          { error: `Item is already fully paid` },
           { status: 400 }
         )
       }
@@ -110,9 +119,10 @@ export async function POST(request: Request) {
         payment_method,
         status: "completed",
         paid_at: new Date().toISOString(),
-        guardian_id,
+        student_id: items[0]?.student_id, // Get student ID from first item
         received_by: user.id,
-        notes: total_discount > 0 || total_waiver > 0 ? `Discount: ₦${total_discount}, Waiver: ₦${total_waiver}` : null,
+        payment_date: new Date().toISOString().split('T')[0],
+        remarks: total_discount > 0 || total_waiver > 0 ? `Discount: ₦${total_discount}, Waiver: ₦${total_waiver}` : null,
       })
       .select()
       .single()
@@ -126,7 +136,7 @@ export async function POST(request: Request) {
     const allocations = items.map((item) => ({
       payment_id: payment.id,
       invoice_item_id: item.invoice_item_id,
-      amount_allocated: item.amount,
+      amount: item.amount,
     }))
 
     const { error: allocError } = await supabase
@@ -140,56 +150,69 @@ export async function POST(request: Request) {
       return Response.json({ error: "Failed to allocate payment" }, { status: 500 })
     }
 
-    // Update invoice items - reduce balance and update status
+    // Update invoice item statuses
     for (const item of items) {
       const invoiceItem = invoiceItems.find((ii) => ii.id === item.invoice_item_id)
       if (!invoiceItem) continue
 
-      const newBalance = invoiceItem.amount - item.amount
-      const newStatus = newBalance === 0 ? "Paid" : "Partial"
+      const newItemBalance = invoiceItem.amount - item.amount
+      const itemStatus = newItemBalance === 0 ? "Paid" : newItemBalance < invoiceItem.amount ? "Partial" : "Unpaid"
 
-      const { error: updateError } = await supabase
+      const { error: itemUpdateError } = await supabase
         .from("invoice_items")
         .update({
-          amount: newBalance,
-          status: newStatus,
+          status: itemStatus,
         })
         .eq("id", item.invoice_item_id)
 
-      if (updateError) {
-        console.error("[v0] Error updating invoice item:", updateError)
+      if (itemUpdateError) {
+        console.error("[v0] Error updating invoice item status:", itemUpdateError)
         // Rollback
         await supabase.from("payments").delete().eq("id", payment.id)
-        return Response.json({ error: "Failed to update invoice items" }, { status: 500 })
+        return Response.json({ error: "Failed to update item status" }, { status: 500 })
       }
     }
 
-    // Update invoice statuses based on their items
-    const invoiceIds = [...new Set(invoiceItems.map((ii) => ii.invoice?.id))]
+    // Update invoice balances based on items paid
+    const invoiceMap = new Map<string, any>()
+    invoiceItems.forEach((item) => {
+      if (!invoiceMap.has(item.invoice_id)) {
+        invoiceMap.set(item.invoice_id, {
+          invoice: item.invoices,
+          totalItemAmount: 0,
+          paidAmount: 0,
+        })
+      }
 
-    for (const invoiceId of invoiceIds) {
-      if (!invoiceId) continue
+      const invoiceEntry = invoiceMap.get(item.invoice_id)!
+      invoiceEntry.totalItemAmount += item.amount
 
-      // Get all items for this invoice
-      const { data: allItems } = await supabase
-        .from("invoice_items")
-        .select("status, amount")
-        .eq("invoice_id", invoiceId)
+      const paymentItem = items.find((i) => i.invoice_item_id === item.id)
+      if (paymentItem) {
+        invoiceEntry.paidAmount += paymentItem.amount
+      }
+    })
 
-      if (!allItems || allItems.length === 0) continue
-
-      // Determine invoice status
-      const allPaid = allItems.every((item) => item.status === "Paid" && item.amount === 0)
-      const somePaid = allItems.some((item) => item.status === "Paid" || item.status === "Partial")
-      const invoiceStatus = allPaid ? "Paid" : somePaid ? "Partial" : "Unpaid"
+    // Update invoices with new balance and status
+    for (const [invoiceId, invoiceEntry] of invoiceMap.entries()) {
+      const invoice = invoiceEntry.invoice
+      const newBalance = Math.max(0, (invoice?.balance || 0) - invoiceEntry.paidAmount)
+      const newStatus = newBalance === 0 ? "Paid" : newBalance < (invoice?.total_amount || 0) ? "Partial" : "Unpaid"
 
       const { error: invoiceUpdateError } = await supabase
         .from("invoices")
-        .update({ status: invoiceStatus })
+        .update({
+          balance: newBalance,
+          amount_paid: (invoice?.amount_paid || 0) + invoiceEntry.paidAmount,
+          status: newStatus,
+        })
         .eq("id", invoiceId)
 
       if (invoiceUpdateError) {
-        console.error("[v0] Error updating invoice status:", invoiceUpdateError)
+        console.error("[v0] Error updating invoice:", invoiceUpdateError)
+        // Rollback
+        await supabase.from("payments").delete().eq("id", payment.id)
+        return Response.json({ error: "Failed to update invoice" }, { status: 500 })
       }
     }
 
