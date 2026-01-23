@@ -37,6 +37,7 @@ interface FamilyCardProps {
   onItemsSelected?: (items: any[]) => void
   userRole?: "admin" | "parent" | "accountant"
   parentId?: string
+  refreshTrigger?: number
 }
 
 function calculateDueDate(dueDate: string) {
@@ -50,6 +51,7 @@ export function FamilyCard({
   onItemsSelected,
   userRole = "admin",
   parentId,
+  refreshTrigger,
 }: FamilyCardProps) {
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set())
   const [studentsData, setStudentsData] = useState<StudentData[]>([])
@@ -65,7 +67,7 @@ export function FamilyCard({
     }
 
     fetchFamilyData()
-  }, [selectedFamily])
+  }, [selectedFamily, refreshTrigger])
 
   const fetchFamilyData = async () => {
     setLoading(true)

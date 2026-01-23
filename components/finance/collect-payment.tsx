@@ -16,12 +16,18 @@ export function CollectPayment({ userRole = "admin", parentId }: CollectPaymentP
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [selectedFamily, setSelectedFamily] = useState<any>(null)
   const [selectedItems, setSelectedItems] = useState<any[]>([])
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   const handleSelectResult = (result: any, type: "parent" | "student") => {
     setSelectedFamily({
       ...result,
       type,
     })
+  }
+
+  const handlePaymentSuccess = () => {
+    // Trigger a refresh of the family card data
+    setRefreshTrigger((prev) => prev + 1)
   }
 
   return (
@@ -53,6 +59,7 @@ export function CollectPayment({ userRole = "admin", parentId }: CollectPaymentP
               onItemsSelected={setSelectedItems}
               userRole={userRole}
               parentId={parentId}
+              refreshTrigger={refreshTrigger}
             />
           </div>
         </div>
@@ -64,6 +71,7 @@ export function CollectPayment({ userRole = "admin", parentId }: CollectPaymentP
             selectedFamily={selectedFamily}
             selectedItems={selectedItems}
             userRole={userRole}
+            onPaymentSuccess={handlePaymentSuccess}
           />
         </div>
       </div>

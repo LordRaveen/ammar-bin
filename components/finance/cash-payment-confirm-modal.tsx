@@ -11,8 +11,8 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Loader2, AlertCircle } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { Loader2, AlertCircle, CheckCircle } from "lucide-react"
+import { toast } from "sonner"
 
 interface PaymentItem {
   id: string
@@ -49,7 +49,6 @@ export function CashPaymentConfirmModal({
   onConfirm,
 }: CashPaymentConfirmModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const { toast } = useToast()
 
   const handleConfirm = async () => {
     if (!guardianId) {
@@ -80,12 +79,18 @@ export function CashPaymentConfirmModal({
         throw new Error(data.error || "Failed to process payment")
       }
 
-      toast.success("Payment collected successfully!")
+      toast.success("Payment collected successfully!", {
+        description: `₦${totalToPay.toLocaleString()} received`,
+        icon: <CheckCircle className="h-5 w-5 text-green-600" />,
+      })
+      
       onOpenChange(false)
       onConfirm()
     } catch (error: any) {
       console.error("[v0] Payment error:", error)
-      toast.error(error.message || "Error processing payment")
+      toast.error("Payment Failed", {
+        description: error.message || "An error occurred while processing the payment",
+      })
     } finally {
       setIsSubmitting(false)
     }

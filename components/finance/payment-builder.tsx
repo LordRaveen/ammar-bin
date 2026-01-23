@@ -24,6 +24,7 @@ interface PaymentBuilderProps {
   selectedFamily: any
   selectedItems: InvoiceItem[]
   userRole?: "admin" | "parent" | "accountant"
+  onPaymentSuccess?: () => void
 }
 
 interface PaymentAmount {
@@ -39,6 +40,7 @@ export function PaymentBuilder({
   selectedFamily,
   selectedItems,
   userRole = "admin",
+  onPaymentSuccess,
 }: PaymentBuilderProps) {
   const [paymentAmounts, setPaymentAmounts] = useState<Record<string, PaymentAmount>>({})
   const [globalDiscount, setGlobalDiscount] = useState(0)
@@ -196,7 +198,10 @@ export function PaymentBuilder({
     setGlobalDiscount(0)
     setGlobalDiscountReason("")
     setPaymentMethod("cash")
-    toast.success("Payment collected successfully!")
+    setShowConfirmModal(false)
+    
+    // Call the callback to refresh data
+    onPaymentSuccess?.()
   }
 
   if (!selectedFamily || selectedItems.length === 0) {
