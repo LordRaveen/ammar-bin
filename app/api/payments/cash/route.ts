@@ -120,6 +120,18 @@ export async function POST(request: Request) {
       return Response.json({ error: "Could not determine student from invoices" }, { status: 400 })
     }
 
+    // Get teacher/staff record for received_by
+    const { data: teacherData } = await supabase
+      .from("teachers")
+      .select("id")
+      .eq("user_id", user.id)
+      .single()
+
+    if (!teacherData?.id) {
+      console.error("[v0] No teacher record found for user:", user.id)
+      return Response.json({ error: "Only staff can collect payments" }, { status: 403 })
+    }
+
     const { data: payment, error: paymentError } = await supabase
       .from("payments")
       .insert({
@@ -130,7 +142,7 @@ export async function POST(request: Request) {
         status: "completed",
         paid_at: new Date().toISOString(),
         student_id: studentId,
-        received_by: user.id,
+        received_by: teacherData.id,
         payment_date: new Date().toISOString().split('T')[0],
         remarks: total_discount > 0 || total_waiver > 0 ? `Discount: ₦${total_discount}, Waiver: ₦${total_waiver}` : null,
       })
@@ -145,7 +157,7 @@ export async function POST(request: Request) {
         payment_method: "cash",
         status: "completed",
         student_id: studentId,
-        received_by: user.id,
+        received_by: teacherData.id,
       })
       return Response.json({ error: `Failed to create payment record: ${paymentError.message}` }, { status: 500 })
     }
