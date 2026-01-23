@@ -125,14 +125,13 @@ export function InvoicesTable({ onSelectInvoice, filters }: InvoicesTableProps) 
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="h-10 py-2 px-3">Invoice No</TableHead>
-              <TableHead className="h-10 py-2 px-3">Student</TableHead>
-              <TableHead className="h-10 py-2 px-3 text-right">Total</TableHead>
-              <TableHead className="h-10 py-2 px-3 text-right">Paid</TableHead>
-              <TableHead className="h-10 py-2 px-3 text-right">Balance</TableHead>
-              <TableHead className="h-10 py-2 px-3">Status</TableHead>
-              <TableHead className="h-10 py-2 px-3">Due Date</TableHead>
-              <TableHead className="h-10 py-2 px-3 text-right">Actions</TableHead>
+              <TableHead className="h-10 py-2 px-1">Invoice No</TableHead>
+              <TableHead className="h-10 py-2 px-1">Student</TableHead>
+              <TableHead className="h-10 py-2 px-1 text-right">Total</TableHead>
+              <TableHead className="h-10 py-2 px-1 text-right">Paid</TableHead>
+              <TableHead className="h-10 py-2 px-1 text-right">Balance</TableHead>
+              <TableHead className="h-10 py-2 px-1">Status</TableHead>
+              <TableHead className="h-10 py-2 px-1">Due Date</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -142,51 +141,28 @@ export function InvoicesTable({ onSelectInvoice, filters }: InvoicesTableProps) 
                 className="hover:bg-muted cursor-pointer h-10"
                 onClick={() => onSelectInvoice(invoice.id)}
               >
-                <TableCell className="py-2 px-3 font-mono text-xs">{invoice.invoice_number}</TableCell>
-                <TableCell className="py-2 px-3 text-sm">
+                <TableCell className="py-2 px-1 font-mono text-xs">{invoice.invoice_number}</TableCell>
+                <TableCell className="py-2 px-1 text-sm">
                   {invoice.students?.first_name} {invoice.students?.last_name}
                 </TableCell>
-                <TableCell className="py-2 px-3 text-right font-semibold text-sm">
+                <TableCell className="py-2 px-1 text-right font-semibold text-sm font-mono">
                   ₦{Number.parseFloat(invoice.total_amount).toLocaleString()}
                 </TableCell>
-                <TableCell className="py-2 px-3 text-right text-sm">
+                <TableCell className="py-2 px-1 text-right text-sm font-mono">
                   ₦{Number.parseFloat(invoice.amount_paid).toLocaleString()}
                 </TableCell>
-                <TableCell className="py-2 px-3 text-right">
-                  <span className="text-red-600 font-semibold text-sm">
+                <TableCell className="py-2 px-1 text-right font-mono">
+                  <span className="text-red-300 font-semibold text-sm">
                     ₦{Number.parseFloat(invoice.balance).toLocaleString()}
                   </span>
                 </TableCell>
-                <TableCell className="py-2 px-3">
-                  <Badge className={`${getStatusBadgeColor(invoice.status)} text-xs`}>
+                <TableCell className="py-2 px-1">
+                  <Badge className={`${getStatusBadgeColor(invoice.status)} px-1 py-1 text-xs`}>
                     {invoice.status}
                   </Badge>
                 </TableCell>
-                <TableCell className="py-2 px-3 text-sm">{new Date(invoice.due_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</TableCell>
-                <TableCell className="py-2 px-3 text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onSelectInvoice(invoice.id)
-                      }}
-                      className="h-8 w-8 p-0"
-                      title="View details"
-                    >
-                      <Eye className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      title="Print invoice"
-                    >
-                      <Printer className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </TableCell>
+                <TableCell className="py-2 px-1 text-sm">{new Date(invoice.due_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</TableCell>
+                
               </TableRow>
             ))}
           </TableBody>
