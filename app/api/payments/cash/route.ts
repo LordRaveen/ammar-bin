@@ -107,8 +107,9 @@ export async function POST(request: Request) {
     // Calculate total amount
     const totalAmount = items.reduce((sum, item) => sum + item.amount, 0)
 
-    // Generate reference number
+    // Generate reference and receipt numbers
     const refNumber = `PAY-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${nanoid(4).toUpperCase()}`
+    const receiptNumber = `RCP-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${nanoid(6).toUpperCase()}`
 
     // Create payment record
     const invoiceData = invoiceItems[0]?.invoices as any
@@ -123,6 +124,7 @@ export async function POST(request: Request) {
       .from("payments")
       .insert({
         reference_number: refNumber,
+        receipt_number: receiptNumber,
         amount: totalAmount,
         payment_method: "Cash",
         status: "Completed",
