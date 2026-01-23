@@ -233,13 +233,13 @@ export function PaymentsTable({ onSelectPayment, filters }: PaymentsTableProps) 
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="h-10 py-2 px-3">Ref</TableHead>
-                <TableHead className="h-10 py-2 px-3">Parent</TableHead>
-                <TableHead className="h-10 py-2 px-3 text-right">Amount</TableHead>
-                <TableHead className="h-10 py-2 px-3">Method</TableHead>
-                <TableHead className="h-10 py-2 px-3">Status</TableHead>
-                <TableHead className="h-10 py-2 px-3">Date</TableHead>
-                <TableHead className="h-10 py-2 px-3 text-right">Actions</TableHead>
+                <TableHead className="h-10 py-2 px-1">Ref</TableHead>
+                <TableHead className="h-10 py-2 px-1">Parent</TableHead>
+                <TableHead className="h-10 py-2 px-1 text-right">Amount</TableHead>
+                <TableHead className="h-10 py-2 px-1">Method</TableHead>
+                <TableHead className="h-10 py-2 px-1">Status</TableHead>
+                <TableHead className="h-10 py-2 px-1">Date</TableHead>
+                <TableHead className="h-10 py-2 px-1 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -249,14 +249,14 @@ export function PaymentsTable({ onSelectPayment, filters }: PaymentsTableProps) 
                   className="hover:bg-muted cursor-pointer h-10"
                   onClick={() => onSelectPayment(payment.id)}
                 >
-                  <TableCell className="py-2 px-3 font-mono text-xs">
+                  <TableCell className="py-2 px-1 font-mono text-xs">
                     {payment.receipt_number || payment.reference_number || `PAY-${payment.id.slice(0, 8)}`}
                   </TableCell>
-                  <TableCell className="py-2 px-3 text-sm">{getParentName(payment)}</TableCell>
-                  <TableCell className="py-2 px-3 text-right font-semibold text-sm">
+                  <TableCell className="py-2 px-1 text-sm">{getParentName(payment)}</TableCell>
+                  <TableCell className="py-2 px-1 text-right font-semibold font-mono text-sm">
                     ₦{Number.parseFloat(payment.amount).toLocaleString()}
                   </TableCell>
-                  <TableCell className="py-2 px-3">
+                  <TableCell className="py-2 px-1">
                     <Badge
                       variant="outline"
                       className={`${getMethodBadgeColor(payment.payment_method)} text-xs capitalize`}
@@ -264,15 +264,15 @@ export function PaymentsTable({ onSelectPayment, filters }: PaymentsTableProps) 
                       {payment.payment_method || "N/A"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="py-2 px-3">
+                  <TableCell className="py-2 px-1">
                     <Badge className={`${getStatusBadgeColor(payment.status)} text-xs capitalize`}>
                       {payment.status || "N/A"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="py-2 px-3 text-sm">
+                  <TableCell className="py-2 px-1 text-sm">
                     {formatDate(payment.payment_date || payment.created_at)}
                   </TableCell>
-                  <TableCell className="py-2 px-3 text-right">
+                  <TableCell className="py-2 px-1 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <Button
                         variant="ghost"
