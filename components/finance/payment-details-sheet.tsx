@@ -84,13 +84,11 @@ export function PaymentDetailsSheet({
           .select(
             `
             *,
-            invoice_items(
+            invoice_items!inner(
               description,
               amount,
-              fee_categories(name)
-            ),
-            invoices(invoice_number),
-            students(first_name, last_name)
+              fee_category_id
+            )
           `
           )
           .eq("payment_id", paymentId)
