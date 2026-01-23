@@ -65,25 +65,7 @@ export function PaymentDetailsSheet({
             `
             *,
             students(first_name, last_name, student_id),
-            invoices(
-              id,
-              invoice_number,
-              total_amount,
-              balance,
-              status,
-              students(
-                first_name,
-                last_name,
-                student_guardians(
-                  is_primary,
-                  relationship,
-                  guardian:guardians(first_name, last_name, phone)
-                )
-              )
-            ),
-            received_by_user:received_by(
-              teachers(first_name, last_name, staff_id)
-            )
+            teacher:received_by(first_name, last_name)
           `
           )
           .eq("id", paymentId)

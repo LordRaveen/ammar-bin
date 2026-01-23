@@ -53,7 +53,15 @@ export function PaymentsTable({ onSelectPayment, filters }: PaymentsTableProps) 
           .select(
             `
             *,
-            students(first_name, last_name, student_id),
+            students(
+              first_name, 
+              last_name, 
+              student_id,
+              student_guardians(
+                is_primary,
+                guardian:guardians(first_name, last_name)
+              )
+            ),
             teacher:received_by(first_name, last_name)
           `,
             { count: "exact" }
@@ -182,7 +190,7 @@ export function PaymentsTable({ onSelectPayment, filters }: PaymentsTableProps) 
   }
 
   const getParentName = (payment: any) => {
-    const guardians = payment.invoices?.students?.student_guardians
+    const guardians = payment.students?.student_guardians
     if (!guardians) return "N/A"
     const primary = guardians.find((sg: any) => sg.is_primary)
     if (primary?.guardian) {
