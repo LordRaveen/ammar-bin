@@ -126,8 +126,8 @@ export async function POST(request: Request) {
         reference_number: refNumber,
         receipt_number: receiptNumber,
         amount: totalAmount,
-        payment_method: "Cash",
-        status: "Completed",
+        payment_method: "cash",
+        status: "completed",
         paid_at: new Date().toISOString(),
         student_id: studentId,
         received_by: user.id,
@@ -142,8 +142,8 @@ export async function POST(request: Request) {
       console.error("[v0] Payment data:", { 
         reference_number: refNumber,
         amount: totalAmount,
-        payment_method: "Cash",
-        status: "Completed",
+        payment_method: "cash",
+        status: "completed",
         student_id: studentId,
         received_by: user.id,
       })
