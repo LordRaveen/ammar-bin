@@ -42,6 +42,8 @@ export async function POST(request: Request) {
     }
 
     // Start transaction - fetch all data first for validation
+    console.log("[v0] Fetching invoice items with IDs:", items.map((i) => i.invoice_item_id))
+    
     const { data: invoiceItems, error: itemsError } = await supabase
       .from("invoice_items")
       .select(
@@ -49,7 +51,7 @@ export async function POST(request: Request) {
         id,
         amount,
         status,
-        invoice:invoices(id, invoice_number, status)
+        invoice:invoice_id(id, invoice_number, status)
       `
       )
       .in(
@@ -57,9 +59,22 @@ export async function POST(request: Request) {
         items.map((i) => i.invoice_item_id)
       )
 
+    console.log("[v0] Invoice items response:", { invoiceItems, itemsError })
+
     if (itemsError) {
       console.error("[v0] Error fetching invoice items:", itemsError)
-      return Response.json({ error: "Failed to fetch invoice items" }, { status: 500 })
+      return Response.json(
+        { error: `Failed to fetch invoice items: ${itemsError.message}` },
+        { status: 500 }
+      )
+    }
+
+    if (!invoiceItems || invoiceItems.length === 0) {
+      console.error("[v0] No invoice items found for IDs:", items.map((i) => i.invoice_item_id))
+      return Response.json(
+        { error: "No invoice items found" },
+        { status: 404 }
+      )
     }
 
     // Validate items exist and are not fully paid

@@ -179,10 +179,7 @@ export function FamilyCard({
           // Flatten invoice items to create list of all items
           const allInvoiceItems: StudentInvoiceItem[] = invoices
             ?.flatMap((inv: any) => inv.items)
-            .map((item: any, idx: number) => ({
-              ...item,
-              id: `${student.id}-item-${idx}`,
-            })) || []
+            .map((item: any) => item) || []
 
           return {
             id: student.id,
@@ -270,10 +267,7 @@ export function FamilyCard({
       // Flatten items
       const allInvoiceItems: StudentInvoiceItem[] = invoices
         ?.flatMap((inv: any) => inv.items)
-        .map((item: any, idx: number) => ({
-          ...item,
-          id: `item-${idx}`,
-        })) || []
+        .map((item: any) => item) || []
 
       const transformed: StudentData = {
         id: studentData.id,
