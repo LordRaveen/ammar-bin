@@ -257,13 +257,13 @@ export function PaymentDetailsSheet({
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : payment ? (
-          <div className="space-y-6 mt-2 mx-4">
+          <div className="space-y-6  mx-4">
             {/* Payment Summary */}
             <Card>
-              <CardHeader className="pb-0">
+              <CardHeader className="py-0">
                 <CardTitle className="text-sm font-medium">Payment Summary</CardTitle>
               </CardHeader>
-              <CardContent className="space-b-3">
+              <CardContent className="space-b-3 gap-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Amount</span>
                   <span className="text-lg font-mono text-green-600">
@@ -328,35 +328,31 @@ export function PaymentDetailsSheet({
               </CardHeader>
               <CardContent>
                 {allocations.length > 0 ? (
-                  <div className="space-y-2">
-                    {allocations.map((allocation) => (
-                      <div
-                        key={allocation.id}
-                        className="flex items-center justify-between py-2 border-b last:border-b-0"
-                      >
-                        <div>
-                          <p className="text-sm font-medium">
-                            {allocation.invoice_items?.fee_categories?.name ||
-                              allocation.invoice_items?.description ||
-                              "Payment"}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {allocation.students?.first_name} {allocation.students?.last_name} •{" "}
-                            {allocation.invoices?.invoice_number}
-                          </p>
+                  <div className="space-y-3">
+                    {allocations.map((allocation) => {
+                      const studentName = `${allocation.students?.first_name} ${allocation.students?.last_name}`
+                      const itemName =
+                        allocation.invoice_items?.fee_categories?.name ||
+                        allocation.invoice_items?.description ||
+                        "Payment"
+                      return (
+                        <div key={allocation.id} className="space-y-2">
+                          <p className="text-xs font-semibold text-muted-foreground">{studentName}</p>
+                          <div className="pl-2 space-y-1 border-l">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">{itemName}</span>
+                              <span className="font-semibold">
+                                ₦{Number.parseFloat(allocation.amount).toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <span className="font-semibold text-sm">
-                          ₦{Number.parseFloat(allocation.amount).toLocaleString()}
-                        </span>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 ) : (
-                  <div className="py-4 text-center text-sm text-muted-foreground">
-                    <p>No allocation details available</p>
-                    <p className="text-xs mt-1">
-                      Linked to invoice: {payment.invoices?.invoice_number || "N/A"}
-                    </p>
+                  <div className="text-center py-4">
+                    <p className="text-sm text-muted-foreground">No allocation details available</p>
                   </div>
                 )}
               </CardContent>
@@ -397,7 +393,7 @@ export function PaymentDetailsSheet({
 
             {/* Collected By */}
             <Card>
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-0">
                 <CardTitle className="text-sm font-medium">Collected By</CardTitle>
               </CardHeader>
               <CardContent>
@@ -409,7 +405,7 @@ export function PaymentDetailsSheet({
             </Card>
 
             {/* Actions */}
-            <div className="flex gap-2 pt-4">
+            <div className="flex gap-2 py-4">
               <Button variant="outline" className="flex-1 gap-2 bg-transparent">
                 <Printer className="h-4 w-4" />
                 Print Receipt
