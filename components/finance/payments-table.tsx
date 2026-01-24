@@ -47,21 +47,12 @@ export function PaymentsTable({ onSelectPayment, filters }: PaymentsTableProps) 
     const fetchPayments = async () => {
       setLoading(true)
       try {
-        // Build the query
+        // Build the query (no student join needed, will come from allocations)
         let query = supabase
           .from("payments")
           .select(
             `
             *,
-            students(
-              first_name, 
-              last_name, 
-              student_id,
-              student_guardians(
-                is_primary,
-                guardian:guardians(first_name, last_name)
-              )
-            ),
             teacher:received_by(first_name, last_name)
           `,
             { count: "exact" }
@@ -120,8 +111,48 @@ export function PaymentsTable({ onSelectPayment, filters }: PaymentsTableProps) 
           })
         }
 
-        setPayments(filteredData)
+        // Set payments data and fetch guardian info from allocations for each
+        const paginatedData = filteredData
+        setPayments(paginatedData)
         setTotalCount(count || 0)
+
+        // Fetch allocations with guardian info for all payments
+        const paymentIds = paginatedData.map((p: any) => p.id)
+        if (paymentIds.length > 0) {
+          const { data: allocationsData } = await supabase
+            .from("payment_allocations")
+            .select(
+              `
+              payment_id,
+              students(
+                first_name,
+                last_name,
+                student_id,
+                student_guardians(
+                  is_primary,
+                  guardian:guardians(first_name, last_name)
+                )
+              )
+            `
+            )
+            .in("payment_id", paymentIds)
+
+          // Map allocations to payments for parent name extraction
+          const paymentAllocations: Record<string, any[]> = {}
+          allocationsData?.forEach((alloc: any) => {
+            if (!paymentAllocations[alloc.payment_id]) {
+              paymentAllocations[alloc.payment_id] = []
+            }
+            paymentAllocations[alloc.payment_id].push(alloc.students)
+          })
+
+          // Attach allocations to payments for use in rendering
+          paginatedData.forEach((p: any) => {
+            p._allocations = paymentAllocations[p.id] || []
+          })
+
+          setPayments([...paginatedData])
+        }
       } catch (error) {
         console.error("[v0] Error fetching payments:", error)
       } finally {
@@ -190,18 +221,22 @@ export function PaymentsTable({ onSelectPayment, filters }: PaymentsTableProps) 
   }
 
   const getParentName = (payment: any) => {
-    const guardians = payment.students?.student_guardians
-    if (!guardians) return "N/A"
-    const primary = guardians.find((sg: any) => sg.is_primary)
-    if (primary?.guardian) {
-      return `${primary.guardian.first_name} ${primary.guardian.last_name}`
+    // Get unique guardians from allocations
+    const guardians: any[] = []
+    payment._allocations?.forEach((student: any) => {
+      const studentGuardians = student?.student_guardians || []
+      const primary = studentGuardians.find((sg: any) => sg.is_primary)
+      if (primary?.guardian && !guardians.find((g) => g.id === primary.guardian.id)) {
+        guardians.push(primary.guardian)
+      }
+    })
+
+    if (guardians.length === 0) return "N/A"
+    if (guardians.length === 1) {
+      return `${guardians[0].first_name} ${guardians[0].last_name}`
     }
-    // Fallback to first guardian
-    const first = guardians[0]
-    if (first?.guardian) {
-      return `${first.guardian.first_name} ${first.guardian.last_name}`
-    }
-    return "N/A"
+    // Multiple guardians - show first + count
+    return `${guardians[0].first_name} ${guardians[0].last_name} +${guardians.length - 1}`
   }
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE)

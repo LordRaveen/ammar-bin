@@ -58,13 +58,12 @@ export function PaymentDetailsSheet({
     const fetchPaymentDetails = async () => {
       setLoading(true)
       try {
-        // Fetch payment with related data
+        // Fetch payment with related data (no student_id needed)
         const { data: paymentData, error: paymentError } = await supabase
           .from("payments")
           .select(
             `
             *,
-            students(first_name, last_name, student_id),
             teacher:received_by(first_name, last_name)
           `
           )
