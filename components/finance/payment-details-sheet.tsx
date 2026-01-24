@@ -320,7 +320,7 @@ export function PaymentDetailsSheet({
 
             {/* Items Paid / Allocations */}
             <Card>
-              <CardHeader className="pb-3">
+              <CardHeader className="">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <FileText className="h-4 w-4" />
                   Items Paid
@@ -328,30 +328,43 @@ export function PaymentDetailsSheet({
               </CardHeader>
               <CardContent>
                 {allocations.length > 0 ? (
-                  <div className="space-y-3">
-                    {allocations.map((allocation) => {
-                      const studentName = `${allocation.students?.first_name} ${allocation.students?.last_name}`
-                      const itemName =
-                        allocation.invoice_items?.fee_categories?.name ||
-                        allocation.invoice_items?.description ||
-                        "Payment"
-                      return (
-                        <div key={allocation.id} className="space-y-2">
-                          <p className="text-xs font-semibold text-muted-foreground">{studentName}</p>
-                          <div className="pl-2 space-y-1 border-l">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-muted-foreground">{itemName}</span>
-                              <span className="font-semibold">
-                                ₦{Number.parseFloat(allocation.amount).toLocaleString()}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
+                  <div className="space-y-4">
+                    {Object.entries(
+                      allocations.reduce(
+                        (grouped: Record<string, typeof allocations>, allocation) => {
+                          const studentName = `${allocation.students?.first_name} ${allocation.students?.last_name}`
+                          if (!grouped[studentName]) {
+                            grouped[studentName] = []
+                          }
+                          grouped[studentName].push(allocation)
+                          return grouped
+                        },
+                        {}
                       )
-                    })}
+                    ).map(([studentName, studentAllocations]) => (
+                      <div key={studentName} className="space-y-2">
+                        <p className="text-sm font-semibold">{studentName}</p>
+                        <div className="pl-3 space-y-2 border-l">
+                          {studentAllocations.map((allocation) => {
+                            const itemName =
+                              allocation.invoice_items?.fee_categories?.name ||
+                              allocation.invoice_items?.description ||
+                              "Payment"
+                            return (
+                              <div key={allocation.id} className="flex items-center justify-between text-xs">
+                                <span className="text-muted-foreground">{itemName}</span>
+                                <span className="font-semibold font-mono">
+                                  ₦{Number.parseFloat(allocation.amount).toLocaleString()}
+                                </span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ) : (
-                  <div className="text-center py-4">
+                  <div className="text-center py-2">
                     <p className="text-sm text-muted-foreground">No allocation details available</p>
                   </div>
                 )}
