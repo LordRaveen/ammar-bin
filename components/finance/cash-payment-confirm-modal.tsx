@@ -19,6 +19,7 @@ interface PaymentItem {
   studentName: string
   description: string
   amount: number
+  originalAmount?: number // The original invoice item amount
   discount?: number
   waiver?: number
 }
@@ -125,12 +126,24 @@ export function CashPaymentConfirmModal({
               <div key={studentName} className="space-y-2">
                 <p className="text-xs font-semibold text-muted-foreground">{studentName}</p>
                 <div className="pl-2 space-y-1 border-l">
-                  {studentItems.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">{item.description}</span>
-                      <span className="font-semibold">₦{item.amount.toLocaleString()}</span>
-                    </div>
-                  ))}
+                  {studentItems.map((item) => {
+                    const isFullyPaid = !item.originalAmount || item.amount === item.originalAmount
+                    const isPartialPaid = item.originalAmount && item.amount < item.originalAmount && item.amount > 0
+                    return (
+                      <div key={item.id} className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">{item.description}</span>
+                          {isFullyPaid && (
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Paid</span>
+                          )}
+                          {isPartialPaid && (
+                            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded">Partial</span>
+                          )}
+                        </div>
+                        <span className="font-semibold">₦{item.amount.toLocaleString()}</span>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             ))}

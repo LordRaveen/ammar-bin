@@ -233,7 +233,16 @@ export async function POST(request: Request) {
     for (const [invoiceId, invoiceEntry] of invoiceMap.entries()) {
       const invoice = invoiceEntry.invoice
       const newBalance = Math.max(0, (invoice?.balance || 0) - invoiceEntry.paidAmount)
-      const newStatus = newBalance === 0 ? "Paid" : newBalance < (invoice?.total_amount || 0) ? "Partial" : "Unpaid"
+      
+      // Check if all items in this invoice are fully paid
+      const invoiceItems_list = invoiceItems.filter((ii) => ii.invoice_id === invoiceId)
+      const allItemsPaid = invoiceItems_list.every((item) => {
+        const paymentItem = items.find((i) => i.invoice_item_id === item.id)
+        if (!paymentItem) return item.status === "Paid" // Item wasn't touched, check current status
+        return item.amount === paymentItem.amount // All of this item's amount is being paid
+      })
+      
+      const newStatus = allItemsPaid ? "Paid" : newBalance > 0 ? "Unpaid" : "Partial"
 
       const { error: invoiceUpdateError } = await supabase
         .from("invoices")

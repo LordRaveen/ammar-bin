@@ -445,6 +445,7 @@ export function PaymentBuilder({
             studentName: item.studentName,
             description: item.description,
             amount: paymentAmounts[item.id]?.amount || item.balance,
+            originalAmount: item.balance,
             discount: paymentAmounts[item.id]?.discount || 0,
             waiver: paymentAmounts[item.id]?.waiver || 0,
           }))}
