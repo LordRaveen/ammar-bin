@@ -81,7 +81,7 @@ export async function POST(request: Request) {
     // Validate items exist and their invoices are not fully paid
     for (const item of invoiceItems) {
       const invoice = item.invoices as any
-      if (invoice?.status === "Paid") {
+      if (item.status === "Paid") {
         return Response.json(
           { error: `Invoice ${invoice.invoice_number} is already fully paid` },
           { status: 400 }
@@ -242,7 +242,15 @@ export async function POST(request: Request) {
         return item.amount === paymentItem.amount // All of this item's amount is being paid
       })
       
-      const newStatus = allItemsPaid ? "Paid" : newBalance > 0 ? "Unpaid" : "Partial"
+      let newStatus: "Paid" | "Partial" | "Unpaid"
+
+      if (newBalance === 0) {
+        newStatus = "Paid"
+      } else if (invoiceEntry.paidAmount > 0) {
+        newStatus = "Partial"
+      } else {
+        newStatus = "Unpaid"
+      }
 
       const { error: invoiceUpdateError } = await supabase
         .from("invoices")
