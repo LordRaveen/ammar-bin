@@ -134,10 +134,10 @@ export function CashPaymentConfirmModal({
                         <div className="flex items-center gap-2">
                           <span className="text-muted-foreground">{item.description}</span>
                           {isFullyPaid && (
-                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Paid</span>
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">Full payment</span>
                           )}
                           {isPartialPaid && (
-                            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded">Partial</span>
+                            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded">Partial payment</span>
                           )}
                         </div>
                         <span className="font-semibold">₦{item.amount.toLocaleString()}</span>
