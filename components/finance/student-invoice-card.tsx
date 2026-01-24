@@ -92,11 +92,11 @@ export function StudentInvoiceCard({
                   className={`${item.status === "paid" ? "bg-muted/30" : ""} hover:bg-muted/50`}
                 >
                   <TableCell className="w-12 px-2 py-1 ">
-                    {item.status !== "paid" ? (
+                    {item.status !== "Paid" ? (
                       <Checkbox
                         checked={selectedItemIds.has(item.id)}
                         onCheckedChange={() => onItemToggle(item.id)}
-                        disabled={item.status === "paid"}
+                        disabled={item.status === "Paid"}
                         className="h-4 w-4"
                       />
                     ) : (
@@ -105,7 +105,7 @@ export function StudentInvoiceCard({
                   </TableCell>
                   <TableCell className="text-sm font-medium px-2 py-1 font-mono">{item.description}</TableCell>
                   <TableCell className="text-sm text-right px-2 py-1 font-mono">
-                    {item.status === "paid" ? (
+                    {item.status === "Paid" ? (
                       <span className="text-green-600 font-medium">Paid</span>
                     ) : (
                       <span

@@ -40,11 +40,6 @@ interface FamilyCardProps {
   refreshTrigger?: number
 }
 
-function calculateDueDate(dueDate: string) {
-  // Placeholder implementation for calculateDueDate
-  return dueDate;
-}
-
 export function FamilyCard({
   selectedFamily,
   onSelectFamily,
@@ -161,22 +156,20 @@ export function FamilyCard({
           const sectionName = activeEnrollment?.classes?.section?.name
           const classWithSection = sectionName ? `${className} - ${sectionName}` : className
 
-          // Get active invoices for this student
-          const invoices = student.invoices
-            ?.filter((inv: any) => inv.status !== "Paid")
-            .map((invoice: any) => ({
-              studentId: student.id,
-              invoiceId: invoice.id,
-              invoiceNumber: invoice.invoice_number,
+          // Get all invoices for this student (including paid ones)
+          const invoices = student.invoices?.map((invoice: any) => ({
+            studentId: student.id,
+            invoiceId: invoice.id,
+            invoiceNumber: invoice.invoice_number,
+            dueDate: calculateDueDate(invoice.due_date),
+            items: invoice.invoice_items?.map((item: any) => ({
+              id: item.id,
+              description: item.fee_categories?.name || item.description,
               dueDate: calculateDueDate(invoice.due_date),
-              items: invoice.invoice_items?.map((item: any) => ({
-                id: item.id,
-                description: item.fee_categories?.name || item.description,
-                dueDate: calculateDueDate(invoice.due_date),
-                balance: Number(item.amount),
-                status: invoice.status === "Paid" ? "paid" : "pending",
-              })),
-            }))
+              balance: Number(item.amount),
+              status: item.status || (invoice.status === "Paid" ? "paid" : "pending"),
+            })),
+          }))
 
           // Flatten invoice items to create list of all items
           const allInvoiceItems: StudentInvoiceItem[] = invoices
@@ -191,7 +184,7 @@ export function FamilyCard({
             invoices: allInvoiceItems,
           }
         })
-        .filter((s: StudentData) => s.invoices.length > 0) || []
+        .filter((s: StudentData) => s.invoices && s.invoices.length > 0) || []
 
       setStudentsData(transformed)
     }
