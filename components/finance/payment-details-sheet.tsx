@@ -84,11 +84,14 @@ export function PaymentDetailsSheet({
           .select(
             `
             *,
-            invoice_items!inner(
+            invoice_items(
               description,
               amount,
-              fee_category_id
-            )
+              fee_category_id,
+              fee_categories(name)
+            ),
+            invoices(invoice_number),
+            students(first_name, last_name)
           `
           )
           .eq("payment_id", paymentId)
@@ -228,9 +231,8 @@ export function PaymentDetailsSheet({
   }
 
   const getCollectedByName = () => {
-    const teacher = payment?.received_by_user?.teachers
-    if (teacher) {
-      return `${teacher.first_name} ${teacher.last_name}`
+    if (payment?.teacher) {
+      return `${payment.teacher.first_name} ${payment.teacher.last_name}`
     }
     return "N/A"
   }
@@ -255,16 +257,16 @@ export function PaymentDetailsSheet({
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : payment ? (
-          <div className="space-y-6 mt-6">
+          <div className="space-y-6 mt-2 mx-4">
             {/* Payment Summary */}
             <Card>
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-0">
                 <CardTitle className="text-sm font-medium">Payment Summary</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-b-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Amount</span>
-                  <span className="text-lg font-bold text-green-600">
+                  <span className="text-lg font-mono text-green-600">
                     ₦{Number.parseFloat(payment.amount).toLocaleString()}
                   </span>
                 </div>
