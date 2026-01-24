@@ -19,7 +19,7 @@ interface StudentInvoiceItem {
   description: string
   dueDate: string
   balance: number
-  status: "pending" | "paid" | "partial"
+  status: "Pending" | "Paid" | "Partial" | "Unpaid"
   selected?: boolean
 }
 
@@ -48,7 +48,7 @@ export function StudentInvoiceCard({
     setStudentChecked(!studentChecked)
     // Toggle all items for this student
     invoices.forEach((item) => {
-      if (item.status !== "paid") {
+      if (item.status !== "Paid") {
         onItemToggle(item.id)
       }
     })
@@ -89,7 +89,7 @@ export function StudentInvoiceCard({
               {invoices.map((item) => (
                 <TableRow
                   key={item.id}
-                  className={`${item.status === "paid" ? "bg-muted/30" : ""} hover:bg-muted/50`}
+                  className={`${item.status === "Paid" ? "bg-muted/30" : ""} hover:bg-muted/50`}
                 >
                   <TableCell className="w-12 px-2 py-1 ">
                     {item.status !== "Paid" ? (

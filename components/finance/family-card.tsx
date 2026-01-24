@@ -133,6 +133,7 @@ export function FamilyCard({
               id,
               description,
               amount,
+              status,
               fee_categories(name)
             )
           )
