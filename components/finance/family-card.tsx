@@ -264,9 +264,31 @@ export function FamilyCard({
         })),
       }))
 
-      // Flatten items
+      // Fetch payment allocations for these invoice items
+      const itemIds = invoices?.flatMap((inv: any) => inv.items.map((item: any) => item.id)) || []
+      const { data: allocations } = await supabase
+        .from("payment_allocations")
+        .select("invoice_item_id, amount")
+        .in("invoice_item_id", itemIds)
+
+      // Create a map of paid amounts per item
+      const paidMap: Record<string, number> = {}
+      allocations?.forEach((alloc: any) => {
+        paidMap[alloc.invoice_item_id] = (paidMap[alloc.invoice_item_id] || 0) + Number(alloc.amount)
+      })
+
+      // Flatten items and calculate remaining balance
       const allInvoiceItems: StudentInvoiceItem[] = invoices
-        ?.flatMap((inv: any) => inv.items)
+        ?.flatMap((inv: any) =>
+          inv.items.map((item: any) => {
+            const paidAmount = paidMap[item.id] || 0
+            const remainingBalance = Math.max(0, item.balance - paidAmount)
+            return {
+              ...item,
+              balance: remainingBalance,
+            }
+          })
+        )
         .map((item: any) => item) || []
 
       const transformed: StudentData = {
