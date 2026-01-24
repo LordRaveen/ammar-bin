@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { StudentInvoiceCard } from "./student-invoice-card"
 import { createBrowserClient } from "@/lib/supabase/client"
+import { Student } from "@/types/student" // Import the Student type
 
 interface StudentInvoiceItem {
   id: string
@@ -111,23 +112,23 @@ export function FamilyCard({
       const { data: studentsWithInvoices, error: invoiceError } = await supabase
         .from("students")
         .select(
-          `
+        `
+        students(
           id,
           first_name,
           last_name,
           student_enrollments(
-            class_id,
             session_id,
             term_id,
-            classes(name, section:section_id(name))
+            classes(name, section(name))
           ),
           invoices(
             id,
             invoice_number,
-            session_id,
-            term_id,
             due_date,
+            total_amount,
             balance,
+            paid_amount,
             status,
             invoice_items(
               id,
@@ -137,6 +138,7 @@ export function FamilyCard({
               fee_categories(name)
             )
           )
+        )
         `
         )
         .in("id", studentIds)
@@ -149,7 +151,7 @@ export function FamilyCard({
 
       // Transform data to StudentData format
       const transformed = studentsWithInvoices
-        ?.map((student: any) => {
+        ?.map((student: Student) => { // Use the Student type here
           const activeEnrollment = student.student_enrollments?.find(
             (e: any) => e.session_id && e.term_id
           )
@@ -249,47 +251,33 @@ export function FamilyCard({
       const sectionName = activeEnrollment?.classes?.section?.name
       const classWithSection = sectionName ? `${className} - ${sectionName}` : className
 
-      // Get all invoices for this student (including paid ones)
-      const invoices = studentData.invoices?.map((invoice: any) => ({
-        studentId: studentData.id,
-        invoiceId: invoice.id,
-        invoiceNumber: invoice.invoice_number,
-        dueDate: invoice.due_date,
-        items: invoice.invoice_items?.map((item: any) => ({
-          id: item.id,
-          description: item.fee_categories?.name || item.description,
-          dueDate: calculateDueDate(invoice.due_date),
-          balance: Number(item.amount),
-          status: item.status || (invoice.status === "Paid" ? "Paid" : "Unpaid"),
-        })),
-      }))
+          // Get all invoices for this student (including paid ones)
+          const invoices = studentData.invoices?.map((invoice: any) => ({
+            studentId: studentData.id,
+            invoiceId: invoice.id,
+            invoiceNumber: invoice.invoice_number,
+            dueDate: calculateDueDate(invoice.due_date),
+            invoicePaidAmount: invoice.paid_amount || 0,
+            invoiceBalance: invoice.balance || 0,
+            items: invoice.invoice_items?.map((item: any) => ({
+              id: item.id,
+              description: item.fee_categories?.name || item.description,
+              dueDate: calculateDueDate(invoice.due_date),
+              balance: Number(item.amount),
+              status: item.status || (invoice.status === "Paid" ? "Paid" : "Unpaid"),
+            })),
+          }))
 
-      // Fetch payment allocations for these invoice items
-      const itemIds = invoices?.flatMap((inv: any) => inv.items.map((item: any) => item.id)) || []
-      const { data: allocations } = await supabase
-        .from("payment_allocations")
-        .select("invoice_item_id, amount")
-        .in("invoice_item_id", itemIds)
-
-      // Create a map of paid amounts per item
-      const paidMap: Record<string, number> = {}
-      allocations?.forEach((alloc: any) => {
-        paidMap[alloc.invoice_item_id] = (paidMap[alloc.invoice_item_id] || 0) + Number(alloc.amount)
-      })
-
-      // Flatten items and calculate remaining balance
-      const allInvoiceItems: StudentInvoiceItem[] = invoices
-        ?.flatMap((inv: any) =>
-          inv.items.map((item: any) => {
-            const paidAmount = paidMap[item.id] || 0
-            const remainingBalance = Math.max(0, item.balance - paidAmount)
-            return {
-              ...item,
-              balance: remainingBalance,
-            }
-          })
-        )
-        .map((item: any) => item) || []
+          // Flatten invoice items - use per-item amounts but mark status based on invoice balance
+          const allInvoiceItems: StudentInvoiceItem[] = invoices
+            ?.flatMap((inv: any) =>
+              inv.items.map((item: any) => ({
+                ...item,
+                // If invoice balance is 0, mark item as Paid, otherwise keep item status
+                status: inv.invoiceBalance === 0 ? "Paid" : item.status,
+              }))
+            )
+            .map((item: any) => item) || []
 
       const transformed: StudentData = {
         id: studentData.id,
