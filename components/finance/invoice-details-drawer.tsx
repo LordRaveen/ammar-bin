@@ -412,52 +412,52 @@ export function InvoiceDetailsDrawer({
                 ) : (
                   <div className="space-y-2">
                     {invoiceItems.map((item) => {
-  const status = itemPaymentStatus[item.id] || {}
-  const isFullyPaid = status.isFullyPaid
-  const isPartialPaid = status.isPartiallPaid
-  const canDelete = !isFullyPaid && !isPartialPaid  // only show delete if no payment at all
+                      const status = itemPaymentStatus[item.id] || {}
+                      const isFullyPaid = status.isFullyPaid
+                      const isPartialPaid = status.isPartiallPaid
+                      const canDelete = !isFullyPaid && !isPartialPaid  // only show delete if no payment at all
 
-  return (
-    <div
-      key={item.id}
-      className="flex justify-between items-center p-3 rounded-lg bg-muted group hover:bg-muted/80 transition-colors"
-    >
-      <div className="flex-1">
-        <p className="font-medium text-sm">{item.description}</p>
+                      return (
+                        <div
+                          key={item.id}
+                          className="flex justify-between items-center p-3 rounded-lg bg-muted group hover:bg-muted/80 transition-colors"
+                        >
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{item.description}</p>
 
-        {/* Badges for payment status */}
-        {isFullyPaid && (
-          <Badge variant="default" className="bg-green-600 mt-1">
-            Fully Paid: ₦{Number(status.totalAllocated).toLocaleString()}
-          </Badge>
-        )}
-        {isPartialPaid && (
-          <Badge variant="outline" className="border-blue-300 text-blue-700 mt-1">
-            Partial: ₦{Number(status.totalAllocated).toLocaleString()} / ₦{Number(item.amount).toLocaleString()}
-          </Badge>
-        )}
-      </div>
+                            {/* Badges for payment status */}
+                            {isFullyPaid && (
+                              <Badge variant="default" className="bg-green-600 mt-1">
+                                Fully Paid: ₦{Number(status.totalAllocated).toLocaleString()}
+                              </Badge>
+                            )}
+                            {isPartialPaid && (
+                              <Badge variant="outline" className="border-blue-300 text-blue-700 mt-1">
+                                Partial: ₦{Number(status.totalAllocated).toLocaleString()} / ₦{Number(item.amount).toLocaleString()}
+                              </Badge>
+                            )}
+                          </div>
 
-      <div className="flex items-center gap-3">
-        <p className="font-semibold">₦{Number.parseFloat(item.amount).toLocaleString()}</p>
+                          <div className="flex items-center gap-3">
+                            <p className="font-semibold">₦{Number.parseFloat(item.amount).toLocaleString()}</p>
 
-        {/* Show delete button only if no payment */}
-        {userRole === "admin" && canDelete && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-            onClick={() => handleDeleteInvoiceItem(item.id)}
-            disabled={deletingItemId === item.id}
-            title="Remove fee"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
-    </div>
-  )
-})}
+                            {/* Show delete button only if no payment */}
+                            {userRole === "admin" && canDelete && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => handleDeleteInvoiceItem(item.id)}
+                                disabled={deletingItemId === item.id}
+                                title="Remove fee"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
 
 
                     {/* Add Fee Button */}
