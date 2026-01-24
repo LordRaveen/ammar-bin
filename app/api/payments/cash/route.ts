@@ -111,9 +111,14 @@ export async function POST(request: Request) {
     const refNumber = `PAY-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${nanoid(4).toUpperCase()}`
     const receiptNumber = `RCP-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${nanoid(6).toUpperCase()}`
 
-    // Create payment record (no student_id, it's in allocations)
+    // Create payment record
     const invoiceData = invoiceItems[0]?.invoices as any
-    const studentId = invoiceData.student_id; // Declare studentId variable
+    const studentId = invoiceData?.student_id
+    
+    if (!studentId) {
+      console.error("[v0] Student ID not found in invoice items")
+      return Response.json({ error: "Could not determine student from invoices" }, { status: 400 })
+    }
 
     // Get teacher/staff record for received_by
     const { data: teacherData } = await supabase
@@ -136,6 +141,7 @@ export async function POST(request: Request) {
         payment_method: "cash",
         status: "completed",
         paid_at: new Date().toISOString(),
+        student_id: studentId,
         received_by: teacherData.id,
         payment_date: new Date().toISOString().split('T')[0],
         remarks: total_discount > 0 || total_waiver > 0 ? `Discount: ₦${total_discount}, Waiver: ₦${total_waiver}` : null,
@@ -156,16 +162,14 @@ export async function POST(request: Request) {
       return Response.json({ error: `Failed to create payment record: ${paymentError.message}` }, { status: 500 })
     }
 
-    // Create payment allocations for each item - HAPPENS IMMEDIATELY AFTER PAYMENT CREATED
-    // Each allocation captures which student this payment portion applies to
+    // Create payment allocations for each item
     const allocations = items.map((item) => {
       const invoiceItem = invoiceItems.find((ii) => ii.id === item.invoice_item_id)
-      const invoice = invoiceItem?.invoices as any
       return {
         payment_id: payment.id,
         invoice_item_id: item.invoice_item_id,
         invoice_id: invoiceItem?.invoice_id,
-        student_id: invoice?.student_id, // Get student_id from invoice relationship
+        student_id: studentId,
         amount: item.amount,
       }
     })
