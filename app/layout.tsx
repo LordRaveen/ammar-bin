@@ -12,7 +12,7 @@ const _geistMono = Geist_Mono({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: 'Ammar Bin',
   description: 'School Management System',
-  generator: 'v0.app',
+  generator: 'hublud.com',
   icons: {
     icon: [
       {
