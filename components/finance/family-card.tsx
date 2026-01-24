@@ -168,7 +168,7 @@ export function FamilyCard({
               description: item.fee_categories?.name || item.description,
               dueDate: calculateDueDate(invoice.due_date),
               balance: Number(item.amount),
-              status: item.status || (invoice.status === "Paid" ? "paid" : "pending"),
+              status: item.status || (invoice.status === "Paid" ? "Paid" : "Unpaid"),
             })),
           }))
 
@@ -183,9 +183,15 @@ export function FamilyCard({
             class: classWithSection,
             invoiceNumber: invoices?.[0]?.invoiceNumber || "N/A",
             invoices: allInvoiceItems,
+            isPaid: allInvoiceItems.every((item: any) => item.status === "Paid"),
           }
         })
-        .filter((s: StudentData) => s.invoices && s.invoices.length > 0) || []
+        .filter((s: StudentData) => s.invoices && s.invoices.length > 0)
+        .sort((a: any, b: any) => {
+          // Unpaid students first, paid students at the bottom
+          if (a.isPaid === b.isPaid) return 0
+          return a.isPaid ? 1 : -1
+        }) || []
 
       setStudentsData(transformed)
     }
@@ -243,22 +249,20 @@ export function FamilyCard({
       const sectionName = activeEnrollment?.classes?.section?.name
       const classWithSection = sectionName ? `${className} - ${sectionName}` : className
 
-      // Get active invoices
-      const invoices = studentData.invoices
-        ?.filter((inv: any) => inv.status !== "Paid")
-        .map((invoice: any) => ({
-          studentId: studentData.id,
-          invoiceId: invoice.id,
-          invoiceNumber: invoice.invoice_number,
-          dueDate: invoice.due_date,
-          items: invoice.invoice_items?.map((item: any) => ({
-            id: item.id,
-            description: item.fee_categories?.name || item.description,
-            dueDate: calculateDueDate(invoice.due_date),
-            balance: Number(item.amount),
-            status: invoice.status === "Paid" ? "paid" : "pending",
-          })),
-        }))
+      // Get all invoices for this student (including paid ones)
+      const invoices = studentData.invoices?.map((invoice: any) => ({
+        studentId: studentData.id,
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoice_number,
+        dueDate: invoice.due_date,
+        items: invoice.invoice_items?.map((item: any) => ({
+          id: item.id,
+          description: item.fee_categories?.name || item.description,
+          dueDate: calculateDueDate(invoice.due_date),
+          balance: Number(item.amount),
+          status: item.status || (invoice.status === "Paid" ? "Paid" : "Unpaid"),
+        })),
+      }))
 
       // Flatten items
       const allInvoiceItems: StudentInvoiceItem[] = invoices

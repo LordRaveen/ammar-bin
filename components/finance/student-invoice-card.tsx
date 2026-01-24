@@ -45,13 +45,25 @@ export function StudentInvoiceCard({
   const [studentChecked, setStudentChecked] = useState(false)
 
   const handleStudentCheckAll = () => {
-    setStudentChecked(!studentChecked)
-    // Toggle all items for this student
-    invoices.forEach((item) => {
-      if (item.status !== "Paid") {
-        onItemToggle(item.id)
-      }
-    })
+    const unpaidItems = invoices.filter((item) => item.status !== "Paid")
+    const allUnpaidSelected = unpaidItems.every((item) => selectedItemIds.has(item.id))
+    
+    // If all unpaid items are selected, deselect them. Otherwise, select all unpaid items.
+    if (allUnpaidSelected) {
+      unpaidItems.forEach((item) => {
+        if (selectedItemIds.has(item.id)) {
+          onItemToggle(item.id)
+        }
+      })
+      setStudentChecked(false)
+    } else {
+      unpaidItems.forEach((item) => {
+        if (!selectedItemIds.has(item.id)) {
+          onItemToggle(item.id)
+        }
+      })
+      setStudentChecked(true)
+    }
   }
 
   return (
