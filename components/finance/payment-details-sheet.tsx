@@ -259,7 +259,7 @@ export function PaymentDetailsSheet({
         ) : payment ? (
           <div className="space-y-6  mx-4">
             {/* Payment Summary */}
-            <Card>
+            <Card className="shadow-none">
               <CardHeader className="py-0">
                 <CardTitle className="text-sm font-medium">Payment Summary</CardTitle>
               </CardHeader>
@@ -302,7 +302,7 @@ export function PaymentDetailsSheet({
 
             {/* Parent/Guardian Info */}
             {getParentInfo() && (
-              <Card>
+              <Card className="shadow-none">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <User className="h-4 w-4" />
@@ -319,7 +319,7 @@ export function PaymentDetailsSheet({
             )}
 
             {/* Items Paid / Allocations */}
-            <Card>
+            <Card className="shadow-none">
               <CardHeader className="">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <FileText className="h-4 w-4" />
@@ -373,7 +373,7 @@ export function PaymentDetailsSheet({
 
             {/* Linked Invoice */}
             {payment.invoices && (
-              <Card>
+              <Card className="shadow-none">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-medium">Linked Invoice</CardTitle>
                 </CardHeader>
@@ -405,13 +405,13 @@ export function PaymentDetailsSheet({
             )}
 
             {/* Collected By */}
-            <Card>
+            <Card className="shadow-none ">
               <CardHeader className="pb-0">
                 <CardTitle className="text-sm font-medium">Collected By</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-0">
                 <p className="font-medium">{getCollectedByName()}</p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground text-mono mt-0">
                   {formatDate(payment.created_at)}
                 </p>
               </CardContent>
