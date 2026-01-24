@@ -48,6 +48,7 @@ export function InvoiceDetailsDrawer({
   const [invoice, setInvoice] = useState<any>(null)
   const [invoiceItems, setInvoiceItems] = useState<any[]>([])
   const [payments, setPayments] = useState<any[]>([])
+  const [itemPaymentStatus, setItemPaymentStatus] = useState<Record<string, any>>({})
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -79,16 +80,42 @@ export function InvoiceDetailsDrawer({
           .select("*")
           .eq("invoice_id", invoiceId)
 
-        // Fetch payments
+        // Fetch payments with allocations
         const { data: paymentsData } = await supabase
           .from("payments")
-          .select("*")
+          .select(`
+            *,
+            payment_allocations(
+              id,
+              invoice_item_id,
+              amount
+            )
+          `)
           .eq("invoice_id", invoiceId)
           .order("created_at", { ascending: false })
+
+        // Build payment status map for each item
+        const statusMap: Record<string, any> = {}
+        itemsData?.forEach((item) => {
+          const allocations = paymentsData
+            ?.flatMap(p => p.payment_allocations || [])
+            .filter(a => a.invoice_item_id === item.id) || []
+
+          const totalAllocated = allocations.reduce((sum: number, a: any) => sum + Number(a.amount), 0)
+          const itemAmount = Number(item.amount)
+          
+          statusMap[item.id] = {
+            totalAllocated,
+            isFullyPaid: totalAllocated >= itemAmount,
+            isPartiallPaid: totalAllocated > 0 && totalAllocated < itemAmount,
+            allocations,
+          }
+        })
 
         setInvoice(invoiceData)
         setInvoiceItems(itemsData || [])
         setPayments(paymentsData || [])
+        setItemPaymentStatus(statusMap)
       } catch (error) {
         console.error("[v0] Error fetching invoice details:", error)
       } finally {
@@ -384,30 +411,54 @@ export function InvoiceDetailsDrawer({
                   <p className="text-sm text-muted-foreground">No invoice items</p>
                 ) : (
                   <div className="space-y-2">
-                    {invoiceItems.map((item) => (
-                      <div key={item.id} className="flex justify-between items-center p-3 rounded-lg bg-muted group hover:bg-muted/80 transition-colors">
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">{item.description}</p>
+                    {invoiceItems.map((item) => {
+                      const status = itemPaymentStatus[item.id] || {}
+                      const isFullyPaid = status.isFullyPaid
+                      const isPartialPaid = status.isPartiallPaid
+                      const canDelete = !isFullyPaid && !isPartialPaid  // only show delete if no payment at all
+
+                      return (
+                        <div
+                          key={item.id}
+                          className="flex justify-between items-center p-3 rounded-lg bg-muted group hover:bg-muted/80 transition-colors"
+                        >
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{item.description}</p>
+
+                            {/* Badges for payment status */}
+                            {isFullyPaid && (
+                              <Badge variant="default" className="bg-green-600 mt-1">
+                                Fully Paid: ₦{Number(status.totalAllocated).toLocaleString()}
+                              </Badge>
+                            )}
+                            {isPartialPaid && (
+                              <Badge variant="outline" className="border-blue-300 text-blue-700 mt-1">
+                                Partial: ₦{Number(status.totalAllocated).toLocaleString()} / ₦{Number(item.amount).toLocaleString()}
+                              </Badge>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <p className="font-semibold">₦{Number.parseFloat(item.amount).toLocaleString()}</p>
+
+                            {/* Show delete button only if no payment */}
+                            {userRole === "admin" && canDelete && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => handleDeleteInvoiceItem(item.id)}
+                                disabled={deletingItemId === item.id}
+                                title="Remove fee"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <p className="font-semibold">
-                            ₦{Number.parseFloat(item.amount).toLocaleString()}
-                          </p>
-                          {userRole === "admin" && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={() => handleDeleteInvoiceItem(item.id)}
-                              disabled={deletingItemId === item.id}
-                              title="Remove fee"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
+
 
                     {/* Add Fee Button */}
                     {userRole === "admin" && (

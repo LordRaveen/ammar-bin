@@ -89,8 +89,30 @@ export function PaymentsTable({ onSelectPayment, filters }: PaymentsTableProps) 
           console.error("[v0] Error fetching payments:", error)
         }
 
+        // Filter by search term (parent name or reference) - client side for now
+        let filteredData = data || []
+        if (filters.search) {
+          const searchLower = filters.search.toLowerCase()
+          filteredData = filteredData.filter((payment) => {
+            const parentGuardian = payment.invoices?.students?.student_guardians?.find(
+              (sg: any) => sg.is_primary
+            )
+            const parentName = parentGuardian?.guardian
+              ? `${parentGuardian.guardian.first_name} ${parentGuardian.guardian.last_name}`.toLowerCase()
+              : ""
+            const refNumber = (payment.reference_number || "").toLowerCase()
+            const receiptNumber = (payment.receipt_number || "").toLowerCase()
+
+            return (
+              parentName.includes(searchLower) ||
+              refNumber.includes(searchLower) ||
+              receiptNumber.includes(searchLower)
+            )
+          })
+        }
+
         // Set payments data and fetch guardian info from allocations for each
-        let paginatedData = data || []
+        const paginatedData = filteredData
         setPayments(paginatedData)
         setTotalCount(count || 0)
 
