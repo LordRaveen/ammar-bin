@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AddClassModal } from "@/components/add-class-modal"
 import { AddSectionModal } from "@/components/add-section-modal"
+import { ManageSectionsModal } from "@/components/manage-sections-modal"
 import { AssignTeacherClientWrapper } from "@/components/assign-teacher-modal-client"
 
 export const dynamic = "force-dynamic"
@@ -144,6 +145,7 @@ export default async function ClassesPage({
           <p className="text-muted-foreground">Manage all classes across sections</p>
         </div>
         <div className="flex gap-2">
+          <ManageSectionsModal sections={sectionsData || []} />
           <AddSectionModal />
           <AddClassModal />
         </div>

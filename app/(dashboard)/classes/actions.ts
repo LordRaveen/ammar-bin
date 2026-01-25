@@ -78,3 +78,56 @@ export async function createSection(formData: FormData) {
     return { error: "An unexpected error occurred" }
   }
 }
+
+export async function updateSection(sectionId: string, name: string, description: string) {
+  try {
+    const supabase = await createServerClient()
+
+    if (!name) {
+      return { error: "Section name is required" }
+    }
+
+    const { data, error } = await supabase
+      .from("sections")
+      .update({
+        name,
+        description: description || null,
+      })
+      .eq("id", sectionId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error("[v0] Error updating section:", error)
+      throw new Error("Failed to update section")
+    }
+
+    revalidatePath("/classes")
+    return { success: true, data }
+  } catch (error) {
+    console.error("[v0] Error in updateSection action:", error)
+    throw error
+  }
+}
+
+export async function deleteSection(sectionId: string) {
+  try {
+    const supabase = await createServerClient()
+
+    const { error } = await supabase
+      .from("sections")
+      .update({ is_active: false })
+      .eq("id", sectionId)
+
+    if (error) {
+      console.error("[v0] Error deleting section:", error)
+      throw new Error("Failed to delete section")
+    }
+
+    revalidatePath("/classes")
+    return { success: true }
+  } catch (error) {
+    console.error("[v0] Error in deleteSection action:", error)
+    throw error
+  }
+}
