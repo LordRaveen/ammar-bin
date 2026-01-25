@@ -4,9 +4,14 @@ import { useEffect, useState } from "react"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, CreditCard, Clock } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Loader2, CreditCard, Clock, Printer } from "lucide-react"
 
-export function RecentCollections() {
+interface RecentCollectionsProps {
+    onViewPayment?: (paymentId: string) => void
+}
+
+export function RecentCollections({ onViewPayment }: RecentCollectionsProps) {
     const [payments, setPayments] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [totalToday, setTotalToday] = useState(0)
@@ -82,16 +87,15 @@ export function RecentCollections() {
                     </div>
                 ) : (
                     <div className="space-y-3">
-                        {/* Timeline connector line could go here but keeping it simple for now */}
                         {payments.map((payment, index) => (
-                            <div key={payment.id} className="relative pl-6 pb-1">
+                            <div key={payment.id} className="relative pl-6 pb-1 group">
                                 {/* Timeline dot */}
                                 <div className="absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full border border-primary bg-background z-10" />
                                 {index !== payments.length - 1 && (
                                     <div className="absolute left-[4px] top-4 bottom-[-12px] w-px bg-border" />
                                 )}
 
-                                <div className="flex items-start justify-between">
+                                <div className="flex items-start justify-between bg-background/50 p-2 rounded-lg hover:bg-background transition-colors border border-transparent hover:border-border/50 cursor-pointer" onClick={() => onViewPayment?.(payment.id)}>
                                     <div>
                                         <p className="font-medium text-sm">
                                             {payment.invoices?.student?.first_name} {payment.invoices?.student?.last_name}
@@ -105,9 +109,23 @@ export function RecentCollections() {
                                             </div>
                                         </div>
                                     </div>
-                                    <p className="font-semibold text-sm text-green-600">
-                                        ₦{Number(payment.amount).toLocaleString()}
-                                    </p>
+                                    <div className="flex items-center gap-3">
+                                        <p className="font-semibold text-sm text-green-600">
+                                            ₦{Number(payment.amount).toLocaleString()}
+                                        </p>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                onViewPayment?.(payment.id)
+                                            }}
+                                            title="Print Receipt"
+                                        >
+                                            <Printer className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         ))}

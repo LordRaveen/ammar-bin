@@ -98,10 +98,7 @@ export function DebtorList({ onSelectStudent }: DebtorListProps) {
 
     return (
         <Card className="h-full border-none shadow-none">
-            <CardHeader className="px-0 pt-0">
-                <CardTitle className="text-sm font-semibold">Students with Outstanding Dues</CardTitle>
-            </CardHeader>
-            <CardContent className="px-0 space-y-2">
+            <CardContent className="px-0 space-y-2 pt-0">
                 {debtors.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-8">No matching debtors found</p>
                 ) : (

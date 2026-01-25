@@ -14,9 +14,9 @@ import { Download, Calendar } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { PaymentsTable } from "@/components/finance/payments-table"
 import { PaymentDetailsSheet } from "@/components/finance/payment-details-sheet"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { format } from "date-fns"
+import { DateRangePicker } from "@/components/ui/date-range-picker"
+import { DateRange } from "react-day-picker"
 
 interface PaymentsTabProps {
   userRole?: "admin" | "accountant" | "parent"
@@ -26,8 +26,7 @@ export function PaymentsTab({ userRole = "admin" }: PaymentsTabProps) {
   const [selectedMethod, setSelectedMethod] = useState("all")
   const [selectedStatus, setSelectedStatus] = useState("all")
   const [searchTerm, setSearchTerm] = useState("")
-  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined)
-  const [dateTo, setDateTo] = useState<Date | undefined>(undefined)
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -45,8 +44,7 @@ export function PaymentsTab({ userRole = "admin" }: PaymentsTabProps) {
     setSelectedMethod("all")
     setSelectedStatus("all")
     setSearchTerm("")
-    setDateFrom(undefined)
-    setDateTo(undefined)
+    setDateRange(undefined)
   }
 
   return (
@@ -54,50 +52,9 @@ export function PaymentsTab({ userRole = "admin" }: PaymentsTabProps) {
       {/* Filters Row */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
         {/* Date Range */}
-        <div className="flex-1">
-          <label className="text-sm font-medium mb-2 block">Date From</label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-full justify-start text-left font-normal bg-transparent"
-              >
-                <Calendar className="mr-2 h-4 w-4" />
-                {dateFrom ? format(dateFrom, "dd MMM yyyy") : "Select date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <CalendarComponent
-                mode="single"
-                selected={dateFrom}
-                onSelect={setDateFrom}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-
-        <div className="flex-1">
-          <label className="text-sm font-medium mb-2 block">Date To</label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-full justify-start text-left font-normal bg-transparent"
-              >
-                <Calendar className="mr-2 h-4 w-4" />
-                {dateTo ? format(dateTo, "dd MMM yyyy") : "Select date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <CalendarComponent
-                mode="single"
-                selected={dateTo}
-                onSelect={setDateTo}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
+        <div className="flex-1 min-w-[260px]">
+          <label className="text-sm font-medium mb-2 block">Date Range</label>
+          <DateRangePicker date={dateRange} setDate={setDateRange} />
         </div>
 
         <div className="flex-1">
@@ -167,8 +124,8 @@ export function PaymentsTab({ userRole = "admin" }: PaymentsTabProps) {
             method: selectedMethod,
             status: selectedStatus,
             search: searchTerm,
-            dateFrom: dateFrom ? format(dateFrom, "yyyy-MM-dd") : undefined,
-            dateTo: dateTo ? format(dateTo, "yyyy-MM-dd") : undefined,
+            dateFrom: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
+            dateTo: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
           }}
         />
       )}

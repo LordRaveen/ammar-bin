@@ -8,6 +8,8 @@ import { PaymentBuilder } from "@/components/finance/payment-builder"
 import { SearchResultsModal } from "@/components/finance/search-results-modal"
 import { DebtorList } from "@/components/finance/debtor-list"
 import { RecentCollections } from "@/components/finance/recent-collections"
+import { PaymentDetailsSheet } from "@/components/finance/payment-details-sheet"
+import { Button } from "@/components/ui/button"
 
 interface CollectPaymentProps {
   userRole?: "admin" | "parent" | "accountant"
@@ -19,6 +21,7 @@ export function CollectPayment({ userRole = "admin", parentId }: CollectPaymentP
   const [selectedFamily, setSelectedFamily] = useState<any>(null)
   const [selectedItems, setSelectedItems] = useState<any[]>([])
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null)
 
   const handleSelectResult = (result: any, type: "parent" | "student") => {
     setSelectedFamily({
@@ -62,9 +65,21 @@ export function CollectPayment({ userRole = "admin", parentId }: CollectPaymentP
 
           {/* Family Card or Debtor List */}
           <div>
-            <h3 className="font-semibold text-sm mb-3">
-              {selectedFamily ? "Family card" : "Outstanding Invoices"}
-            </h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-sm">
+                {selectedFamily ? "Family card" : "Outstanding Invoices"}
+              </h3>
+              {selectedFamily && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedFamily(null)}
+                  className="h-auto py-0 px-2 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Clear Selection
+                </Button>
+              )}
+            </div>
 
             {selectedFamily ? (
               <FamilyCard
@@ -95,7 +110,7 @@ export function CollectPayment({ userRole = "admin", parentId }: CollectPaymentP
               onPaymentSuccess={handlePaymentSuccess}
             />
           ) : (
-            <RecentCollections />
+            <RecentCollections onViewPayment={setSelectedPaymentId} />
           )}
         </div>
       </div>
@@ -106,6 +121,16 @@ export function CollectPayment({ userRole = "admin", parentId }: CollectPaymentP
         onOpenChange={setSearchModalOpen}
         onSelectResult={handleSelectResult}
       />
+
+      {/* Payment Details Sheet */}
+      {selectedPaymentId && (
+        <PaymentDetailsSheet
+          paymentId={selectedPaymentId}
+          open={!!selectedPaymentId}
+          onOpenChange={(open) => !open && setSelectedPaymentId(null)}
+          userRole={userRole}
+        />
+      )}
     </>
   )
 }
