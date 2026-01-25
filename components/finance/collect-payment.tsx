@@ -6,6 +6,8 @@ import { Search } from "lucide-react"
 import { FamilyCard } from "@/components/finance/family-card"
 import { PaymentBuilder } from "@/components/finance/payment-builder"
 import { SearchResultsModal } from "@/components/finance/search-results-modal"
+import { DebtorList } from "@/components/finance/debtor-list"
+import { RecentCollections } from "@/components/finance/recent-collections"
 
 interface CollectPaymentProps {
   userRole?: "admin" | "parent" | "accountant"
@@ -22,6 +24,14 @@ export function CollectPayment({ userRole = "admin", parentId }: CollectPaymentP
     setSelectedFamily({
       ...result,
       type,
+    })
+  }
+
+  const handleSelectDebtor = (student: any) => {
+    // Treat as selecting a single student
+    setSelectedFamily({
+      ...student,
+      type: "student",
     })
   }
 
@@ -50,29 +60,43 @@ export function CollectPayment({ userRole = "admin", parentId }: CollectPaymentP
             />
           </div>
 
-          {/* Family Card */}
+          {/* Family Card or Debtor List */}
           <div>
-            <h3 className="font-semibold text-sm mb-3">Family card</h3>
-            <FamilyCard
-              selectedFamily={selectedFamily}
-              onSelectFamily={setSelectedFamily}
-              onItemsSelected={setSelectedItems}
-              userRole={userRole}
-              parentId={parentId}
-              refreshTrigger={refreshTrigger}
-            />
+            <h3 className="font-semibold text-sm mb-3">
+              {selectedFamily ? "Family card" : "Outstanding Invoices"}
+            </h3>
+
+            {selectedFamily ? (
+              <FamilyCard
+                selectedFamily={selectedFamily}
+                onSelectFamily={setSelectedFamily}
+                onItemsSelected={setSelectedItems}
+                userRole={userRole}
+                parentId={parentId}
+                refreshTrigger={refreshTrigger}
+              />
+            ) : (
+              <DebtorList onSelectStudent={handleSelectDebtor} />
+            )}
           </div>
         </div>
 
-        {/* Right Column - Payment Builder */}
+        {/* Right Column - Payment Builder or Recent Collections */}
         <div>
-          <h3 className="font-semibold text-sm mb-3">Payment builder</h3>
-          <PaymentBuilder
-            selectedFamily={selectedFamily}
-            selectedItems={selectedItems}
-            userRole={userRole}
-            onPaymentSuccess={handlePaymentSuccess}
-          />
+          <h3 className="font-semibold text-sm mb-3">
+            {selectedFamily ? "Payment builder" : "Recent Activity"}
+          </h3>
+
+          {selectedFamily ? (
+            <PaymentBuilder
+              selectedFamily={selectedFamily}
+              selectedItems={selectedItems}
+              userRole={userRole}
+              onPaymentSuccess={handlePaymentSuccess}
+            />
+          ) : (
+            <RecentCollections />
+          )}
         </div>
       </div>
 
