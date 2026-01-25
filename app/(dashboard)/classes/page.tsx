@@ -42,9 +42,10 @@ interface Section {
 export default async function ClassesPage({
   searchParams,
 }: {
-  searchParams: { search?: string; section?: string }
+  searchParams: Promise<{ search?: string; section?: string }>
 }) {
   await requireAdmin()
+  const resolvedSearchParams = await searchParams
   const supabase = await createClient()
 
   const { data: currentSession } = await supabase
@@ -120,16 +121,16 @@ export default async function ClassesPage({
           })) || [],
     })) || []
 
-  const filteredSections = searchParams.search
+  const filteredSections = resolvedSearchParams.search
     ? sections
-        .map((section) => ({
-          ...section,
-          classes: section.classes.filter((c) => c.name.toLowerCase().includes(searchParams.search!.toLowerCase())),
-        }))
-        .filter((section) => section.classes.length > 0)
+      .map((section) => ({
+        ...section,
+        classes: section.classes.filter((c) => c.name.toLowerCase().includes(resolvedSearchParams.search!.toLowerCase())),
+      }))
+      .filter((section) => section.classes.length > 0)
     : sections
 
-  const defaultSection = searchParams.section || filteredSections[0]?.id || ""
+  const defaultSection = resolvedSearchParams.section || filteredSections[0]?.id || ""
 
   const { data: teachersDataForModal } = await supabase
     .from("teachers")
@@ -153,13 +154,13 @@ export default async function ClassesPage({
 
       <div className="flex items-center gap-4">
         <form className="flex-1 max-w-sm">
-          <Input name="search" placeholder="Search classes..." defaultValue={searchParams.search} className="w-full" />
+          <Input name="search" placeholder="Search classes..." defaultValue={resolvedSearchParams.search} className="w-full" />
         </form>
       </div>
 
       {filteredSections.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
-          {searchParams.search
+          {resolvedSearchParams.search
             ? "No classes found matching your search."
             : "No sections available. Create a section first to get started."}
         </div>

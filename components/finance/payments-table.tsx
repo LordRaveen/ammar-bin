@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Eye, RotateCcw } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -53,7 +54,20 @@ export function PaymentsTable({ onSelectPayment, filters }: PaymentsTableProps) 
           .select(
             `
             *,
-            teacher:received_by(first_name, last_name)
+            teacher:received_by(first_name, last_name),
+            invoices (
+              students (
+                first_name,
+                last_name,
+                student_guardians (
+                  is_primary,
+                  guardian:guardians (
+                    first_name,
+                    last_name
+                  )
+                )
+              )
+            )
           `,
             { count: "exact" }
           )
@@ -231,6 +245,13 @@ export function PaymentsTable({ onSelectPayment, filters }: PaymentsTableProps) 
       }
     })
 
+    // Fallback: Use invoice relationship if allocations method failed
+    if (guardians.length === 0 && payment.invoices?.students?.student_guardians) {
+      const sgs = payment.invoices.students.student_guardians
+      const primary = sgs.find((sg: any) => sg.is_primary) || sgs[0]
+      if (primary?.guardian) guardians.push(primary.guardian)
+    }
+
     if (guardians.length === 0) return "N/A"
     if (guardians.length === 1) {
       return `${guardians[0].first_name} ${guardians[0].last_name}`
@@ -268,22 +289,31 @@ export function PaymentsTable({ onSelectPayment, filters }: PaymentsTableProps) 
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
+                <TableHead className="w-[30px] p-2">
+                  <Checkbox />
+                </TableHead>
+                <TableHead className="h-10 py-2 px-1 w-[50px]">SN</TableHead>
                 <TableHead className="h-10 py-2 px-1">Ref</TableHead>
                 <TableHead className="h-10 py-2 px-1">Parent</TableHead>
                 <TableHead className="h-10 py-2 px-1 text-right">Amount</TableHead>
                 <TableHead className="h-10 py-2 px-1">Method</TableHead>
                 <TableHead className="h-10 py-2 px-1">Status</TableHead>
-                <TableHead className="h-10 py-2 px-1">Date</TableHead>
-                <TableHead className="h-10 py-2 px-1 text-right">Actions</TableHead>
+                <TableHead className="h-10 py-2 px-1 text-right">Date</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {payments.map((payment) => (
+              {payments.map((payment, index) => (
                 <TableRow
                   key={payment.id}
                   className="hover:bg-muted cursor-pointer h-10"
                   onClick={() => onSelectPayment(payment.id)}
                 >
+                  <TableCell className="py-2 px-2">
+                    <Checkbox onClick={(e) => e.stopPropagation()} />
+                  </TableCell>
+                  <TableCell className="py-2 px-1 font-mono text-xs text-muted-foreground">
+                    {(currentPage - 1) * PAGE_SIZE + index + 1}
+                  </TableCell>
                   <TableCell className="py-2 px-1 font-mono text-xs">
                     {payment.receipt_number || payment.reference_number || `PAY-${payment.id.slice(0, 8)}`}
                   </TableCell>
@@ -304,38 +334,8 @@ export function PaymentsTable({ onSelectPayment, filters }: PaymentsTableProps) 
                       {payment.status || "N/A"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="py-2 px-1 text-sm">
+                  <TableCell className="py-2 px-1 text-right text-sm">
                     {formatDate(payment.payment_date || payment.created_at)}
-                  </TableCell>
-                  <TableCell className="py-2 px-1 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onSelectPayment(payment.id)
-                        }}
-                        className="h-8 px-2 text-xs"
-                        title="View details"
-                      >
-                        View
-                      </Button>
-                      {payment.status?.toLowerCase() !== "reversed" && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onSelectPayment(payment.id)
-                          }}
-                          className="h-8 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                          title="Reverse payment"
-                        >
-                          Reverse
-                        </Button>
-                      )}
-                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -345,55 +345,57 @@ export function PaymentsTable({ onSelectPayment, filters }: PaymentsTableProps) 
       </Card>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Showing {(currentPage - 1) * PAGE_SIZE + 1} to{" "}
-            {Math.min(currentPage * PAGE_SIZE, totalCount)} of {totalCount} payments
-          </p>
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                  className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                />
-              </PaginationItem>
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum = i + 1
-                if (totalPages > 5) {
-                  if (currentPage <= 3) {
-                    pageNum = i + 1
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i
-                  } else {
-                    pageNum = currentPage - 2 + i
+      {
+        totalPages > 1 && (
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Showing {(currentPage - 1) * PAGE_SIZE + 1} to{" "}
+              {Math.min(currentPage * PAGE_SIZE, totalCount)} of {totalCount} payments
+            </p>
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum = i + 1
+                  if (totalPages > 5) {
+                    if (currentPage <= 3) {
+                      pageNum = i + 1
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i
+                    } else {
+                      pageNum = currentPage - 2 + i
+                    }
                   }
-                }
-                return (
-                  <PaginationItem key={pageNum}>
-                    <PaginationLink
-                      onClick={() => setCurrentPage(pageNum)}
-                      isActive={currentPage === pageNum}
-                      className="cursor-pointer"
-                    >
-                      {pageNum}
-                    </PaginationLink>
-                  </PaginationItem>
-                )
-              })}
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                  className={
-                    currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"
-                  }
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
-      )}
-    </div>
+                  return (
+                    <PaginationItem key={pageNum}>
+                      <PaginationLink
+                        onClick={() => setCurrentPage(pageNum)}
+                        isActive={currentPage === pageNum}
+                        className="cursor-pointer"
+                      >
+                        {pageNum}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )
+                })}
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                    className={
+                      currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"
+                    }
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )
+      }
+    </div >
   )
 }

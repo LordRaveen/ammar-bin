@@ -20,7 +20,7 @@ interface StudentInvoiceItem {
   description: string
   dueDate: string
   balance: number
-  status: "pending" | "paid" | "partial"
+  status: "Pending" | "Paid" | "Partial" | "Unpaid"
 }
 
 interface StudentData {
@@ -168,7 +168,7 @@ export function FamilyCard({
               description: item.fee_categories?.name || item.description,
               dueDate: calculateDueDate(invoice.due_date),
               balance: Number(item.amount),
-              status: item.status || (invoice.status === "Paid" ? "Paid" : "Unpaid"),
+              status: item.status ? (item.status.charAt(0).toUpperCase() + item.status.slice(1)) : (invoice.status === "Paid" ? "Paid" : "Unpaid"),
             })),
           }))
 
@@ -192,17 +192,70 @@ export function FamilyCard({
           if (a.isPaid === b.isPaid) return 0
           return a.isPaid ? 1 : -1
         }) || []
-
-      setStudentsData(transformed)
+      await fetchStudentsByIds(studentIds)
+    } else {
+      setStudentsData([]) // No students found for this guardian
     }
   }
 
   const fetchStudentData = async (studentId: string) => {
-    // No guardian info when student is selected directly
-    setGuardianInfo(null)
+    // Try to find the primary guardian for this student first to show the whole family
+    const { data: guardianData } = await supabase
+      .from("student_guardians")
+      .select("guardian_id")
+      .eq("student_id", studentId)
+      .eq("is_primary", true)
+      .single()
 
-    // Fetch student with enrollments and invoices
-    const { data: studentData, error: invoiceError } = await supabase
+    if (guardianData?.guardian_id) {
+      // Found a guardian! Switch context to this parent to show all siblings
+      // We need to update the selectedFamily state in the parent component via callback normally,
+      // but since we are inside the component, we can just call fetchParentData but we need to trick it 
+      // by setting the state temporarily or just calling the logic.
+
+      // Better approach: We'll manually call the guardian info fetch and student fetch logic here
+      // treating the guardian_id as the selected family ID.
+
+      // Validated: Reuse the same logic as fetchParentData but with the found guardian ID
+
+      // 1. Get guardian info
+      const { data: gInfo } = await supabase
+        .from("guardians")
+        .select("*")
+        .eq("id", guardianData.guardian_id)
+        .single()
+
+      if (gInfo) {
+        setGuardianInfo({
+          name: `${gInfo.first_name} ${gInfo.last_name}`,
+          relationship: gInfo.relationship_type || "Guardian",
+          phone: gInfo.phone || gInfo.whatsapp_number || "N/A",
+          type: "parent",
+        })
+      }
+
+      // 2. Get all students (siblings) linked to this guardian
+      const { data: studentGuardianData } = await supabase
+        .from("student_guardians")
+        .select("student_id")
+        .eq("guardian_id", guardianData.guardian_id)
+
+      if (studentGuardianData && studentGuardianData.length > 0) {
+        const studentIds = studentGuardianData.map((sg) => sg.student_id)
+        // Reuse the same fetch logic for multiple students
+        await fetchStudentsByIds(studentIds)
+      }
+      return
+    }
+
+    // Fallback: No guardian found, just fetch this single student
+    setGuardianInfo(null)
+    await fetchStudentsByIds([studentId])
+  }
+
+  // Refactored helper to fetch invoices for a list of student IDs
+  const fetchStudentsByIds = async (studentIds: string[]) => {
+    const { data: studentsWithInvoices, error: invoiceError } = await supabase
       .from("students")
       .select(
         `
@@ -227,80 +280,94 @@ export function FamilyCard({
             id,
             description,
             amount,
+            status,
             fee_categories(name)
           )
         )
       `
       )
-      .eq("id", studentId)
+      .in("id", studentIds)
       .is("invoices.deleted_at", null)
-      .single()
 
     if (invoiceError) {
-      console.error("[v0] Student invoice query error:", invoiceError)
+      console.error("[v0] Invoice query error:", invoiceError)
       return
     }
 
-    if (studentData) {
-      const activeEnrollment = studentData.student_enrollments?.find(
+    // Transform and process data (same as before)
+    // We need to fetch allocations for calculations too
+    // This part is getting complex to duplicate, so let's refactor the standard fetching logic
+
+    // Let's implement robust fetching for the list
+
+    const students = studentsWithInvoices || []
+    const allInvoiceItems = students.flatMap((s: any) => s.invoices || []).flatMap((i: any) => i.invoice_items || [])
+    const itemIds = allInvoiceItems.map((i: any) => i.id)
+
+    // Fetch allocations for ALL items
+    let paidMap: Record<string, number> = {}
+    if (itemIds.length > 0) {
+      const { data: allocations } = await supabase
+        .from("payment_allocations")
+        .select("invoice_item_id, amount")
+        .in("invoice_item_id", itemIds)
+
+      allocations?.forEach((alloc: any) => {
+        paidMap[alloc.invoice_item_id] = (paidMap[alloc.invoice_item_id] || 0) + Number(alloc.amount)
+      })
+    }
+
+    const transformed = students.map((student: any) => {
+      const activeEnrollment = student.student_enrollments?.find(
         (e: any) => e.session_id && e.term_id
       )
       const className = activeEnrollment?.classes?.name || "N/A"
       const sectionName = activeEnrollment?.classes?.section?.name
       const classWithSection = sectionName ? `${className} - ${sectionName}` : className
 
-      // Get all invoices for this student (including paid ones)
-      const invoices = studentData.invoices?.map((invoice: any) => ({
-        studentId: studentData.id,
-        invoiceId: invoice.id,
-        invoiceNumber: invoice.invoice_number,
-        dueDate: invoice.due_date,
-        items: invoice.invoice_items?.map((item: any) => ({
-          id: item.id,
-          description: item.fee_categories?.name || item.description,
+      const invoices = student.invoices?.map((invoice: any) => {
+        const items = invoice.invoice_items?.map((item: any) => {
+          const paidAmount = paidMap[item.id] || 0
+          const balance = Math.max(0, Number(item.amount) - paidAmount)
+          // If invoice is marked Paid, force item status to Paid, else check specific logic
+          const dbStatus = item.status
+          const capitalizedStatus = dbStatus ? (dbStatus.charAt(0).toUpperCase() + dbStatus.slice(1)) : null
+          const status = capitalizedStatus || (balance <= 0 ? "Paid" : "Unpaid")
+
+          return {
+            id: item.id,
+            description: item.fee_categories?.name || item.description,
+            dueDate: calculateDueDate(invoice.due_date),
+            balance: balance,
+            status: status,
+            amount: Number(item.amount) // Keep original amount for ref
+          }
+        })
+
+        return {
+          studentId: student.id,
+          invoiceId: invoice.id,
+          invoiceNumber: invoice.invoice_number,
           dueDate: calculateDueDate(invoice.due_date),
-          balance: Number(item.amount),
-          status: item.status || (invoice.status === "Paid" ? "Paid" : "Unpaid"),
-        })),
-      }))
-
-      // Fetch payment allocations for these invoice items
-      const itemIds = invoices?.flatMap((inv: any) => inv.items.map((item: any) => item.id)) || []
-      const { data: allocations } = await supabase
-        .from("payment_allocations")
-        .select("invoice_item_id, amount")
-        .in("invoice_item_id", itemIds)
-
-      // Create a map of paid amounts per item
-      const paidMap: Record<string, number> = {}
-      allocations?.forEach((alloc: any) => {
-        paidMap[alloc.invoice_item_id] = (paidMap[alloc.invoice_item_id] || 0) + Number(alloc.amount)
+          items: items
+        }
       })
 
-      // Flatten items and calculate remaining balance
-      const allInvoiceItems: StudentInvoiceItem[] = invoices
-        ?.flatMap((inv: any) =>
-          inv.items.map((item: any) => {
-            const paidAmount = paidMap[item.id] || 0
-            const remainingBalance = Math.max(0, item.balance - paidAmount)
-            return {
-              ...item,
-              balance: remainingBalance,
-            }
-          })
-        )
-        .map((item: any) => item) || []
+      const flatItems = invoices?.flatMap((inv: any) => inv.items) || []
 
-      const transformed: StudentData = {
-        id: studentData.id,
-        name: `${studentData.first_name} ${studentData.last_name}`,
+      return {
+        id: student.id,
+        name: `${student.first_name} ${student.last_name}`,
         class: classWithSection,
         invoiceNumber: invoices?.[0]?.invoiceNumber || "N/A",
-        invoices: allInvoiceItems,
+        invoices: flatItems,
+        isPaid: flatItems.every((item: any) => item.status === "Paid" || item.balance <= 0),
       }
+    })
+      .filter((s: StudentData) => s.invoices && s.invoices.length > 0)
+      .sort((a: any, b: any) => a.isPaid === b.isPaid ? 0 : a.isPaid ? 1 : -1)
 
-      setStudentsData([transformed])
-    }
+    setStudentsData(transformed)
   }
 
   const handleItemToggle = (itemId: string) => {

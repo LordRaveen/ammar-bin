@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { CreditCard, FileText, History, Trash2, User, Plus } from "lucide-react"
+import { CreditCard, FileText, History, Trash2, User, Plus, ChevronRight, Phone, Mail } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +31,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { StudentDetailsSheet } from "@/components/student-details-sheet"
+import { PaymentDetailsSheet } from "@/components/finance/payment-details-sheet"
+import { GuardianDetailsSheet } from "@/components/guardian-details-sheet"
 
 interface InvoiceDetailsDrawerProps {
   invoiceId: string | null
@@ -56,6 +58,8 @@ export function InvoiceDetailsDrawer({
   const [addFeeDialogOpen, setAddFeeDialogOpen] = useState(false)
   const [availableFees, setAvailableFees] = useState<any[]>([])
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null)
+  const [selectedPaymentId, setSelectedPaymentId] = useState<string | null>(null)
+  const [selectedGuardianId, setSelectedGuardianId] = useState<string | null>(null)
   const supabase = createBrowserClient()
 
   useEffect(() => {
@@ -69,7 +73,22 @@ export function InvoiceDetailsDrawer({
           .from("invoices")
           .select(`
             *,
-            students(first_name, last_name, student_id)
+            students(
+              first_name, 
+              last_name, 
+              student_id,
+              student_guardians(
+                relationship,
+                is_primary,
+                guardian:guardians(
+                  id,
+                  first_name,
+                  last_name,
+                  phone,
+                  email
+                )
+              )
+            )
           `)
           .eq("id", invoiceId)
           .single()
@@ -80,41 +99,55 @@ export function InvoiceDetailsDrawer({
           .select("*")
           .eq("invoice_id", invoiceId)
 
-        // Fetch payments with allocations
-        const { data: paymentsData } = await supabase
-          .from("payments")
+        // Fetch allocations for this invoice directly (not via payments.invoice_id which can be null)
+        const { data: allocationsData } = await supabase
+          .from("payment_allocations")
           .select(`
-            *,
-            payment_allocations(
+            id,
+            payment_id,
+            invoice_item_id,
+            amount,
+            payments(
               id,
-              invoice_item_id,
-              amount
+              amount,
+              payment_date,
+              payment_method,
+              status,
+              receipt_number
             )
           `)
           .eq("invoice_id", invoiceId)
-          .order("created_at", { ascending: false })
 
-        // Build payment status map for each item
+        // Build payment status map for each item using direct allocations
         const statusMap: Record<string, any> = {}
         itemsData?.forEach((item) => {
-          const allocations = paymentsData
-            ?.flatMap(p => p.payment_allocations || [])
-            .filter(a => a.invoice_item_id === item.id) || []
-
-          const totalAllocated = allocations.reduce((sum: number, a: any) => sum + Number(a.amount), 0)
+          const itemAllocations = allocationsData?.filter(a => a.invoice_item_id === item.id) || []
+          const totalAllocated = itemAllocations.reduce((sum: number, a: any) => sum + Number(a.amount), 0)
           const itemAmount = Number(item.amount)
-          
+
           statusMap[item.id] = {
             totalAllocated,
             isFullyPaid: totalAllocated >= itemAmount,
-            isPartiallPaid: totalAllocated > 0 && totalAllocated < itemAmount,
-            allocations,
+            isPartiallyPaid: totalAllocated > 0 && totalAllocated < itemAmount,
+            allocations: itemAllocations,
           }
         })
 
+        // Build unique payments list from allocations for the History tab
+        const paymentIds = new Set<string>()
+        const uniquePayments: any[] = []
+        allocationsData?.forEach(allocation => {
+          if (allocation.payments && !paymentIds.has(allocation.payment_id)) {
+            paymentIds.add(allocation.payment_id)
+            uniquePayments.push(allocation.payments)
+          }
+        })
+        // Sort by payment_date descending
+        uniquePayments.sort((a, b) => new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime())
+
         setInvoice(invoiceData)
         setInvoiceItems(itemsData || [])
-        setPayments(paymentsData || [])
+        setPayments(uniquePayments)
         setItemPaymentStatus(statusMap)
       } catch (error) {
         console.error("[v0] Error fetching invoice details:", error)
@@ -223,17 +256,18 @@ export function InvoiceDetailsDrawer({
     if (!invoice) return
 
     try {
-      // Get the student's current class for context
-      const { data: studentData } = await supabase
-        .from("students")
-        .select("*")
-        .eq("id", invoice.student_id)
+      // Get the student's current active enrollment to find their class
+      const { data: enrollment } = await supabase
+        .from("student_enrollments")
+        .select("class_id")
+        .eq("student_id", invoice.student_id)
+        .eq("is_active", true)
         .single()
 
-      const studentClassId = studentData?.current_class_id
+      const studentClassId = enrollment?.class_id
 
       if (!studentClassId) {
-        toast.error("Could not determine student's class")
+        toast.error("Could not determine student's class. Please ensure the student is enrolled.")
         return
       }
 
@@ -247,13 +281,13 @@ export function InvoiceDetailsDrawer({
         .eq("active", true)
 
       if (!allFees || allFees.length === 0) {
-        toast.error("No available fees to add")
+        toast.error("No available fees to add for this class/term")
         return
       }
 
       // Filter out fees already in this invoice and zero-amount fees
       const addedFeeIds = invoiceItems.map(i => i.fee_category_id)
-      const available = allFees.filter(fs => 
+      const available = allFees.filter(fs =>
         !addedFeeIds.includes(fs.fee_category_id) && Number(fs.amount) > 0
       )
 
@@ -328,11 +362,11 @@ export function InvoiceDetailsDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto px-6">
+      <SheetContent className="sm:max-w-xl overflow-y-auto px-6">
         {loading ? (
           <div className="py-12 text-center text-muted-foreground">Loading invoice details...</div>
         ) : invoice ? (
-          <div className="space-y-6">
+          <div className="space-y-6 pb-8">
             <SheetHeader>
               <SheetTitle className="text-2xl">Invoice {invoice.invoice_number}</SheetTitle>
               <SheetDescription>Invoice Details & Payment History</SheetDescription>
@@ -406,65 +440,68 @@ export function InvoiceDetailsDrawer({
               </TabsList>
 
               {/* Fee Breakdown Tab */}
-              <TabsContent value="breakdown" className="space-y-3 mt-4">
+              <TabsContent value="breakdown" className="mt-4">
                 {invoiceItems.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No invoice items</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="divide-y">
                     {invoiceItems.map((item) => {
                       const status = itemPaymentStatus[item.id] || {}
                       const isFullyPaid = status.isFullyPaid
-                      const isPartialPaid = status.isPartiallPaid
-                      const canDelete = !isFullyPaid && !isPartialPaid  // only show delete if no payment at all
+                      const isPartialPaid = status.isPartiallyPaid
+                      const canDelete = !isFullyPaid && !isPartialPaid
 
                       return (
                         <div
                           key={item.id}
-                          className="flex justify-between items-center p-3 rounded-lg bg-muted group hover:bg-muted/80 transition-colors"
+                          className="flex items-center justify-between py-2 gap-2"
                         >
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">{item.description}</p>
+                          {/* Description */}
+                          <span className="text-sm font-medium truncate flex-shrink min-w-0">
+                            {item.description}
+                          </span>
 
-                            {/* Badges for payment status */}
+                          {/* Badge + Amount + Delete */}
+                          <div className="flex items-center gap-2 flex-shrink-0">
                             {isFullyPaid && (
-                              <Badge variant="default" className="bg-green-600 mt-1">
-                                Fully Paid: ₦{Number(status.totalAllocated).toLocaleString()}
+                              <Badge variant="default" className="bg-green-600 text-xs px-1.5 py-0">
+                                Paid
                               </Badge>
                             )}
                             {isPartialPaid && (
-                              <Badge variant="outline" className="border-blue-300 text-blue-700 mt-1">
-                                Partial: ₦{Number(status.totalAllocated).toLocaleString()} / ₦{Number(item.amount).toLocaleString()}
+                              <Badge variant="outline" className="border-blue-300 text-blue-700 text-xs px-1.5 py-0">
+                                ₦{Number(status.totalAllocated).toLocaleString()}
                               </Badge>
                             )}
-                          </div>
 
-                          <div className="flex items-center gap-3">
-                            <p className="font-semibold">₦{Number.parseFloat(item.amount).toLocaleString()}</p>
+                            <span className="font-semibold text-sm w-20 text-right">
+                              ₦{Number.parseFloat(item.amount).toLocaleString()}
+                            </span>
 
-                            {/* Show delete button only if no payment */}
-                            {userRole === "admin" && canDelete && (
+                            {userRole === "admin" && canDelete ? (
                               <Button
                                 variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                size="icon"
+                                className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
                                 onClick={() => handleDeleteInvoiceItem(item.id)}
                                 disabled={deletingItemId === item.id}
                                 title="Remove fee"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-3.5 w-3.5" />
                               </Button>
+                            ) : (
+                              <div className="w-6" /> /* Spacer to keep alignment */
                             )}
                           </div>
                         </div>
                       )
                     })}
 
-
                     {/* Add Fee Button */}
                     {userRole === "admin" && (
                       <Button
                         variant="outline"
-                        className="w-full mt-4 gap-2 bg-transparent"
+                        className="w-full mt-3 gap-2 bg-transparent"
                         onClick={handleOpenAddFeeDialog}
                       >
                         <Plus className="h-4 w-4" />
@@ -472,35 +509,48 @@ export function InvoiceDetailsDrawer({
                       </Button>
                     )}
 
-                    <div className="border-t pt-3 mt-3 flex justify-between items-center font-bold">
+                    <div className="border-t pt-2 mt-2 flex justify-between items-center font-bold text-sm">
                       <span>Total</span>
-                      <span>₦{Number.parseFloat(invoice.total_amount).toLocaleString()}</span>
+                      <span className="pr-6">₦{Number.parseFloat(invoice.total_amount).toLocaleString()}</span>
                     </div>
                   </div>
                 )}
               </TabsContent>
 
               {/* Payment History Tab */}
-              <TabsContent value="history" className="space-y-3 mt-4">
+              <TabsContent value="history" className="mt-4">
                 {payments.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No payment history</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="divide-y">
                     {payments.map((payment) => (
-                      <div key={payment.id} className="flex justify-between items-center p-3 rounded-lg bg-green-50 border border-green-200">
-                        <div>
-                          <p className="font-medium text-sm">Payment Received</p>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(payment.payment_date).toLocaleDateString()} • {payment.payment_method}
-                          </p>
+                      <div
+                        key={payment.id}
+                        className="flex items-center justify-between py-2.5 cursor-pointer hover:bg-muted/50 transition-colors -mx-2 px-2 rounded"
+                        onClick={() => setSelectedPaymentId(payment.id)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-full bg-green-600/10 flex items-center justify-center">
+                            <CreditCard className="h-4 w-4 text-green-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">
+                              {new Date(payment.payment_date).toLocaleDateString("en-GB", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric"
+                              })}
+                            </p>
+                            <p className="text-xs text-muted-foreground capitalize">
+                              {payment.payment_method}
+                            </p>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-semibold text-green-600">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-green-600">
                             ₦{Number.parseFloat(payment.amount).toLocaleString()}
-                          </p>
-                          <Badge variant="outline" className="text-xs mt-1">
-                            {payment.status}
-                          </Badge>
+                          </span>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
                         </div>
                       </div>
                     ))}
@@ -509,25 +559,69 @@ export function InvoiceDetailsDrawer({
               </TabsContent>
 
               {/* Parent Info Tab */}
-              <TabsContent value="parent" className="space-y-3 mt-4">
-                {invoice.guardians && invoice.guardians.length > 0 ? (
-                  <div className="space-y-3">
-                    {invoice.guardians.map((guardian: any, idx: number) => (
-                      <Card key={idx}>
-                        <CardContent className="pt-6">
-                          <div className="space-y-2">
-                            <p className="font-semibold">
-                              {guardian.first_name} {guardian.last_name}
-                            </p>
-                            <p className="text-sm text-muted-foreground">{guardian.phone}</p>
-                            <p className="text-sm text-muted-foreground">{guardian.email}</p>
+              <TabsContent value="parent" className="mt-4">
+                {invoice.students?.student_guardians && invoice.students.student_guardians.length > 0 ? (
+                  <div className="divide-y border rounded-lg overflow-hidden">
+                    {invoice.students.student_guardians.map((sg: any, idx: number) => {
+                      const guardian = sg.guardian
+                      if (!guardian) return null
+
+                      return (
+                        <div
+                          key={idx}
+                          className="p-3 bg-muted/30 flex items-center justify-between group hover:bg-muted/50 transition-colors cursor-pointer"
+                          onClick={() => guardian.id && setSelectedGuardianId(guardian.id)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold text-sm">
+                              {guardian.first_name?.[0]}{guardian.last_name?.[0]}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold text-sm">
+                                  {guardian.first_name} {guardian.last_name}
+                                </p>
+                                {sg.is_primary && (
+                                  <Badge variant="outline" className="text-[10px] h-4 px-1 py-0">Primary</Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground capitalize">
+                                {sg.relationship || "Guardian"}
+                              </p>
+                            </div>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+
+                          <div className="flex items-center gap-1">
+                            {guardian.phone && (
+                              <a
+                                href={`tel:${guardian.phone}`}
+                                className="h-8 w-8 rounded-full flex items-center justify-center hover:bg-green-100 text-muted-foreground hover:text-green-700 transition-colors"
+                                title="Call Parent"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Phone className="h-4 w-4" />
+                              </a>
+                            )}
+                            {guardian.email && (
+                              <a
+                                href={`mailto:${guardian.email}`}
+                                className="h-8 w-8 rounded-full flex items-center justify-center hover:bg-blue-100 text-muted-foreground hover:text-blue-700 transition-colors"
+                                title="Email Parent"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Mail className="h-4 w-4" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No parent information</p>
+                  <div className="text-center py-8 bg-muted/20 rounded-lg border border-dashed">
+                    <User className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-50" />
+                    <p className="text-sm text-muted-foreground">No parent information available</p>
+                  </div>
                 )}
               </TabsContent>
             </Tabs>
@@ -610,14 +704,14 @@ export function InvoiceDetailsDrawer({
                     handleAddFee(fee)
                     setAddFeeDialogOpen(false)
                   }}
-                  className="w-full p-3 rounded-lg border hover:border-blue-500 hover:bg-blue-50 transition-colors text-left"
+                  className="w-full p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-muted transition-colors text-left"
                 >
-                  <div className="flex justify-between items-start">
+                  <div className="flex justify-between items-center">
                     <div>
                       <p className="font-medium text-sm">{fee.fee_categories?.name}</p>
-                      <p className="text-xs text-muted-foreground mt-1">Amount: ₦{Number(fee.amount).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">₦{Number(fee.amount).toLocaleString()}</p>
                     </div>
-                    <Plus className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                    <Plus className="h-4 w-4 text-primary flex-shrink-0" />
                   </div>
                 </button>
               ))
@@ -625,6 +719,29 @@ export function InvoiceDetailsDrawer({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Payment Details Sheet */}
+      {selectedPaymentId && (
+        <PaymentDetailsSheet
+          paymentId={selectedPaymentId}
+          open={!!selectedPaymentId}
+          onOpenChange={(open) => {
+            if (!open) setSelectedPaymentId(null)
+          }}
+          userRole={userRole}
+        />
+      )}
+
+      {/* Guardian Details Sheet */}
+      {selectedGuardianId && (
+        <GuardianDetailsSheet
+          guardianId={selectedGuardianId}
+          open={!!selectedGuardianId}
+          onOpenChange={(open) => {
+            if (!open) setSelectedGuardianId(null)
+          }}
+        />
+      )}
     </Sheet>
   )
 }

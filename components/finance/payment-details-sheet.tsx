@@ -418,7 +418,7 @@ export function PaymentDetailsSheet({
 
             {/* Actions */}
             <div className="flex gap-2 py-4">
-              <Button variant="outline" className="flex-1 gap-2 bg-transparent">
+              <Button variant="outline" className="flex-1 gap-2 bg-transparent" onClick={() => window.print()}>
                 <Printer className="h-4 w-4" />
                 Print Receipt
               </Button>

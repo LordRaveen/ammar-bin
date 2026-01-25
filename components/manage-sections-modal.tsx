@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { IconSettings } from "@tabler/icons-react"
+import { IconSettings, IconPencil, IconTrash, IconCheck, IconX } from "@tabler/icons-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -11,6 +11,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import {
   Table,
   TableBody,
@@ -38,6 +48,8 @@ export function ManageSectionsModal({ sections }: ManageSectionsModalProps) {
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<Section[]>(sections)
   const [tempData, setTempData] = useState<Record<string, { name: string; description: string }>>({})
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [sectionToDelete, setSectionToDelete] = useState<Section | null>(null)
   const router = useRouter()
 
   const handleEdit = (section: Section) => {
@@ -67,10 +79,10 @@ export function ManageSectionsModal({ sections }: ManageSectionsModalProps) {
         prev.map((s) =>
           s.id === sectionId
             ? {
-                ...s,
-                name: updatedData.name,
-                description: updatedData.description || null,
-              }
+              ...s,
+              name: updatedData.name,
+              description: updatedData.description || null,
+            }
             : s
         )
       )
@@ -86,19 +98,25 @@ export function ManageSectionsModal({ sections }: ManageSectionsModalProps) {
     }
   }
 
-  const handleDelete = async (sectionId: string) => {
-    if (!confirm("Are you sure you want to delete this section?")) return
+  const handleDeleteClick = (section: Section) => {
+    setSectionToDelete(section)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!sectionToDelete) return
 
     setLoading(true)
     try {
-      await deleteSection(sectionId)
-      setData((prev) => prev.filter((s) => s.id !== sectionId))
+      await deleteSection(sectionToDelete.id)
+      setData((prev) => prev.filter((s) => s.id !== sectionToDelete.id))
       router.refresh()
     } catch (error) {
       console.error("Error deleting section:", error)
-      alert("Failed to delete section. Please try again.")
     } finally {
       setLoading(false)
+      setDeleteDialogOpen(false)
+      setSectionToDelete(null)
     }
   }
 
@@ -110,111 +128,120 @@ export function ManageSectionsModal({ sections }: ManageSectionsModalProps) {
           Manage Sections
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="!sm:max-w-3xl w-full max-w-3xl">
         <DialogHeader>
           <DialogTitle>Manage Sections</DialogTitle>
         </DialogHeader>
 
         <div className="border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">SN</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.map((section, index) => (
-                <TableRow key={section.id}>
-                  <TableCell className="font-medium">{index + 1}</TableCell>
-                  <TableCell>
-                    {editingId === section.id ? (
-                      <Input
-                        value={tempData[section.id]?.name || ""}
-                        onChange={(e) =>
-                          setTempData((prev) => ({
-                            ...prev,
-                            [section.id]: {
-                              ...(prev[section.id] || { name: "", description: "" }),
-                              name: e.target.value,
-                            },
-                          }))
-                        }
-                        className="w-full"
-                      />
-                    ) : (
-                      section.name
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {editingId === section.id ? (
-                      <Input
-                        value={tempData[section.id]?.description || ""}
-                        onChange={(e) =>
-                          setTempData((prev) => ({
-                            ...prev,
-                            [section.id]: {
-                              ...(prev[section.id] || { name: "", description: "" }),
-                              description: e.target.value,
-                            },
-                          }))
-                        }
-                        className="w-full"
-                      />
-                    ) : (
-                      section.description || "-"
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right space-x-2 flex justify-end">
-                    {editingId === section.id ? (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={handleCancelEdit}
-                          disabled={loading}
-                          className="text-gray-500"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => handleSaveRow(section.id)}
-                          disabled={loading}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          Save
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleEdit(section)}
-                          disabled={loading}
-                          className="text-blue-500 hover:text-blue-700"
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDelete(section.id)}
-                          disabled={loading}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          Delete
-                        </Button>
-                      </>
-                    )}
-                  </TableCell>
+          <div className="max-h-[400px] overflow-y-auto">
+            <Table>
+              <TableHeader className="sticky top-0 bg-background z-10">
+                <TableRow>
+                  <TableHead className="w-12 py-2">SN</TableHead>
+                  <TableHead className="py-2">Name</TableHead>
+                  <TableHead className="py-2">Description</TableHead>
+                  <TableHead className="text-right py-2">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {data.map((section, index) => (
+                  <TableRow key={section.id}>
+                    <TableCell className="font-medium py-2">{index + 1}</TableCell>
+                    <TableCell className="py-2">
+                      {editingId === section.id ? (
+                        <Input
+                          value={tempData[section.id]?.name || ""}
+                          onChange={(e) =>
+                            setTempData((prev) => ({
+                              ...prev,
+                              [section.id]: {
+                                ...(prev[section.id] || { name: "", description: "" }),
+                                name: e.target.value,
+                              },
+                            }))
+                          }
+                          className="w-full h-8"
+                        />
+                      ) : (
+                        section.name
+                      )}
+                    </TableCell>
+                    <TableCell className="py-2">
+                      {editingId === section.id ? (
+                        <Input
+                          value={tempData[section.id]?.description || ""}
+                          onChange={(e) =>
+                            setTempData((prev) => ({
+                              ...prev,
+                              [section.id]: {
+                                ...(prev[section.id] || { name: "", description: "" }),
+                                description: e.target.value,
+                              },
+                            }))
+                          }
+                          className="w-full h-8"
+                        />
+                      ) : (
+                        <span className="line-clamp-1">{section.description || "-"}</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right py-2">
+                      <div className="flex items-center justify-end gap-1">
+                        {editingId === section.id ? (
+                          <>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={handleCancelEdit}
+                              disabled={loading}
+                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                              title="Cancel"
+                            >
+                              <IconX className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleSaveRow(section.id)}
+                              disabled={loading}
+                              className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50"
+                              title="Save"
+                            >
+                              <IconCheck className="h-4 w-4" />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleEdit(section)}
+                              disabled={loading}
+                              className="h-7 w-7 text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                              title="Edit"
+                            >
+                              <IconPencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleDeleteClick(section)}
+                              disabled={loading}
+                              className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              title="Delete"
+                            >
+                              <IconTrash className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </div>
 
         {data.length === 0 && (
@@ -227,6 +254,28 @@ export function ManageSectionsModal({ sections }: ManageSectionsModalProps) {
           </Button>
         </div>
       </DialogContent>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Section</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the section &quot;{sectionToDelete?.name}&quot;?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={loading}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              {loading ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   )
 }
