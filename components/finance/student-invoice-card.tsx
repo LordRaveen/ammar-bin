@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -31,6 +30,7 @@ interface StudentInvoiceCardProps {
   invoices: StudentInvoiceItem[]
   selectedItemIds: Set<string>
   onItemToggle: (itemId: string) => void
+  onSelectAll?: (itemIds: string[], select: boolean) => void
 }
 
 export function StudentInvoiceCard({
@@ -41,28 +41,27 @@ export function StudentInvoiceCard({
   invoices,
   selectedItemIds,
   onItemToggle,
+  onSelectAll,
 }: StudentInvoiceCardProps) {
-  const [studentChecked, setStudentChecked] = useState(false)
+  const unpaidItems = invoices.filter((item) => item.status !== "Paid")
+  const allUnpaidSelected = unpaidItems.length > 0 && unpaidItems.every((item) => selectedItemIds.has(item.id))
 
   const handleStudentCheckAll = () => {
-    const unpaidItems = invoices.filter((item) => item.status !== "Paid")
-    const allUnpaidSelected = unpaidItems.every((item) => selectedItemIds.has(item.id))
-    
-    // If all unpaid items are selected, deselect them. Otherwise, select all unpaid items.
-    if (allUnpaidSelected) {
-      unpaidItems.forEach((item) => {
-        if (selectedItemIds.has(item.id)) {
-          onItemToggle(item.id)
-        }
-      })
-      setStudentChecked(false)
+    const unpaidItemIds = unpaidItems.map((item) => item.id)
+
+    if (onSelectAll) {
+      // Use the bulk select/deselect callback
+      onSelectAll(unpaidItemIds, !allUnpaidSelected)
     } else {
+      // Fallback to individual toggles (won't work correctly due to stale state)
       unpaidItems.forEach((item) => {
-        if (!selectedItemIds.has(item.id)) {
+        const isSelected = selectedItemIds.has(item.id)
+        if (allUnpaidSelected && isSelected) {
+          onItemToggle(item.id)
+        } else if (!allUnpaidSelected && !isSelected) {
           onItemToggle(item.id)
         }
       })
-      setStudentChecked(true)
     }
   }
 
@@ -73,9 +72,10 @@ export function StudentInvoiceCard({
         <div className="flex items-center justify-between p-2 border-b">
           <div className="flex items-center gap-3 flex-1">
             <Checkbox
-              checked={studentChecked}
+              checked={allUnpaidSelected}
               onCheckedChange={handleStudentCheckAll}
               className="h-5 w-5"
+              disabled={unpaidItems.length === 0}
             />
             <div className="flex-1">
               <p className="font-semibold text-sm">{studentName} <span className="text-xs text-muted-foreground">{studentClass}</span> </p>
@@ -108,7 +108,6 @@ export function StudentInvoiceCard({
                       <Checkbox
                         checked={selectedItemIds.has(item.id)}
                         onCheckedChange={() => onItemToggle(item.id)}
-                        disabled={item.status === "Paid"}
                         className="h-4 w-4"
                       />
                     ) : (
@@ -121,9 +120,8 @@ export function StudentInvoiceCard({
                       <span className="text-green-600 font-medium">Paid</span>
                     ) : (
                       <span
-                        className={`${
-                          item.dueDate === "Overdue" ? "text-red-600 font-medium" : ""
-                        }`}
+                        className={`${item.dueDate === "Overdue" ? "text-red-600 font-medium" : ""
+                          }`}
                       >
                         {item.dueDate}
                       </span>

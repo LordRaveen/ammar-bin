@@ -38,7 +38,8 @@ interface InvoiceDetailsDrawerProps {
   invoiceId: string | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  userRole?: "admin" | "accountant" | "parent"
+  userRole?: "admin" | "accountant" | "parent" | "super_admin"
+  onCollectPayment?: (studentId: string, invoiceId?: string) => void
 }
 
 export function InvoiceDetailsDrawer({
@@ -46,6 +47,7 @@ export function InvoiceDetailsDrawer({
   open,
   onOpenChange,
   userRole = "admin",
+  onCollectPayment,
 }: InvoiceDetailsDrawerProps) {
   const [invoice, setInvoice] = useState<any>(null)
   const [invoiceItems, setInvoiceItems] = useState<any[]>([])
@@ -160,6 +162,13 @@ export function InvoiceDetailsDrawer({
       fetchInvoiceDetails()
     }
   }, [invoiceId, open, supabase])
+
+  const handleCollectPaymentClick = () => {
+    if (onCollectPayment && invoice?.student_id) {
+      onCollectPayment(invoice.student_id, invoice.id)
+      onOpenChange(false)
+    }
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -364,7 +373,12 @@ export function InvoiceDetailsDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-xl overflow-y-auto px-6">
         {loading ? (
-          <div className="py-12 text-center text-muted-foreground">Loading invoice details...</div>
+          <>
+            <SheetHeader className="sr-only">
+              <SheetTitle>Invoice Details</SheetTitle>
+            </SheetHeader>
+            <div className="py-12 text-center text-muted-foreground">Loading invoice details...</div>
+          </>
         ) : invoice ? (
           <div className="space-y-6 pb-8">
             <SheetHeader>
@@ -628,7 +642,11 @@ export function InvoiceDetailsDrawer({
 
             {/* Collect Payment Button */}
             {invoice.balance > 0 && (
-              <Button className="w-full gap-2 bg-green-600 hover:bg-green-700" size="lg">
+              <Button
+                className="w-full gap-2 bg-green-600 hover:bg-green-700"
+                size="lg"
+                onClick={handleCollectPaymentClick}
+              >
                 <CreditCard className="h-4 w-4" />
                 Collect Payment (₦{Number.parseFloat(invoice.balance).toLocaleString()})
               </Button>
@@ -648,7 +666,12 @@ export function InvoiceDetailsDrawer({
             )}
           </div>
         ) : (
-          <div className="py-12 text-center text-muted-foreground">Invoice not found</div>
+          <>
+            <SheetHeader className="sr-only">
+              <SheetTitle>Invoice Details</SheetTitle>
+            </SheetHeader>
+            <div className="py-12 text-center text-muted-foreground">Invoice not found</div>
+          </>
         )}
       </SheetContent>
 
@@ -682,6 +705,7 @@ export function InvoiceDetailsDrawer({
           terms={[]}
           classes={[]}
           userRole={userRole}
+          onCollectPayment={onCollectPayment}
         />
       )}
 

@@ -19,7 +19,7 @@ import { DateRangePicker } from "@/components/ui/date-range-picker"
 import { DateRange } from "react-day-picker"
 
 interface PaymentsTabProps {
-  userRole?: "admin" | "accountant" | "parent"
+  userRole?: "admin" | "accountant" | "parent" | "super_admin"
 }
 
 export function PaymentsTab({ userRole = "admin" }: PaymentsTabProps) {

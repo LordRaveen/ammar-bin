@@ -17,7 +17,8 @@ import { InvoiceDetailsDrawer } from "@/components/finance/invoice-details-drawe
 import { BulkGenerateModal } from "@/components/finance/bulk-generate-modal"
 
 interface InvoicesTabProps {
-  userRole?: "admin" | "accountant" | "parent"
+  userRole?: "admin" | "accountant" | "parent" | "super_admin"
+  onCollectPayment?: (studentId: string) => void
 }
 
 interface FilterOptions {
@@ -26,7 +27,7 @@ interface FilterOptions {
   classes: any[]
 }
 
-export function InvoicesTab({ userRole = "admin" }: InvoicesTabProps) {
+export function InvoicesTab({ userRole = "admin", onCollectPayment }: InvoicesTabProps) {
   const [selectedSession, setSelectedSession] = useState("")
   const [selectedTerm, setSelectedTerm] = useState("")
   const [selectedClass, setSelectedClass] = useState("")
@@ -267,6 +268,7 @@ export function InvoicesTab({ userRole = "admin" }: InvoicesTabProps) {
             if (!open) setSelectedInvoice(null)
           }}
           userRole={userRole}
+          onCollectPayment={onCollectPayment}
         />
       )}
 

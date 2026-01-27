@@ -35,7 +35,7 @@ interface FamilyCardProps {
   selectedFamily: any
   onSelectFamily: (family: any) => void
   onItemsSelected?: (items: any[]) => void
-  userRole?: "admin" | "parent" | "accountant"
+  userRole?: "admin" | "parent" | "accountant" | "super_admin"
   parentId?: string
   refreshTrigger?: number
 }
@@ -58,9 +58,12 @@ export function FamilyCard({
     if (!selectedFamily) {
       setStudentsData([])
       setGuardianInfo(null)
+      setSelectedItemIds(new Set())
       return
     }
 
+    // Clear selection when refreshing (e.g., after payment)
+    setSelectedItemIds(new Set())
     fetchFamilyData()
   }, [selectedFamily, refreshTrigger])
 
@@ -393,6 +396,33 @@ export function FamilyCard({
     onItemsSelected?.(items)
   }
 
+  const handleSelectAll = (itemIds: string[], select: boolean) => {
+    const newSelected = new Set(selectedItemIds)
+
+    if (select) {
+      // Add all items
+      itemIds.forEach((id) => newSelected.add(id))
+    } else {
+      // Remove all items
+      itemIds.forEach((id) => newSelected.delete(id))
+    }
+
+    setSelectedItemIds(newSelected)
+
+    // Callback with selected items
+    const items = studentsData
+      .flatMap((student) =>
+        student.invoices
+          .filter((item) => newSelected.has(item.id))
+          .map((item) => ({
+            ...item,
+            studentId: student.id,
+            studentName: student.name,
+          }))
+      )
+    onItemsSelected?.(items)
+  }
+
   const calculateDueDate = (dueDateString: string | null): string => {
     if (!dueDateString) return "N/A"
 
@@ -489,6 +519,7 @@ export function FamilyCard({
                   invoices={student.invoices}
                   selectedItemIds={selectedItemIds}
                   onItemToggle={handleItemToggle}
+                  onSelectAll={handleSelectAll}
                 />
               ))}
             </div>
@@ -515,6 +546,7 @@ export function FamilyCard({
               invoices={student.invoices}
               selectedItemIds={selectedItemIds}
               onItemToggle={handleItemToggle}
+              onSelectAll={handleSelectAll}
             />
           ))}
         </div>

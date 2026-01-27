@@ -26,6 +26,8 @@ import { Plus, Eye, Edit2, Trash2, RotateCw, EyeOff } from "lucide-react"
 import { FeeStructureModal } from "@/components/finance/fee-structure-modal"
 import { PreviewImpactModal } from "@/components/finance/preview-impact-modal"
 import { BulkGenerateModal } from "@/components/finance/bulk-generate-modal"
+import { FeeCategoryManager } from "@/components/finance/fee-category-manager"
+import { FeeTemplatesTab } from "@/components/finance/fee-templates-tab"
 
 interface Session {
   id: string
@@ -219,14 +221,16 @@ export function FeesTab() {
           <TabsTrigger value="by-class">By Class</TabsTrigger>
           <TabsTrigger value="by-category">By Category</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="manage-fees">Manage Fee Categories</TabsTrigger>
         </TabsList>
 
         <TabsContent value="by-class" className="space-y-6 mt-6">
-          {/* Header Controls */}
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="flex gap-3">
+          {/* Top Filters - Clean Design */}
+          <div className="flex flex-col md:flex-row gap-6 md:items-end">
+            <div className="space-y-1.5 flex-1 min-w-[200px] max-w-[250px]">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Academic Session</label>
               <Select value={selectedSession} onValueChange={setSelectedSession}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full bg-background border-input shadow-sm h-10">
                   <SelectValue placeholder="Select session" />
                 </SelectTrigger>
                 <SelectContent>
@@ -237,9 +241,12 @@ export function FeesTab() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
 
+            <div className="space-y-1.5 flex-1 min-w-[200px] max-w-[250px]">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Term</label>
               <Select value={selectedTerm} onValueChange={setSelectedTerm}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full bg-background border-input shadow-sm h-10">
                   <SelectValue placeholder="Select term" />
                 </SelectTrigger>
                 <SelectContent>
@@ -251,184 +258,196 @@ export function FeesTab() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
 
-            <div className="flex gap-2">
-              <Button
-                onClick={() => {
-                  setEditingFee(null)
-                  setFeeModalOpen(true)
-                }}
-                className="gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Add Fee
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setPreviewModalOpen(true)}
-                className="gap-2"
-              >
-                <Eye className="h-4 w-4" />
-                Preview Impact
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setBulkGenerateOpen(true)}
-                className="gap-2"
-              >
-                <RotateCw className="h-4 w-4" />
-                Generate Invoices
-              </Button>
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+            {/* Left Sidebar - Class Selection */}
+            <div className="md:col-span-3 lg:col-span-3 space-y-4">
+              <div className="font-medium text-sm flex items-center justify-between">
+                <span>Classes</span>
+                <span className="text-xs text-muted-foreground">{classes.length} found</span>
+              </div>
+
+              <div className="space-y-1 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                {classes.map(cls => (
+                  <button
+                    key={cls.id}
+                    onClick={() => setSelectedClass(cls.id)}
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm transition-all flex items-center justify-between group ${selectedClass === cls.id
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                      }`}
+                  >
+                    <span className="truncate font-medium">{cls.name}</span>
+                    {cls.section?.name && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded border ${selectedClass === cls.id
+                        ? "border-primary-foreground/30 bg-primary-foreground/10"
+                        : "border-border bg-muted/50"
+                        }`}>
+                        {cls.section.name}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Right Content - Fee Table */}
+            <div className="md:col-span-9 lg:col-span-9 space-y-6">
+              <Card className="border-none shadow-none bg-transparent">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                  <div>
+                    <h2 className="text-lg font-semibold tracking-tight">
+                      {currentClass ? currentClass.name : "Select a Class"}
+                      {currentClass?.section?.name && <span className="text-muted-foreground font-normal ml-2 text-base">{currentClass.section.name}</span>}
+                    </h2>
+                    <p className="text-sm text-muted-foreground">Manage fee structure and amounts</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                    <Button
+                      variant="outline"
+                      onClick={() => setPreviewModalOpen(true)}
+                      className="gap-2 h-9 text-xs"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      Preview
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setBulkGenerateOpen(true)}
+                      className="gap-2 h-9 text-xs"
+                    >
+                      <RotateCw className="h-3.5 w-3.5" />
+                      Generate
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setEditingFee(null)
+                        setFeeModalOpen(true)
+                      }}
+                      className="gap-2 h-9 text-xs"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Add Fee
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="rounded-md border bg-card">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50 hover:bg-muted/50">
+                        <TableHead>Category</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead>Due Date</TableHead>
+                        <TableHead>Gender</TableHead>
+                        <TableHead>Recurrence</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {loading ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                            Loading fee structures...
+                          </TableCell>
+                        </TableRow>
+                      ) : feeStructures.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                            No fee structures found for this class.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        feeStructures.map(fee => (
+                          <TableRow key={fee.id} className={!fee.active ? "opacity-60 bg-muted/20" : ""}>
+                            <TableCell className="font-medium">
+                              {fee.fee_categories?.name}
+                            </TableCell>
+                            <TableCell className="text-right font-bold font-mono text-muted-foreground">
+                              ₦{Number(fee.amount).toLocaleString()}
+                            </TableCell>
+                            <TableCell>
+                              {fee.due_date
+                                ? new Date(fee.due_date).toLocaleDateString("en-GB", {
+                                  day: "numeric",
+                                  month: "short",
+                                })
+                                : <span className="text-muted-foreground">-</span>}
+                            </TableCell>
+                            <TableCell>
+                              {fee.gender_specific ? (
+                                <Badge variant="outline" className="text-[10px] py-0 h-5">
+                                  {fee.gender_specific}
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">All</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {fee.fee_categories?.is_recurring && (
+                                <div className="flex items-center gap-1.5 text-blue-600">
+                                  <RotateCw className="h-3.5 w-3.5" />
+                                  <span className="text-xs">Recurring</span>
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={fee.active ? "secondary" : "outline"}
+                                className={`text-[10px] h-5 ${fee.active ? "bg-green-100 text-green-700 hover:bg-green-100 hover:text-green-700 border-green-200" : "text-muted-foreground"}`}
+                              >
+                                {fee.active ? "Active" : "Inactive"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => {
+                                    setEditingFee(fee)
+                                    setFeeModalOpen(true)
+                                  }}
+                                >
+                                  <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => handleToggleActive(fee)}
+                                  title={fee.active ? "Deactivate" : "Activate"}
+                                >
+                                  {fee.active ? (
+                                    <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                                  ) : (
+                                    <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
+                                  )}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 hover:text-destructive"
+                                  onClick={() => handleDeleteFee(fee.id)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
             </div>
           </div>
-
-          {/* Class Selector Chips */}
-          <div className="flex flex-wrap gap-2">
-            {classes.map(cls => (
-              <button
-                key={cls.id}
-                onClick={() => setSelectedClass(cls.id)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  selectedClass === cls.id
-                    ? "bg-blue-600 text-white"
-                    : "bg-muted hover:bg-muted/80 text-foreground"
-                }`}
-              >
-                {cls.name} {cls.section?.name ? `- ${cls.section.name}` : ""}
-              </button>
-            ))}
-          </div>
-
-          {/* Fee Structures Table */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle>
-                {currentClass
-                  ? `Fee Structures - ${currentClass.name}${
-                      currentClass.section?.name ? ` - ${currentClass.section.name}` : ""
-                    }`
-                  : "Fee Structures"}
-              </CardTitle>
-              <Button
-                onClick={() => {
-                  setEditingFee(null)
-                  setFeeModalOpen(true)
-                }}
-                className="gap-2"
-                size="sm"
-              >
-                <Plus className="h-4 w-4" />
-                Add Fee
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  Loading fee structures...
-                </div>
-              ) : feeStructures.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No fee structures found. Add one to get started.
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Category</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead>Due Date</TableHead>
-                      <TableHead>Gender</TableHead>
-                      <TableHead>Recurrence</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {feeStructures.map(fee => (
-                      <TableRow key={fee.id} className={!fee.active ? "opacity-50" : ""}>
-                        <TableCell className="font-medium">
-                          {fee.fee_categories?.name}
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">
-                          ₦{Number(fee.amount).toLocaleString()}
-                        </TableCell>
-                        <TableCell>
-                          {fee.due_date
-                            ? new Date(fee.due_date).toLocaleDateString("en-GB", {
-                                day: "numeric",
-                                month: "short",
-                                year: "numeric",
-                              })
-                            : "–"}
-                        </TableCell>
-                        <TableCell>
-                          {fee.gender_specific ? (
-                            <Badge variant="outline" className="text-xs">
-                              {fee.gender_specific}
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-xs">
-                              Both
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {fee.fee_categories?.is_recurring && (
-                            <RotateCw className="h-4 w-4 text-blue-600" />
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={fee.active ? "default" : "secondary"}
-                            className="text-xs"
-                          >
-                            {fee.active ? "Active" : "Inactive"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={() => {
-                                setEditingFee(fee)
-                                setFeeModalOpen(true)
-                              }}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={() => handleToggleActive(fee)}
-                              title={fee.active ? "Deactivate" : "Activate"}
-                            >
-                              {fee.active ? (
-                                <Eye className="h-4 w-4" />
-                              ) : (
-                                <EyeOff className="h-4 w-4 text-muted-foreground" />
-                              )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                              onClick={() => handleDeleteFee(fee.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
         </TabsContent>
+
 
         <TabsContent value="by-category">
           <Card>
@@ -438,12 +457,12 @@ export function FeesTab() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="templates">
-          <Card>
-            <CardContent className="py-12">
-              <p className="text-center text-muted-foreground">Coming soon...</p>
-            </CardContent>
-          </Card>
+        <TabsContent value="templates" className="mt-6">
+          <FeeTemplatesTab />
+        </TabsContent>
+
+        <TabsContent value="manage-fees" className="mt-6">
+          <FeeCategoryManager />
         </TabsContent>
       </Tabs>
 

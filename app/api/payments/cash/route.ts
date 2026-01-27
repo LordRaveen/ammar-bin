@@ -10,6 +10,12 @@ export async function POST(request: Request) {
       items,
       total_discount = 0,
       total_waiver = 0,
+      // POS specific fields
+      reference,
+      bank_name,
+      card_last_4,
+      terminal_id,
+      payment_date,
     } = body
 
     // Validate input
@@ -41,9 +47,25 @@ export async function POST(request: Request) {
       return Response.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Check for duplicate POS reference if applicable
+    if (payment_method === 'pos' && reference) {
+      const { data: existingPayment } = await supabase
+        .from("payments")
+        .select("id")
+        .eq("reference_number", reference)
+        .maybeSingle()
+
+      if (existingPayment) {
+        return Response.json(
+          { error: "This POS reference has already been used." },
+          { status: 409 }
+        )
+      }
+    }
+
     // Start transaction - fetch all data first for validation
     console.log("[v0] Fetching invoice items with IDs:", items.map((i) => i.invoice_item_id))
-    
+
     const { data: invoiceItems, error: itemsError } = await supabase
       .from("invoice_items")
       .select(
@@ -108,13 +130,23 @@ export async function POST(request: Request) {
     const totalAmount = items.reduce((sum, item) => sum + item.amount, 0)
 
     // Generate reference and receipt numbers
-    const refNumber = `PAY-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${nanoid(4).toUpperCase()}`
+    // Generate reference and receipt numbers
+    let refNumber: string = reference || `PAY-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${nanoid(4).toUpperCase()}`
     const receiptNumber = `RCP-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${nanoid(6).toUpperCase()}`
+
+    const paymentDateObj = payment_date ? new Date(payment_date) : new Date()
+    const paymentDateStr = paymentDateObj.toISOString().split('T')[0]
+
+    const metadata = payment_method === 'pos' ? {
+      bank_name,
+      card_last_4,
+      terminal_id
+    } : {}
 
     // Create payment record
     const invoiceData = invoiceItems[0]?.invoices as any
     const studentId = invoiceData?.student_id
-    
+
     if (!studentId) {
       console.error("[v0] Student ID not found in invoice items")
       return Response.json({ error: "Could not determine student from invoices" }, { status: 400 })
@@ -136,22 +168,23 @@ export async function POST(request: Request) {
       .from("payments")
       .insert({
         reference_number: refNumber,
-        receipt_number: receiptNumber,
+        receipt_number: receiptNumber, // Receipts might be auto-generated or not needed for POS if reference is used? But let's keep it.
         amount: totalAmount,
-        payment_method: "cash",
+        payment_method: payment_method,
         status: "completed",
-        paid_at: new Date().toISOString(),
+        paid_at: paymentDateObj.toISOString(),
         student_id: studentId,
         received_by: teacherData.id,
-        payment_date: new Date().toISOString().split('T')[0],
+        payment_date: paymentDateStr,
         remarks: total_discount > 0 || total_waiver > 0 ? `Discount: ₦${total_discount}, Waiver: ₦${total_waiver}` : null,
+        metadata: metadata,
       })
       .select()
       .single()
 
     if (paymentError) {
       console.error("[v0] Error creating payment:", paymentError)
-      console.error("[v0] Payment data:", { 
+      console.error("[v0] Payment data:", {
         reference_number: refNumber,
         amount: totalAmount,
         payment_method: "cash",
@@ -233,7 +266,7 @@ export async function POST(request: Request) {
     for (const [invoiceId, invoiceEntry] of invoiceMap.entries()) {
       const invoice = invoiceEntry.invoice
       const newBalance = Math.max(0, (invoice?.balance || 0) - invoiceEntry.paidAmount)
-      
+
       // Check if all items in this invoice are fully paid
       const invoiceItems_list = invoiceItems.filter((ii) => ii.invoice_id === invoiceId)
       const allItemsPaid = invoiceItems_list.every((item) => {
@@ -241,7 +274,7 @@ export async function POST(request: Request) {
         if (!paymentItem) return item.status === "Paid" // Item wasn't touched, check current status
         return item.amount === paymentItem.amount // All of this item's amount is being paid
       })
-      
+
       let newStatus: "Paid" | "Partial" | "Unpaid"
 
       if (newBalance === 0) {
