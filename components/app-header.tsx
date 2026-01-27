@@ -16,6 +16,7 @@ import { usePathname } from "next/navigation"
 import { useTheme } from "next-themes"
 import React from "react"
 import { NotificationsPopover } from "@/components/notifications-popover"
+import { CommandMenu } from "@/components/command-menu"
 
 function generateBreadcrumbs(pathname: string) {
   const segments = pathname.split("/").filter(Boolean)
@@ -52,7 +53,7 @@ export function AppHeader() {
 
       <Separator orientation="vertical" className="mr-2 h-4" />
 
-      <Breadcrumb>
+      <Breadcrumb className="hidden md:block">
         <BreadcrumbList>
           {breadcrumbs.map((crumb, index) => (
             <React.Fragment key={crumb.path}>
@@ -68,6 +69,10 @@ export function AppHeader() {
           ))}
         </BreadcrumbList>
       </Breadcrumb>
+
+      <div className="flex-1 flex justify-center px-4">
+        <CommandMenu />
+      </div>
 
       <div className="ml-auto flex items-center gap-2">
         {/* Theme Toggle */}

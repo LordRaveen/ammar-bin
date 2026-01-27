@@ -100,7 +100,15 @@ export function DebtorList({ onSelectStudent }: DebtorListProps) {
         <Card className="h-full border-none shadow-none">
             <CardContent className="px-0 space-y-2 pt-0">
                 {debtors.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">No matching debtors found</p>
+                    <div className="flex flex-col items-center justify-center py-12 px-4 border-2 border-dashed rounded-xl border-muted-foreground/10 bg-muted/5">
+                        <div className="h-12 w-12 rounded-full bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center mb-4 text-emerald-600">
+                            <ArrowRight className="h-6 w-6 -rotate-45" />
+                        </div>
+                        <h4 className="text-sm font-semibold mb-1">All clear!</h4>
+                        <p className="text-xs text-muted-foreground text-center max-w-[200px]">
+                            No outstanding invoices found. All student accounts are up to date.
+                        </p>
+                    </div>
                 ) : (
                     debtors.map((debtor) => (
                         <div

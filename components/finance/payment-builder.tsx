@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { ChevronDown, InboxIcon } from "lucide-react"
 import { CashPaymentConfirmModal } from "./cash-payment-confirm-modal"
+import { PosPaymentModal } from "./pos-payment-modal"
 import { useToast } from "@/hooks/use-toast"
 
 interface InvoiceItem {
@@ -23,7 +24,7 @@ interface InvoiceItem {
 interface PaymentBuilderProps {
   selectedFamily: any
   selectedItems: InvoiceItem[]
-  userRole?: "admin" | "parent" | "accountant"
+  userRole?: "admin" | "parent" | "accountant" | "super_admin"
   onPaymentSuccess?: () => void
 }
 
@@ -52,6 +53,7 @@ export function PaymentBuilder({
     new Set(selectedItems.map((item) => item.studentId))
   )
   const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [showPosModal, setShowPosModal] = useState(false)
   const { toast } = useToast()
 
   // Group items by student
@@ -172,24 +174,40 @@ export function PaymentBuilder({
   const handleConfirmPayment = () => {
     // Validation
     if (selectedItems.length === 0) {
-      toast.error("No items selected")
+      toast({
+        variant: "destructive",
+        title: "No items selected",
+        description: "Please select at least one item to pay for."
+      })
       return
     }
 
     if (totals.total === 0) {
-      toast.error("Total amount must be greater than 0")
+      toast({
+        variant: "destructive",
+        title: "Invalid Amount",
+        description: "Total amount must be greater than 0"
+      })
       return
     }
 
     // Check that at least one item has an amount
     const hasAmount = Object.values(paymentAmounts).some((pa) => pa.amount > 0)
     if (!hasAmount) {
-      toast.error("Please enter an amount for at least one item")
+      toast({
+        variant: "destructive",
+        title: "Missing Amount",
+        description: "Please enter an amount for at least one item"
+      })
       return
     }
 
     // Show confirmation modal
-    setShowConfirmModal(true)
+    if (paymentMethod === "pos") {
+      setShowPosModal(true)
+    } else {
+      setShowConfirmModal(true)
+    }
   }
 
   const handlePaymentSuccess = () => {
@@ -198,8 +216,10 @@ export function PaymentBuilder({
     setGlobalDiscount(0)
     setGlobalDiscountReason("")
     setPaymentMethod("cash")
+    setPaymentMethod("cash")
     setShowConfirmModal(false)
-    
+    setShowPosModal(false)
+
     // Call the callback to refresh data
     onPaymentSuccess?.()
   }
@@ -392,7 +412,7 @@ export function PaymentBuilder({
         <Separator />
         <div className="flex items-center justify-between text-base font-semibold font mono">
           <span>Total to pay</span>
-          <span classNAme="font-mono">₦{totals.total.toLocaleString()}</span>
+          <span className="font-mono">₦{totals.total.toLocaleString()}</span>
         </div>
       </div>
 
@@ -427,15 +447,15 @@ export function PaymentBuilder({
         </div>
       </div>
 
-      {/* Confirm Button */}
-      <Button 
+  /* Confirm Button */
+      <Button
         onClick={handleConfirmPayment}
         className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold h-10"
       >
         Confirm & Collect Payment
       </Button>
 
-      {/* Confirmation Modal */}
+      {/* Cash Confirmation Modal */}
       {showConfirmModal && (
         <CashPaymentConfirmModal
           open={showConfirmModal}
@@ -458,6 +478,30 @@ export function PaymentBuilder({
           onConfirm={handlePaymentSuccess}
         />
       )}
+
+      {/* POS Payment Modal */}
+      {showPosModal && (
+        <PosPaymentModal
+          open={showPosModal}
+          onOpenChange={setShowPosModal}
+          items={selectedItems.map((item) => ({
+            id: item.id,
+            studentName: item.studentName,
+            description: item.description,
+            amount: paymentAmounts[item.id]?.amount || item.balance,
+            originalAmount: item.balance,
+            discount: paymentAmounts[item.id]?.discount || 0,
+            waiver: paymentAmounts[item.id]?.waiver || 0,
+          }))}
+          subtotal={totals.subtotal}
+          totalDiscount={totals.discount}
+          totalWaiver={totals.waiver}
+          totalToPay={totals.total}
+          guardianId={selectedFamily?.id || ""}
+          onConfirm={handlePaymentSuccess}
+        />
+      )}
     </div>
   )
 }
+

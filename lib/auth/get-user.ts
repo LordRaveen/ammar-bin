@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { devLog } from "@/lib/logger"
 import type { UserRole } from "@/lib/types/database"
+import { redirect } from "next/navigation"
 
 export interface AuthUser {
   id: string
@@ -91,7 +92,7 @@ export async function isAccountant(): Promise<boolean> {
 export async function requireAuth(): Promise<AuthUser> {
   const user = await getUser()
   if (!user) {
-    throw new Error("Unauthorized")
+    redirect("/auth/signin")
   }
   return user
 }
@@ -102,7 +103,7 @@ export async function requireAuth(): Promise<AuthUser> {
 export async function requireAdmin(): Promise<AuthUser> {
   const user = await requireAuth()
   if (!["super_admin", "admin"].includes(user.role)) {
-    throw new Error("Forbidden: Admin access required")
+    redirect("/dashboard")
   }
   return user
 }

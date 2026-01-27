@@ -34,7 +34,7 @@ interface PaymentDetailsSheetProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onReversed?: () => void
-  userRole?: "admin" | "accountant" | "parent"
+  userRole?: "admin" | "accountant" | "parent" | "super_admin"
 }
 
 export function PaymentDetailsSheet({
