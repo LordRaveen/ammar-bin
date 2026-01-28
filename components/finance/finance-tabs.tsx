@@ -47,6 +47,8 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 
+import { createBrowserClient } from "@/lib/supabase/client"
+
 interface FinanceTabsProps {
     initialInvoices: any[]
     initialPayments: any[]
@@ -59,8 +61,57 @@ export function FinanceTabs({
     userRole = "admin"
 }: FinanceTabsProps) {
     const [activeTab, setActiveTab] = useState("overview")
+    const [invoices, setInvoices] = useState(initialInvoices)
+    const [payments, setPayments] = useState(initialPayments)
+    const [loading, setLoading] = useState(false)
+    const supabase = createBrowserClient()
     const searchParams = useSearchParams()
     const tabParam = searchParams.get("tab")
+
+    const refreshData = async () => {
+        // We only refresh if we're on the overview tab to save resources, 
+        // OR we can refresh always to keep all tabs in sync.
+        // Let's refresh always for a 'fast and efficient' experience.
+        const [
+            { data: newInvoices },
+            { data: newPayments }
+        ] = await Promise.all([
+            supabase
+                .from("invoices")
+                .select(`
+                    *,
+                    students (
+                        first_name,
+                        last_name,
+                        student_id,
+                        student_enrollments (
+                            is_active,
+                            class:classes (name)
+                        )
+                    )
+                `)
+                .is("deleted_at", null)
+                .order("created_at", { ascending: false })
+                .limit(200),
+            supabase
+                .from("payments")
+                .select(`
+                    *,
+                    payment_allocations (
+                        amount,
+                        students (
+                            first_name,
+                            last_name
+                        )
+                    )
+                `)
+                .order("payment_date", { ascending: false })
+                .limit(100)
+        ])
+
+        if (newInvoices) setInvoices(newInvoices)
+        if (newPayments) setPayments(newPayments)
+    }
 
     useEffect(() => {
         if (tabParam) {
@@ -68,22 +119,42 @@ export function FinanceTabs({
         }
     }, [tabParam])
 
+    useEffect(() => {
+        // Subscribe to real-time changes
+        const paymentsChannel = supabase
+            .channel('finance-payments-all')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, () => refreshData())
+            .subscribe()
+
+        const invoicesChannel = supabase
+            .channel('finance-invoices-all')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, () => refreshData())
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(paymentsChannel)
+            supabase.removeChannel(invoicesChannel)
+        }
+    }, [])
+
     const [selectedStudentForPayment, setSelectedStudentForPayment] = useState<string | null>(null)
     const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<string | null>(null)
     const [studentsDebtorsOnly, setStudentsDebtorsOnly] = useState(false)
 
-    // Calculate stats for Overview
-    const totalCollected = initialPayments.reduce((sum, p) => sum + Number.parseFloat(p.amount || 0), 0) || 0
-    const totalPending = initialInvoices.reduce((sum, i) => sum + Number.parseFloat(i.balance || 0), 0) || 0
-    const paidInvoicesCount = initialInvoices.filter((i) => i.status?.toLowerCase() === "paid").length || 0
-    const collectionRate = initialInvoices.length ? Math.round((paidInvoicesCount / initialInvoices.length) * 100) : 0
+    // Calculate stats for Overview (Filtering for SUCCESSFUL payments)
+    const completedPayments = payments.filter(p => p.status?.toLowerCase() === 'completed' || p.status?.toLowerCase() === 'success')
+
+    const totalCollected = completedPayments.reduce((sum, p) => sum + Number.parseFloat(p.amount || 0), 0) || 0
+    const totalPending = invoices.reduce((sum, i) => sum + Number.parseFloat(i.balance || 0), 0) || 0
+    const paidInvoicesCount = invoices.filter((i) => i.status?.toLowerCase() === "paid").length || 0
+    const collectionRate = invoices.length ? Math.round((paidInvoicesCount / invoices.length) * 100) : 0
 
     // Get today's date in YYYY-MM-DD format based on local time
     const now = new Date()
     const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
-    const todayInvoices = initialInvoices.filter((i) => i.created_at?.startsWith(todayStr)).length || 0
-    const todayRevenue = initialPayments
+    const todayInvoices = invoices.filter((i) => i.created_at?.startsWith(todayStr)).length || 0
+    const todayRevenue = completedPayments
         .filter((p) => (p.payment_date || p.created_at)?.startsWith(todayStr))
         .reduce((sum, p) => sum + Number.parseFloat(p.amount || 0), 0) || 0
 
@@ -92,7 +163,7 @@ export function FinanceTabs({
         const d = new Date()
         d.setDate(d.getDate() - (6 - i))
         const dStr = d.toISOString().split("T")[0]
-        const amount = initialPayments
+        const amount = completedPayments
             .filter(p => (p.payment_date || p.created_at)?.startsWith(dStr))
             .reduce((sum, p) => sum + Number.parseFloat(p.amount || 0), 0)
 
@@ -105,7 +176,7 @@ export function FinanceTabs({
     // Payment Method Distribution
     const methods = ["cash", "pos", "transfer", "online"]
     const methodData = methods.map(method => {
-        const total = initialPayments
+        const total = completedPayments
             .filter(p => p.payment_method?.toLowerCase() === method)
             .reduce((sum, p) => sum + Number.parseFloat(p.amount || 0), 0)
         return { name: method.charAt(0).toUpperCase() + method.slice(1), value: total }
@@ -129,17 +200,19 @@ export function FinanceTabs({
     }
 
     return (
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full py-3">
-            <TabsList className="grid w-full max-w-full grid-cols-8 lg:max-w-6xl">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="fees">Fees</TabsTrigger>
-                <TabsTrigger value="invoices">Invoices</TabsTrigger>
-                <TabsTrigger value="collect">Collect payment</TabsTrigger>
-                <TabsTrigger value="students">Students</TabsTrigger>
-                <TabsTrigger value="payments">Payments</TabsTrigger>
-                <TabsTrigger value="reversals">Reversals</TabsTrigger>
-                <TabsTrigger value="report">Report</TabsTrigger>
-            </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <div className="sticky top-16 z-40 w-full py-3 bg-background/80 backdrop-blur-md border-b -mx-4 px-4 sm:mx-0 sm:px-0">
+                <TabsList className="w-full h-auto flex flex-nowrap overflow-x-auto justify-start lg:grid lg:grid-cols-8 gap-1 p-1 bg-muted/50 no-scrollbar">
+                    <TabsTrigger value="overview" className="flex-shrink-0 text-xs px-3 py-1.5 lg:px-2">Overview</TabsTrigger>
+                    <TabsTrigger value="fees" className="flex-shrink-0 text-xs px-3 py-1.5 lg:px-2">Fees</TabsTrigger>
+                    <TabsTrigger value="invoices" className="flex-shrink-0 text-xs px-3 py-1.5 lg:px-2">Invoices</TabsTrigger>
+                    <TabsTrigger value="collect" className="flex-shrink-0 text-xs px-3 py-1.5 lg:px-2">Collect payment</TabsTrigger>
+                    <TabsTrigger value="students" className="flex-shrink-0 text-xs px-3 py-1.5 lg:px-2">Students</TabsTrigger>
+                    <TabsTrigger value="payments" className="flex-shrink-0 text-xs px-3 py-1.5 lg:px-2">Payments</TabsTrigger>
+                    <TabsTrigger value="reversals" className="flex-shrink-0 text-xs px-3 py-1.5 lg:px-2">Reversals</TabsTrigger>
+                    <TabsTrigger value="report" className="flex-shrink-0 text-xs px-3 py-1.5 lg:px-2">Report</TabsTrigger>
+                </TabsList>
+            </div>
 
             <TabsContent value="overview" className="space-y-6 pt-4">
                 {/* KPI Cards */}
@@ -321,11 +394,11 @@ export function FinanceTabs({
                             </Button>
                         </CardHeader>
                         <CardContent className="p-0">
-                            {!initialPayments || initialPayments.length === 0 ? (
+                            {completedPayments.length === 0 ? (
                                 <div className="p-12 text-center text-muted-foreground text-sm">No recent payments</div>
                             ) : (
                                 <div className="divide-y divide-border">
-                                    {initialPayments.slice(0, 5).map((payment: any) => {
+                                    {completedPayments.slice(0, 5).map((payment: any) => {
                                         const studentName = payment.payment_allocations?.[0]?.students
                                             ? `${payment.payment_allocations[0].students.first_name} ${payment.payment_allocations[0].students.last_name}`
                                             : "Direct Collection";
@@ -339,7 +412,7 @@ export function FinanceTabs({
                                                         </AvatarFallback>
                                                     </Avatar>
                                                     <div className="min-w-0">
-                                                        <p className="text-xs font-semibold truncate max-w-[140px]">{studentName}</p>
+                                                        <p className="text-xs font-semibold truncate max-w-[140px] text-zinc-900">{studentName}</p>
                                                         <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mt-0.5">
                                                             <span className="flex items-center gap-0.5">
                                                                 {getPaymentMethodIcon(payment.payment_method)}
@@ -352,7 +425,15 @@ export function FinanceTabs({
                                                 </div>
                                                 <div className="text-right flex flex-col items-end">
                                                     <p className="text-xs font-bold text-emerald-600">₦{Number.parseFloat(payment.amount).toLocaleString()}</p>
-                                                    <Badge variant="outline" className="h-3 text-[8px] px-1 font-bold border-emerald-200 text-emerald-700 bg-emerald-50">SUCCESS</Badge>
+                                                    <Badge
+                                                        variant="outline"
+                                                        className={`h-3 text-[8px] px-1 font-bold capitalize ${payment.status?.toLowerCase() === 'completed' || payment.status?.toLowerCase() === 'success'
+                                                            ? 'border-emerald-200 text-emerald-700 bg-emerald-50'
+                                                            : 'border-yellow-200 text-yellow-700 bg-yellow-50'
+                                                            }`}
+                                                    >
+                                                        {payment.status || 'SUCCESS'}
+                                                    </Badge>
                                                 </div>
                                             </div>
                                         );
@@ -377,11 +458,11 @@ export function FinanceTabs({
                             </Button>
                         </CardHeader>
                         <CardContent className="p-0">
-                            {initialInvoices?.filter((i: any) => i.status === "Pending" && new Date(i.due_date) < new Date()).length === 0 ? (
+                            {invoices?.filter((i: any) => i.status === "Pending" && new Date(i.due_date) < new Date()).length === 0 ? (
                                 <div className="p-12 text-center text-muted-foreground text-sm">No priority invoices</div>
                             ) : (
                                 <div className="divide-y divide-border">
-                                    {initialInvoices
+                                    {invoices
                                         ?.filter((i: any) => i.status === "Pending" && new Date(i.due_date) < new Date())
                                         .slice(0, 5)
                                         .map((invoice: any) => (
@@ -456,8 +537,8 @@ export function FinanceTabs({
 
             <TabsContent value="report">
                 <ReportsTab
-                    invoices={initialInvoices}
-                    payments={initialPayments}
+                    invoices={invoices}
+                    payments={payments}
                 />
             </TabsContent>
         </Tabs>

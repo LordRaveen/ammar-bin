@@ -32,6 +32,7 @@ interface PaymentsTableProps {
     search?: string
     dateFrom?: string
     dateTo?: string
+    showDrafts?: boolean
   }
 }
 
@@ -81,6 +82,24 @@ export function PaymentsTable({ onSelectPayment, filters }: PaymentsTableProps) 
         // Apply status filter
         if (filters.status && filters.status !== "all") {
           query = query.ilike("status", filters.status)
+        }
+
+        // Hide online drafts by default
+        if (!filters.showDrafts) {
+          // If status filter is 'pending', we still exclude online drafts specifically
+          // Logic: Exclude (payment_method = 'online' AND status = 'pending')
+          // Using not and and filtering is tricky in Supabase syntax for nested logic, 
+          // but we can use or filtering to select everything ELSE.
+          // Or just use the fact that drafts always have 'pending' status and 'online' method.
+
+          // Actually, the simplest way is to fetch everything and filter out on client if 
+          // complex logic is needed, but let's try to filter on server if possible.
+          // Since we want to exclude a specific combination, we can use a raw filter or a simplified approach.
+
+          // Simplified: If not showing drafts, we only show:
+          // 1. Status is NOT pending
+          // 2. OR Method is NOT online
+          query = query.or(`status.neq.pending,payment_method.neq.online`)
         }
 
         // Apply date range filter
@@ -180,7 +199,7 @@ export function PaymentsTable({ onSelectPayment, filters }: PaymentsTableProps) 
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [filters.method, filters.status, filters.search, filters.dateFrom, filters.dateTo])
+  }, [filters.method, filters.status, filters.search, filters.dateFrom, filters.dateTo, filters.showDrafts])
 
   const getStatusBadgeColor = (status: string) => {
     const statusLower = status?.toLowerCase() || ""

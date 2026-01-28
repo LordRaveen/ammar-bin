@@ -19,6 +19,26 @@ export function RecentCollections({ onViewPayment }: RecentCollectionsProps) {
 
     useEffect(() => {
         fetchRecentPayments()
+
+        // Subscribe to real-time changes
+        const channel = supabase
+            .channel('recent-payments-changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'payments'
+                },
+                () => {
+                    fetchRecentPayments()
+                }
+            )
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
     }, [])
 
     const fetchRecentPayments = async () => {
@@ -31,6 +51,7 @@ export function RecentCollections({ onViewPayment }: RecentCollectionsProps) {
           id,
           amount,
           payment_method,
+          status,
           created_at,
           invoices (
             student:students (
@@ -39,6 +60,7 @@ export function RecentCollections({ onViewPayment }: RecentCollectionsProps) {
             )
           )
         `)
+                .eq("status", "completed")
                 .gte("created_at", `${today}T00:00:00`)
                 .order("created_at", { ascending: false })
                 .limit(10)

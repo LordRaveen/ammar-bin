@@ -258,18 +258,18 @@ export function PaymentDetailsSheet({
         ) : payment ? (
           <div className="space-y-6  mx-4">
             {/* Payment Summary */}
-            <Card className="shadow-none">
+            <Card className="shadow-none gap-0">
               <CardHeader className="py-0">
                 <CardTitle className="text-sm font-medium">Payment Summary</CardTitle>
               </CardHeader>
-              <CardContent className="space-b-3 gap-2">
-                <div className="flex items-center justify-between">
+              <CardContent className="space-b-2 gap-3">
+                <div className="mb-1 flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Amount</span>
-                  <span className="text-lg font-mono text-green-600">
+                  <span className="text-lg font-mono font-bold text-green-600">
                     ₦{Number.parseFloat(payment.amount).toLocaleString()}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="mb-1 flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Method</span>
                   <Badge
                     variant="outline"
@@ -278,13 +278,13 @@ export function PaymentDetailsSheet({
                     {payment.payment_method || "N/A"}
                   </Badge>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="mb-1 flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Status</span>
                   <Badge className={`${getStatusBadgeColor(payment.status)} capitalize`}>
                     {payment.status || "N/A"}
                   </Badge>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="mb-1 flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Date</span>
                   <span className="text-sm">
                     {formatDate(payment.paid_at || payment.payment_date || payment.created_at)}
@@ -318,8 +318,8 @@ export function PaymentDetailsSheet({
             )}
 
             {/* Items Paid / Allocations */}
-            <Card className="shadow-none">
-              <CardHeader className="">
+            <Card className="shadow-none gap-0">
+              <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <FileText className="h-4 w-4" />
                   Items Paid
@@ -403,18 +403,88 @@ export function PaymentDetailsSheet({
               </Card>
             )}
 
-            {/* Collected By */}
-            <Card className="shadow-none ">
-              <CardHeader className="pb-0">
-                <CardTitle className="text-sm font-medium">Collected By</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <p className="font-medium">{getCollectedByName()}</p>
-                <p className="text-xs text-muted-foreground text-mono mt-0">
-                  {formatDate(payment.created_at)}
-                </p>
+            {/* Collected By (Staff/Admin) */}
+            <Card className="shadow-none border-dashed bg-zinc-50/50 dark:bg-zinc-900/50">
+              <CardContent className="pt-1 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                    <User className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Processed By</p>
+                    <p className="text-sm font-medium">{getCollectedByName()}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Created</p>
+                  <p className="text-xs text-muted-foreground font-mono">
+                    {formatDate(payment.created_at)}
+                  </p>
+                </div>
               </CardContent>
             </Card>
+
+            {/* Method Specific Metadata */}
+            {(payment.payment_method === 'pos' || payment.payment_method === 'transfer' || payment.payment_method === 'online') && (
+              <Card className="shadow-none gap-0 border-blue-100 dark:border-blue-900/30 bg-blue-50/20 dark:bg-blue-900/5">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 text-blue-500" />
+                    Transaction Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-0">
+                  {payment.payment_method === 'pos' && (
+                    <>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground">Bank</span>
+                        <span className="font-semibold">{payment.metadata?.bank_name || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground">Card ending in</span>
+                        <span className="font-mono font-bold tracking-widest text-blue-600 italic">**** {payment.metadata?.card_last_4 || '****'}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground">Terminal ID</span>
+                        <span className="font-mono text-xs">{payment.metadata?.terminal_id || 'N/A'}</span>
+                      </div>
+                    </>
+                  )}
+                  {payment.payment_method === 'transfer' && (
+                    <>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground">Sender</span>
+                        <span className="font-semibold">{payment.metadata?.sender_name || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground">Source Bank</span>
+                        <span className="font-semibold">{payment.metadata?.bank_name || 'N/A'}</span>
+                      </div>
+                    </>
+                  )}
+                  {payment.payment_method === 'online' && (
+                    <>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground">Gateway</span>
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border-none capitalize">
+                          {payment.metadata?.gateway || 'N/A'}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground">Gateway Ref</span>
+                        <span className="font-mono text-[10px] break-all max-w-[200px] text-right">{payment.metadata?.gateway_reference || 'N/A'}</span>
+                      </div>
+                      {payment.metadata?.gateway_verified_at && (
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-muted-foreground italic">Auto-verified at</span>
+                          <span className="text-muted-foreground">{new Date(payment.metadata.gateway_verified_at).toLocaleTimeString()}</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Actions */}
             <div className="flex gap-2 py-4">

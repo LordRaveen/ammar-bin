@@ -53,26 +53,30 @@ export async function POST(request: Request) {
         const guardian = primaryLink?.guardian
 
         const email = guardian?.email || "customer@example.com"
-        const name = guardian
+        const name = (guardian
             ? `${guardian.first_name} ${guardian.last_name}`.trim()
-            : `${student.first_name} ${student.last_name}`.trim()
+            : `${student.first_name} ${student.last_name}`.trim()) || "Customer"
 
         const totalAmount = items.reduce((sum: number, item: any) => sum + item.amount, 0)
         const reference = `ONLINE-${Date.now()}-${nanoid(4).toUpperCase()}`
 
         // 2. Create PENDING payment record
+        // Note: payment_method must be 'online' to satisfy DB check constraint
         const { data: payment, error: paymentError } = await supabase
             .from("payments")
             .insert({
                 reference_number: reference,
+                receipt_number: `DRFT-${nanoid(10).toUpperCase()}`,
+                invoice_id: invoice_id,
                 amount: totalAmount,
-                payment_method: payment_method, // Store 'monnify' or 'paystack'
+                payment_method: "online",
                 status: "pending",
                 student_id: student.id,
                 payment_date: new Date().toISOString().split('T')[0],
                 metadata: {
                     items_requested: items,
-                    invoice_id: invoice_id
+                    invoice_id: invoice_id,
+                    gateway: payment_method // monnify or paystack
                 }
             })
             .select()
@@ -83,39 +87,56 @@ export async function POST(request: Request) {
             return Response.json({ error: "Failed to initialize transaction locally" }, { status: 500 })
         }
 
-        // 3. Initialize Gateway
-        const mode = await getPaymentMode()
-        const gateway = getPaymentGateway(payment_method, mode)
-        const initResult = await gateway.initialize({
-            amount: totalAmount,
-            email: email,
-            name: name,
-            reference: reference,
-            metadata: {
-                payment_id: payment.id,
-                invoice_id: invoice_id
-            }
-        })
+        // 3. Optional: Initialize Gateway (if requested or if skipping UI)
+        const skipGatewayInit = body.skipGatewayInit === true
+        let checkoutUrl = ""
+        let gatewayReference = ""
+        let transactionToken = ""
 
-        if (!initResult.success) {
-            // Cleanup the pending payment
-            await supabase.from("payments").delete().eq("id", payment.id)
-            return Response.json({ error: initResult.error || "Gateway initialization failed" }, { status: 502 })
+        if (!skipGatewayInit) {
+            const mode = await getPaymentMode()
+            const gateway = getPaymentGateway(payment_method, mode)
+            const initResult = await gateway.initialize({
+                amount: totalAmount,
+                customerFullName: name,
+                email: email,
+                name: name,
+                currencyCode: "NGN",
+                reference: reference,
+                metadata: {
+                    payment_id: payment.id,
+                    invoice_id: invoice_id
+                }
+            })
+
+            if (!initResult.success) {
+                // Cleanup the pending payment
+                await supabase.from("payments").delete().eq("id", payment.id)
+                return Response.json({ error: initResult.error || "Gateway initialization failed" }, { status: 502 })
+            }
+
+            checkoutUrl = initResult.checkoutUrl || ""
+            gatewayReference = initResult.gatewayReference || ""
+            transactionToken = initResult.transactionToken || ""
+
+            // 4. Update payment with gateway reference
+            await supabase.from("payments").update({
+                metadata: {
+                    ...payment.metadata,
+                    gateway_reference: gatewayReference,
+                    transaction_token: transactionToken
+                }
+            }).eq("id", payment.id)
         }
-
-        // 4. Update payment with gateway reference
-        await supabase.from("payments").update({
-            metadata: {
-                ...payment.metadata,
-                gateway_reference: initResult.gatewayReference,
-                transaction_token: initResult.transactionToken
-            }
-        }).eq("id", payment.id)
 
         return Response.json({
             success: true,
-            checkoutUrl: initResult.checkoutUrl,
-            reference: reference
+            checkoutUrl: checkoutUrl,
+            reference: reference,
+            payment_id: payment.id,
+            customerName: name,
+            customerEmail: email,
+            amount: totalAmount
         })
 
     } catch (error: any) {

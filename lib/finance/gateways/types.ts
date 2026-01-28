@@ -4,6 +4,8 @@ export interface PaymentInitData {
     amount: number;
     email: string;
     name: string;
+    customerFullName?: string;
+    currencyCode?: string;
     reference: string;
     metadata?: any;
 }

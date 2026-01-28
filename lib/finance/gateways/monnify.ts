@@ -3,9 +3,9 @@ import { PaymentGateway, PaymentInitData, PaymentInitResponse, PaymentVerifyResp
 export class MonnifyProvider implements PaymentGateway {
     name: "monnify" = "monnify";
     private mode: "test" | "live";
-    private apiKey = process.env.MONNIFY_API_KEY || "";
-    private secretKey = process.env.MONNIFY_SECRET_KEY || "";
-    private contractCode = process.env.MONNIFY_CONTRACT_CODE || "";
+    private apiKey: string;
+    private secretKey: string;
+    private contractCode: string;
     private baseUrl: string;
 
     constructor(mode: "test" | "live" = "test") {
@@ -13,6 +13,18 @@ export class MonnifyProvider implements PaymentGateway {
         this.baseUrl = mode === "live"
             ? "https://api.monnify.com"
             : "https://sandbox.monnify.com";
+
+        this.apiKey = mode === "live"
+            ? (process.env.MONNIFY_API_KEY || "")
+            : (process.env.MONNIFY_TEST_API_KEY || process.env.MONNIFY_API_KEY || "");
+
+        this.secretKey = mode === "live"
+            ? (process.env.MONNIFY_SECRET_KEY || "")
+            : (process.env.MONNIFY_TEST_SECRET_KEY || process.env.MONNIFY_SECRET_KEY || "");
+
+        this.contractCode = mode === "live"
+            ? (process.env.MONNIFY_CONTRACT_CODE || "")
+            : (process.env.MONNIFY_TEST_CONTRACT_CODE || process.env.MONNIFY_CONTRACT_CODE || "");
     }
 
     private async getAccessToken() {
@@ -46,7 +58,7 @@ export class MonnifyProvider implements PaymentGateway {
                     customerEmail: data.email,
                     paymentReference: data.reference,
                     paymentDescription: `School Fees Payment - ${data.reference}`,
-                    currencyCode: "NGN",
+                    currencyCode: data.currencyCode || "NGN",
                     contractCode: this.contractCode,
                     redirectUrl: `${process.env.NEXT_PUBLIC_APP_URL}/finance/payments/callback?ref=${data.reference}&gateway=monnify`,
                     metadata: data.metadata,

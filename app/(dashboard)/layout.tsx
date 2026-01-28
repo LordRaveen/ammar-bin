@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/app-header"
 import { requireAuth } from "@/lib/auth/get-user"
 import { createServerClient } from "@/lib/supabase/server"
 import { SessionTimeoutWrapper } from "@/components/session-timeout-wrapper"
+import { PrintProvider } from "@/components/finance/print-provider"
 
 export default async function AuthenticatedLayout({
   children,
@@ -56,7 +57,9 @@ export default async function AuthenticatedLayout({
         <AppSidebar user={user} />
         <SidebarInset>
           <AppHeader paymentMode={settings?.payment_mode || "test"} />
-          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
+          <PrintProvider>
+            <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
+          </PrintProvider>
         </SidebarInset>
       </SidebarProvider>
     </SessionTimeoutWrapper>

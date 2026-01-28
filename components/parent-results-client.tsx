@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Download, Printer, Award, TrendingUp, TrendingDown } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { usePrint } from "@/components/finance/print-provider"
 
 interface ParentResultsClientProps {
   children: any[]
@@ -54,8 +55,32 @@ export function ParentResultsClient({
     router.push(`/parent/results?${params.toString()}`)
   }
 
+  const { print } = usePrint()
+
   const handlePrint = () => {
-    window.print()
+    if (!resultData || !scores) return
+
+    print("result", {
+      studentName: `${resultData.students.first_name} ${resultData.students.last_name}`,
+      studentId: resultData.students.student_id,
+      className: `${resultData.classes?.name} (${resultData.classes?.sections?.name || 'A'})`,
+      term: selectedTerm?.name || "Term",
+      session: selectedSession?.name || "Session",
+      average: resultData.average_score || 0,
+      totalScore: resultData.total_score || 0,
+      position: resultData.position || "N/A",
+      subjects: scores.map(s => ({
+        name: s.name,
+        ca: s.ca,
+        exam: s.exam,
+        total: s.total,
+        grade: s.grade,
+        remark: s.remark
+      })),
+      grading: grading || [],
+      teacherRemark: resultData.teacher_remark,
+      principalRemark: resultData.principal_remark
+    })
   }
 
   const handleDownload = () => {

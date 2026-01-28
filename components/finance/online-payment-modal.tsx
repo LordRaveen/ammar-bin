@@ -20,6 +20,7 @@ interface PaymentItem {
     studentName: string
     description: string
     amount: number
+    invoice_id?: string
 }
 
 interface OnlinePaymentModalProps {
@@ -33,7 +34,8 @@ interface OnlinePaymentModalProps {
 
 declare global {
     interface Window {
-        MonnifySDK: any
+        MonnifySDK: any;
+        PaystackPop: any;
     }
 }
 
@@ -46,27 +48,52 @@ export function OnlinePaymentModal({
     onSuccess,
 }: OnlinePaymentModalProps) {
     const [isInitializing, setIsInitializing] = useState(false)
-    const [isScriptLoaded, setIsScriptLoaded] = useState(false)
+    const [isMonnifyLoaded, setIsMonnifyLoaded] = useState(false)
+    const [isPaystackLoaded, setIsPaystackLoaded] = useState(false)
+    const [selectedGateway, setSelectedGateway] = useState<"paystack" | "monnify">("paystack")
 
-    // Load Monnify SDK Script
+    // Load Checkout Scripts
     useEffect(() => {
-        if (typeof window !== "undefined" && !window.MonnifySDK) {
+        if (typeof window === "undefined") return;
+
+        // Monnify SDK
+        if (!window.MonnifySDK) {
             const script = document.createElement("script")
-            script.src = "https://sdk.monnify.com/v1/sdk.js"
+            script.src = "https://sdk.monnify.com/plugin/monnify.js"
             script.async = true
-            script.onload = () => {
-                console.log("Monnify SDK Loaded")
-                setIsScriptLoaded(true)
-            }
-            script.onerror = () => {
-                console.error("Monnify SDK Failed to load")
-                // Keep isScriptLoaded false, but button remains enabled for fallback
-            }
+            script.onload = () => setIsMonnifyLoaded(true)
             document.body.appendChild(script)
-        } else if (window.MonnifySDK) {
-            setIsScriptLoaded(true)
+        } else {
+            setIsMonnifyLoaded(true)
+        }
+
+        // Paystack SDK
+        if (!window.PaystackPop) {
+            const script = document.createElement("script")
+            script.src = "https://js.paystack.co/v1/inline.js"
+            script.async = true
+            script.onload = () => setIsPaystackLoaded(true)
+            document.body.appendChild(script)
+        } else {
+            setIsPaystackLoaded(true)
         }
     }, [])
+
+    const verifyPayment = async (reference: string, gateway: string) => {
+        try {
+            const response = await fetch("/api/payments/online/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reference, payment_method: gateway }),
+            })
+            const result = await response.json()
+            if (!response.ok) throw new Error(result.error || "Verification failed")
+            return result
+        } catch (error: any) {
+            console.error("Verification Error:", error)
+            throw error
+        }
+    }
 
     const handleStartPayment = async () => {
         if (!guardianId) {
@@ -75,15 +102,16 @@ export function OnlinePaymentModal({
         }
 
         setIsInitializing(true)
-        console.log("[OnlinePayment] Initializing for items:", items);
+        console.log("[OnlinePayment] Initializing for items:", items, "Gateway:", selectedGateway);
         try {
-            // 1. Initialize on our backend
+            // 1. Step 1: Initialize Locally (Fast, always done) 
             const response = await fetch("/api/payments/online/initialize", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    invoice_id: (items[0] as any).invoice_id || "", // We should pass invoice_id from props if available
-                    payment_method: "monnify",
+                    invoice_id: items[0]?.invoice_id || "",
+                    payment_method: selectedGateway,
+                    skipGatewayInit: true, // Don't wait for server-to-server init yet
                     items: items.map(item => ({
                         invoice_item_id: item.id,
                         amount: item.amount
@@ -92,40 +120,107 @@ export function OnlinePaymentModal({
             })
 
             const data = await response.json()
-            if (!response.ok) throw new Error(data.error || "Initialization failed")
+            if (!response.ok) throw new Error(data.error || "Local initialization failed")
 
-            // 2. Open Monnify Inline Plugin
-            if (window.MonnifySDK) {
+            // 2. Step 2: Gateway Logic
+            if (selectedGateway === "monnify" && window.MonnifySDK) {
                 window.MonnifySDK.initialize({
-                    amount: totalToPay,
-                    currency: "NGN",
+                    amount: data.amount,
+                    currencyCode: "NGN",
                     reference: data.reference,
-                    customerName: "Parent/Guardian", // Should ideally fetch name
-                    customerEmail: "parent@example.com", // Should ideally fetch email
+                    customerFullName: data.customerName || "Customer",
+                    customerEmail: data.customerEmail || "customer@example.com",
                     apiKey: process.env.NEXT_PUBLIC_MONNIFY_API_KEY,
                     contractCode: process.env.NEXT_PUBLIC_MONNIFY_CONTRACT_CODE,
                     paymentDescription: "School Fees Payment",
                     metadata: {
                         payment_id: data.payment_id,
-                        guardian_id: guardianId
+                        guardian_id: guardianId,
+                        invoice_id: items[0]?.invoice_id
                     },
-                    onComplete: function (response: any) {
-                        console.log("Monnify Response:", response);
-                        if (response.status === "SUCCESS") {
-                            toast.success("Payment successful!")
-                            onSuccess()
-                            onOpenChange(false)
+                    onComplete: function (monnifyResponse: any) {
+                        if (monnifyResponse.paymentStatus === "PAID" || monnifyResponse.status === "SUCCESS") {
+                            toast.loading("Verifying payment...", { id: "verify-payment" })
+                            verifyPayment(data.reference, "monnify")
+                                .then(() => {
+                                    toast.success("Payment verified and recorded!", { id: "verify-payment" })
+                                    onSuccess()
+                                    onOpenChange(false)
+                                })
+                                .catch((err: any) => {
+                                    toast.error("Payment successful but recording failed. Please contact admin.", {
+                                        id: "verify-payment",
+                                        description: err.message
+                                    })
+                                })
+                                .finally(() => {
+                                    setIsInitializing(false)
+                                })
                         } else {
-                            toast.error("Payment was not successful")
+                            toast.error(`Payment Status: ${monnifyResponse.paymentStatus || 'Failed'}`)
+                            setIsInitializing(false)
                         }
                     },
-                    onClose: function (data: any) {
-                        console.log("Monnify Closed");
+                    onClose: function () {
+                        setIsInitializing(false)
                     }
                 });
+            } else if (selectedGateway === "paystack" && window.PaystackPop) {
+                const handler = window.PaystackPop.setup({
+                    key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
+                    email: data.customerEmail || "customer@example.com",
+                    amount: Math.round(data.amount * 100), // Paystack uses kobo
+                    ref: data.reference,
+                    metadata: {
+                        payment_id: data.payment_id,
+                        guardian_id: guardianId,
+                        invoice_id: items[0]?.invoice_id
+                    },
+                    callback: function (paystackResponse: any) {
+                        toast.loading("Verifying payment...", { id: "verify-payment" })
+                        verifyPayment(data.reference, "paystack")
+                            .then(() => {
+                                toast.success("Payment verified and recorded!", { id: "verify-payment" })
+                                onSuccess()
+                                onOpenChange(false)
+                            })
+                            .catch((err: any) => {
+                                toast.error("Payment successful but recording failed. Our team will verify it.", {
+                                    id: "verify-payment",
+                                    description: err.message
+                                })
+                            })
+                            .finally(() => {
+                                setIsInitializing(false)
+                            })
+                    },
+                    onClose: function () {
+                        setIsInitializing(false)
+                    }
+                });
+                handler.openIframe();
             } else {
-                // Fallback to checkout URL if SDK fails
-                window.location.href = data.checkoutUrl
+                // Fallback to external redirect if SDK is missing
+                toast.info("SDK missing, redirecting to secure checkout...")
+                const fallbackResponse = await fetch("/api/payments/online/initialize", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        invoice_id: items[0]?.invoice_id || "",
+                        payment_method: selectedGateway,
+                        skipGatewayInit: false,
+                        items: items.map(item => ({
+                            invoice_item_id: item.id,
+                            amount: item.amount
+                        }))
+                    }),
+                })
+                const fallbackData = await fallbackResponse.json()
+                if (fallbackData.checkoutUrl) {
+                    window.location.href = fallbackData.checkoutUrl
+                } else {
+                    throw new Error("Checkout URL not found")
+                }
             }
 
         } catch (error: any) {
@@ -133,10 +228,11 @@ export function OnlinePaymentModal({
             toast.error("Failed to start payment", {
                 description: error.message
             })
-        } finally {
             setIsInitializing(false)
         }
     }
+
+    const isCurrentScriptLoaded = selectedGateway === "monnify" ? isMonnifyLoaded : isPaystackLoaded;
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -147,12 +243,47 @@ export function OnlinePaymentModal({
                         <DialogTitle>Online Payment</DialogTitle>
                     </div>
                     <DialogDescription>
-                        Pay securely via Monnify using Card, Bank Transfer, or USSD.
+                        Pay securely using your preferred payment gateway.
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-4 py-4">
-                    <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg border space-y-3">
+                    {/* Gateway Selection */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Select Payment Gateway</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setSelectedGateway("paystack")}
+                                className={`p-3 rounded-lg border-2 transition-all ${selectedGateway === "paystack"
+                                    ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20"
+                                    : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-300"
+                                    }`}
+                                disabled={isInitializing}
+                            >
+                                <div className="flex flex-col items-center gap-1">
+                                    <div className="text-lg font-bold">Paystack</div>
+                                    <div className="text-[10px] text-muted-foreground">Modern Checkout</div>
+                                </div>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedGateway("monnify")}
+                                className={`p-3 rounded-lg border-2 transition-all ${selectedGateway === "monnify"
+                                    ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20"
+                                    : "border-zinc-200 dark:border-zinc-800 hover:border-zinc-300"
+                                    }`}
+                                disabled={isInitializing}
+                            >
+                                <div className="flex flex-col items-center gap-1">
+                                    <div className="text-lg font-bold">Monnify</div>
+                                    <div className="text-[10px] text-muted-foreground">Flexible Checkout</div>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="bg-zinc-50 dark:bg-zinc-900 p-4 rounded-lg border space-y-3">
                         <div className="flex justify-between items-center text-sm">
                             <span className="text-muted-foreground">Total to pay</span>
                             <span className="font-mono font-black text-lg">₦{totalToPay.toLocaleString()}</span>
@@ -172,24 +303,15 @@ export function OnlinePaymentModal({
                     <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-100 dark:border-blue-900/50 text-blue-800 dark:text-blue-300">
                         <ShieldCheck className="h-4 w-4 shrink-0" />
                         <p className="text-[11px] leading-tight">
-                            Payments are processed securely by Monnify. Your financial data is nunca stored on our servers.
+                            Payments are processed securely by {selectedGateway === "paystack" ? "Paystack" : "Monnify"}. Your financial data is nunca stored on our servers.
                         </p>
                     </div>
-
-                    {totalToPay > 2500 && (
-                        <div className="flex gap-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-100 dark:border-amber-900/50 text-amber-800 dark:text-amber-300">
-                            <AlertCircle className="h-3 w-3 shrink-0 mt-0.5" />
-                            <p className="text-[10px]">
-                                A small processing fee may be applied by the gateway.
-                            </p>
-                        </div>
-                    )}
                 </div>
 
-                {!isScriptLoaded && !isInitializing && (
+                {!isCurrentScriptLoaded && !isInitializing && (
                     <div className="px-6 pb-2">
                         <p className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded border border-amber-100 dark:border-amber-900/40 text-center font-medium">
-                            Note: Monnify SDK not detected. You will be redirected to a secure payment page.
+                            Note: {selectedGateway === "paystack" ? "Paystack" : "Monnify"} SDK not detected. You will be redirected to a secure payment page.
                         </p>
                     </div>
                 )}
