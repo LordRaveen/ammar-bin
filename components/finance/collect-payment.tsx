@@ -73,6 +73,7 @@ export function CollectPayment({
                 status: (remainingBalance <= 0 ? "paid" : (totalAllocated > 0 ? "partial" : "pending")) as any,
                 studentId: invoice.students.id,
                 studentName: `${invoice.students.first_name} ${invoice.students.last_name}`,
+                invoiceId: invoice.id,
               }
             }).filter(item => item.balance > 0) // Only add items that still have a balance
 

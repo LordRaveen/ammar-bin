@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { updateSchoolSettings } from "./actions";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 
 export const dynamic = 'force-dynamic'
 
@@ -43,7 +44,7 @@ export default async function SchoolSettingsPage() {
         <CardContent>
           <form action={updateSchoolSettings} className="space-y-4">
             <input type="hidden" name="id" value={settings?.id} />
-            
+
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="school_name">School Name (English)</Label>
@@ -141,7 +142,33 @@ export default async function SchoolSettingsPage() {
               </div>
             </div>
 
-            <div className="flex justify-end">
+            <Separator />
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold">Payment Configuration</h3>
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-3">
+                  <Label htmlFor="payment_mode" className="text-sm font-bold flex items-center gap-2">
+                    System Environment
+                    <Badge variant="outline" className="text-[9px] uppercase font-black px-2 py-0">Global</Badge>
+                  </Label>
+                  <select
+                    id="payment_mode"
+                    name="payment_mode"
+                    defaultValue={settings?.payment_mode || "test"}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="test">Test Mode (Sandboxed)</option>
+                    <option value="live">Live Mode (Production)</option>
+                  </select>
+                  <p className="text-[10px] text-muted-foreground italic font-medium">
+                    Test mode uses sandbox credentials. Live mode processes real money transactions.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-4">
               <Button type="submit">Save Changes</Button>
             </div>
           </form>

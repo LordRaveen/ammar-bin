@@ -290,7 +290,7 @@ async function updateStudentResult(
 
   if (!assessments || assessments.length === 0) return
 
-  const assessmentIds = assessments.map((a) => a.id)
+  const assessmentIds = assessments.map((a: any) => a.id)
   const { data: scores } = await supabase
     .from("student_scores")
     .select("score, assessment_id")
@@ -301,8 +301,8 @@ async function updateStudentResult(
 
   // Group by subject
   const subjectScores = new Map<string, number[]>()
-  assessments.forEach((assessment) => {
-    const subjectScores_arr = scores.filter((s) => s.assessment_id === assessment.id).map((s) => s.score)
+  assessments.forEach((assessment: any) => {
+    const subjectScores_arr = scores.filter((s: any) => s.assessment_id === assessment.id).map((s: any) => s.score)
 
     if (subjectScores_arr.length > 0) {
       if (!subjectScores.has(assessment.subject_id)) {
@@ -323,14 +323,14 @@ async function updateStudentResult(
     .select("subject_id, pass_mark")
     .eq("class_id", classId)
 
-  const passMarkMap = new Map((classSubjects || []).map((cs) => [cs.subject_id, cs.pass_mark]))
+  const passMarkMap = new Map((classSubjects || []).map((cs: any) => [cs.subject_id, cs.pass_mark]))
 
   subjectScores.forEach((scores, subjectId) => {
     const subjectTotal = scores.reduce((sum, score) => sum + score, 0)
     totalScore += subjectTotal
     totalSubjects++
 
-    const passMark = passMarkMap.get(subjectId) || 40
+    const passMark = Number(passMarkMap.get(subjectId)) || 40
     if (subjectTotal >= passMark) {
       subjectsPassed++
     } else {
@@ -366,6 +366,30 @@ export async function fetchGradingScheme() {
   const { data } = await supabase.from("grading_schemes").select("*").order("min_score", { ascending: false })
 
   return data || []
+}
+
+export async function updateClass(classId: string, data: { name?: string, capacity?: number, section_id?: string, is_active?: boolean }) {
+  await requireAdmin()
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from("classes")
+    .update(data)
+    .eq("id", classId)
+
+  if (error) throw new Error(error.message)
+}
+
+export async function deleteClass(classId: string) {
+  await requireAdmin()
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from("classes")
+    .delete()
+    .eq("id", classId)
+
+  if (error) throw new Error(error.message)
 }
 
 function calculateGrade(score: number): string {

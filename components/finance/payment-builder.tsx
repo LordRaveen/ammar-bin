@@ -9,6 +9,8 @@ import { Separator } from "@/components/ui/separator"
 import { ChevronDown, InboxIcon } from "lucide-react"
 import { CashPaymentConfirmModal } from "./cash-payment-confirm-modal"
 import { PosPaymentModal } from "./pos-payment-modal"
+import { OnlinePaymentModal } from "./online-payment-modal"
+import { BankTransferModal } from "./bank-transfer-modal"
 import { useToast } from "@/hooks/use-toast"
 
 interface InvoiceItem {
@@ -19,6 +21,7 @@ interface InvoiceItem {
   studentId: string
   studentName: string
   dueDate?: string
+  invoiceId?: string
 }
 
 interface PaymentBuilderProps {
@@ -54,6 +57,8 @@ export function PaymentBuilder({
   )
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [showPosModal, setShowPosModal] = useState(false)
+  const [showOnlineModal, setShowOnlineModal] = useState(false)
+  const [showTransferModal, setShowTransferModal] = useState(false)
   const { toast } = useToast()
 
   // Group items by student
@@ -205,6 +210,10 @@ export function PaymentBuilder({
     // Show confirmation modal
     if (paymentMethod === "pos") {
       setShowPosModal(true)
+    } else if (paymentMethod === "online") {
+      setShowOnlineModal(true)
+    } else if (paymentMethod === "transfer") {
+      setShowTransferModal(true)
     } else {
       setShowConfirmModal(true)
     }
@@ -216,9 +225,10 @@ export function PaymentBuilder({
     setGlobalDiscount(0)
     setGlobalDiscountReason("")
     setPaymentMethod("cash")
-    setPaymentMethod("cash")
     setShowConfirmModal(false)
     setShowPosModal(false)
+    setShowOnlineModal(false)
+    setShowTransferModal(false)
 
     // Call the callback to refresh data
     onPaymentSuccess?.()
@@ -496,6 +506,41 @@ export function PaymentBuilder({
           subtotal={totals.subtotal}
           totalDiscount={totals.discount}
           totalWaiver={totals.waiver}
+          totalToPay={totals.total}
+          guardianId={selectedFamily?.id || ""}
+          onConfirm={handlePaymentSuccess}
+        />
+      )}
+
+      {/* Online Payment Modal */}
+      {showOnlineModal && (
+        <OnlinePaymentModal
+          open={showOnlineModal}
+          onOpenChange={setShowOnlineModal}
+          items={selectedItems.map((item) => ({
+            id: item.id,
+            studentName: item.studentName,
+            description: item.description,
+            amount: paymentAmounts[item.id]?.amount || item.balance,
+            invoice_id: item.invoiceId
+          }))}
+          totalToPay={totals.total}
+          guardianId={selectedFamily?.id || ""}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
+
+      {/* Bank Transfer Modal */}
+      {showTransferModal && (
+        <BankTransferModal
+          open={showTransferModal}
+          onOpenChange={setShowTransferModal}
+          items={selectedItems.map((item) => ({
+            id: item.id,
+            studentName: item.studentName,
+            description: item.description,
+            amount: paymentAmounts[item.id]?.amount || item.balance,
+          }))}
           totalToPay={totals.total}
           guardianId={selectedFamily?.id || ""}
           onConfirm={handlePaymentSuccess}

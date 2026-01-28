@@ -20,7 +20,11 @@ export default async function FinancePage() {
         students (
           first_name,
           last_name,
-          student_id
+          student_id,
+          student_enrollments (
+            is_active,
+            class:classes (name)
+          )
         )
       `)
       .is("deleted_at", null)

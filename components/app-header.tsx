@@ -38,7 +38,13 @@ function generateBreadcrumbs(pathname: string) {
   return breadcrumbs
 }
 
-export function AppHeader() {
+import { Badge } from "@/components/ui/badge"
+
+interface AppHeaderProps {
+  paymentMode?: string
+}
+
+export function AppHeader({ paymentMode = "test" }: AppHeaderProps) {
   const { toggleSidebar } = useSidebar()
   const pathname = usePathname()
   const breadcrumbs = generateBreadcrumbs(pathname)
@@ -74,7 +80,17 @@ export function AppHeader() {
         <CommandMenu />
       </div>
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex items-center gap-4">
+        {/* Payment Mode Indicator */}
+        <Badge
+          variant={paymentMode === "live" ? "default" : "outline"}
+          className={paymentMode === "live"
+            ? "bg-emerald-500 hover:bg-emerald-600 text-white font-black uppercase text-[10px] tracking-widest px-3 py-1 rounded-full animate-pulse"
+            : "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800 font-bold uppercase text-[10px] tracking-widest px-3 py-1 rounded-full"}
+        >
+          {paymentMode === "live" ? "Live Mode" : "Test Mode"}
+        </Badge>
+
         {/* Theme Toggle */}
         <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
           <IconSun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />

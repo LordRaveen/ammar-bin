@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/app-header"
 import { requireAuth } from "@/lib/auth/get-user"
 import { createServerClient } from "@/lib/supabase/server"
 import { SessionTimeoutWrapper } from "@/components/session-timeout-wrapper"
+import { PrintProvider } from "@/components/finance/print-provider"
 
 export default async function AuthenticatedLayout({
   children,
@@ -38,6 +39,11 @@ export default async function AuthenticatedLayout({
     }
   }
 
+  const { data: settings } = await supabase
+    .from("school_settings")
+    .select("payment_mode")
+    .single()
+
   const user = {
     id: authUser.id,
     email: authUser.email || "",
@@ -50,8 +56,10 @@ export default async function AuthenticatedLayout({
       <SidebarProvider>
         <AppSidebar user={user} />
         <SidebarInset>
-          <AppHeader />
-          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
+          <AppHeader paymentMode={settings?.payment_mode || "test"} />
+          <PrintProvider>
+            <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
+          </PrintProvider>
         </SidebarInset>
       </SidebarProvider>
     </SessionTimeoutWrapper>

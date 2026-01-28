@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Download, Calendar } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { PaymentsTable } from "@/components/finance/payments-table"
 import { PaymentDetailsSheet } from "@/components/finance/payment-details-sheet"
@@ -29,6 +30,7 @@ export function PaymentsTab({ userRole = "admin" }: PaymentsTabProps) {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [showDrafts, setShowDrafts] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const supabase = createBrowserClient()
 
@@ -45,6 +47,7 @@ export function PaymentsTab({ userRole = "admin" }: PaymentsTabProps) {
     setSelectedStatus("all")
     setSearchTerm("")
     setDateRange(undefined)
+    setShowDrafts(false)
   }
 
   return (
@@ -100,19 +103,35 @@ export function PaymentsTab({ userRole = "admin" }: PaymentsTabProps) {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex flex-wrap gap-2 justify-between items-center">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={clearFilters}
-          className="text-muted-foreground"
-        >
-          Clear Filters
-        </Button>
-        <Button className="gap-2 bg-transparent" size="sm" variant="outline">
-          <Download className="h-4 w-4" />
-          Export
-        </Button>
+      <div className="flex flex-wrap gap-4 justify-between items-center">
+        <div className="flex items-center gap-2 px-1">
+          <Checkbox
+            id="show-drafts"
+            checked={showDrafts}
+            onCheckedChange={(checked) => setShowDrafts(checked === true)}
+          />
+          <label
+            htmlFor="show-drafts"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+          >
+            Show online draft records
+          </label>
+        </div>
+
+        <div className="flex gap-2 items-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearFilters}
+            className="text-muted-foreground"
+          >
+            Clear Filters
+          </Button>
+          <Button className="gap-2 bg-transparent" size="sm" variant="outline">
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
+        </div>
       </div>
 
       {/* Payments Table */}
@@ -126,6 +145,7 @@ export function PaymentsTab({ userRole = "admin" }: PaymentsTabProps) {
             search: searchTerm,
             dateFrom: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
             dateTo: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
+            showDrafts: showDrafts
           }}
         />
       )}
