@@ -21,12 +21,30 @@ import { useToast } from "@/hooks/use-toast"
 import { cn } from "@/lib/utils"
 import { markAttendanceForClass, fetchClassAttendanceForDate } from "@/app/(dashboard)/classes/[id]/attendance/actions"
 import type { AttendanceStatus, AttendanceInput } from "@/lib/types/attendance"
-import { Loader2, CheckCircle2, XCircle, Clock, FileText } from "lucide-react"
+import {
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  FileText,
+  Calendar,
+  Search,
+  Check,
+  UserPlus,
+  Users,
+  ChevronRight,
+  Filter
+} from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
 
 interface Student {
   id: string
   first_name: string
   last_name: string
+  photo_url?: string | null
+  student_id?: string
 }
 
 interface MarkAttendanceInterfaceProps {
@@ -43,7 +61,12 @@ export function MarkAttendanceInterface({ classId, sessionId, termId, students }
   const [loading, setLoading] = useState(false)
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [markAllPresent, setMarkAllPresent] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("")
   const { toast } = useToast()
+
+  const filteredStudents = students.filter(s =>
+    `${s.first_name} ${s.last_name}`.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   useEffect(() => {
     const initialStatus: Record<string, AttendanceStatus> = {}
@@ -177,179 +200,206 @@ export function MarkAttendanceInterface({ classId, sessionId, termId, students }
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header Card */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Mark Attendance</CardTitle>
-              <CardDescription>Record student attendance for this class</CardDescription>
-            </div>
-            <div className="text-right">
-              <p className="text-sm font-medium">Total Students</p>
-              <p className="text-2xl font-bold">{students.length}</p>
+    <div className="space-y-6 pb-20 relative">
+      {/* High-Efficiency Header Ribbon */}
+      <div className="bg-white dark:bg-slate-950 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <div className="h-10 w-10 rounded-xl bg-orange-50 dark:bg-orange-950/30 flex items-center justify-center text-orange-600">
+            <Calendar className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-black uppercase tracking-widest text-foreground leading-none">Attendance Log</h3>
+            <div className="mt-1.5 flex items-center bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-lg px-2 py-0.5">
+              <input
+                type="date"
+                value={attendanceDate}
+                onChange={(e) => setAttendanceDate(e.target.value)}
+                max={format(new Date(), "yyyy-MM-dd")}
+                className="bg-transparent border-none text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 focus:ring-0 outline-none cursor-pointer"
+              />
             </div>
           </div>
-        </CardHeader>
-      </Card>
+        </div>
 
-      {/* Date Selection */}
-      <Card>
-        <CardHeader>
-          <Label htmlFor="attendance-date">Attendance Date</Label>
-        </CardHeader>
-        <CardContent>
-          <Input
-            id="attendance-date"
-            type="date"
-            value={attendanceDate}
-            onChange={(e) => setAttendanceDate(e.target.value)}
-            max={format(new Date(), "yyyy-MM-dd")}
-            className="max-w-xs"
-          />
-        </CardContent>
-      </Card>
+        {/* Global Stats Strip */}
+        <div className="flex items-center gap-6 px-6 border-x border-slate-100 dark:border-slate-800 hidden lg:flex">
+          <div className="text-center">
+            <span className="text-[9px] font-black text-emerald-500 uppercase block tracking-tighter">Present</span>
+            <span className="text-xl font-black">{statusCounts.present}</span>
+          </div>
+          <div className="text-center">
+            <span className="text-[9px] font-black text-red-500 uppercase block tracking-tighter">Absent</span>
+            <span className="text-xl font-black">{statusCounts.absent}</span>
+          </div>
+          <div className="text-center">
+            <span className="text-[9px] font-black text-amber-500 uppercase block tracking-tighter">Late</span>
+            <span className="text-xl font-black">{statusCounts.late}</span>
+          </div>
+          <div className="text-center">
+            <span className="text-[9px] font-black text-blue-500 uppercase block tracking-tighter">Total Students</span>
+            <span className="text-xl font-black italic">{students.length}</span>
+          </div>
+        </div>
 
-      {/* Statistics */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <CheckCircle2 className="mx-auto mb-2 h-6 w-6 text-green-600" />
-              <p className="text-sm text-muted-foreground">Present</p>
-              <p className="text-2xl font-bold">{statusCounts.present}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <XCircle className="mx-auto mb-2 h-6 w-6 text-red-600" />
-              <p className="text-sm text-muted-foreground">Absent</p>
-              <p className="text-2xl font-bold">{statusCounts.absent}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <Clock className="mx-auto mb-2 h-6 w-6 text-yellow-600" />
-              <p className="text-sm text-muted-foreground">Late</p>
-              <p className="text-2xl font-bold">{statusCounts.late}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <FileText className="mx-auto mb-2 h-6 w-6 text-blue-600" />
-              <p className="text-sm text-muted-foreground">Excused</p>
-              <p className="text-2xl font-bold">{statusCounts.excused}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search student..."
+              className="h-10 pl-9 w-[180px] bg-slate-50 dark:bg-slate-900 border-none rounded-xl text-xs font-bold"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <Button
+            onClick={handleMarkAllPresent}
+            variant="outline"
+            size="sm"
+            className="h-10 border-slate-200 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest px-4 rounded-xl"
+          >
+            Mark All Present
+          </Button>
+        </div>
       </div>
 
-      {/* Bulk Actions */}
-      <div className="flex gap-2">
-        <Button onClick={handleMarkAllPresent} variant="outline">
-          Mark All Present
-        </Button>
-      </div>
-
-      {/* Attendance Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Student Attendance</CardTitle>
-        </CardHeader>
-        <CardContent>
+      {/* Main Content Area */}
+      <Card className="border shadow-none bg-white dark:bg-slate-950 overflow-hidden">
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student Name</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Remarks</TableHead>
+              <TableHeader className="bg-slate-50/50 dark:bg-slate-900/50">
+                <TableRow className="border-b border-slate-100 dark:border-slate-800">
+                  <TableHead className="w-[300px] text-[10px] font-black uppercase tracking-widest pl-8">Student Identity</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-widest">Attendance Status</TableHead>
+                  <TableHead className="text-[10px] font-black uppercase tracking-widest pr-8 text-right">Notes/Remarks</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {students.map((student) => (
-                  <TableRow key={student.id}>
-                    <TableCell>
-                      <p className="font-medium">
-                        {student.first_name} {student.last_name}
-                      </p>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        {(["Present", "Absent", "Late", "Excused"] as const).map((status) => (
-                          <Button
-                            key={status}
-                            size="sm"
-                            variant={attendanceStatus[student.id] === status ? "default" : "outline"}
-                            onClick={() => handleStatusChange(student.id, status)}
-                            className={cn(
-                              "text-xs",
-                              attendanceStatus[student.id] === status && {
-                                "bg-green-600": status === "Present",
-                                "bg-red-600": status === "Absent",
-                                "bg-yellow-600": status === "Late",
-                                "bg-blue-600": status === "Excused",
-                              },
-                            )}
-                          >
-                            {getStatusIcon(status)}
-                            <span className="ml-1">{status}</span>
-                          </Button>
-                        ))}
+                {filteredStudents.length > 0 ? (
+                  filteredStudents.map((student) => {
+                    const status = attendanceStatus[student.id] || "Absent"
+
+                    return (
+                      <TableRow key={student.id} className="group border-b border-slate-50 dark:border-slate-900/50 hover:bg-slate-50/30 dark:hover:bg-slate-900/10">
+                        <TableCell className="pl-8 py-4">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9 border border-slate-200 dark:border-slate-800 shadow-sm transition-transform group-hover:scale-105">
+                              {student.photo_url && <AvatarImage src={student.photo_url} />}
+                              <AvatarFallback className="text-[10px] font-black bg-slate-900 text-white">
+                                {student.first_name[0]}{student.last_name[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="text-sm font-black tracking-tight leading-none mb-1">
+                                {student.first_name} {student.last_name}
+                              </p>
+                              <p className="text-[10px] font-bold text-muted-foreground uppercase">{student.student_id || 'STD-00' + student.id.slice(0, 3).toUpperCase()}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex bg-slate-50 dark:bg-slate-900 p-1 rounded-xl w-fit border border-slate-100 dark:border-slate-800">
+                            {([
+                              { id: "Present", icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500 text-white" },
+                              { id: "Absent", icon: XCircle, color: "text-red-500", bg: "bg-red-500 text-white" },
+                              { id: "Late", icon: Clock, color: "text-amber-500", bg: "bg-amber-500 text-white" },
+                              { id: "Excused", icon: FileText, color: "text-blue-500", bg: "bg-blue-500 text-white" }
+                            ] as const).map((opt) => (
+                              <button
+                                key={opt.id}
+                                onClick={() => handleStatusChange(student.id, opt.id)}
+                                className={cn(
+                                  "h-8 px-3 rounded-lg flex items-center justify-center transition-all duration-300",
+                                  status === opt.id
+                                    ? cn(opt.bg, "shadow-md scale-105")
+                                    : cn("text-slate-400 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-white dark:hover:bg-slate-800")
+                                )}
+                                title={opt.id}
+                              >
+                                <opt.icon className={cn("h-4 w-4", status !== opt.id && opt.color)} />
+                                {status === opt.id && <span className="ml-1.5 text-[9px] font-black uppercase tracking-tight">{opt.id}</span>}
+                              </button>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell className="pr-8 text-right">
+                          <div className="relative group/input inline-block">
+                            <Input
+                              type="text"
+                              placeholder="Add notes..."
+                              value={remarks[student.id] || ""}
+                              onChange={(e) => handleRemarksChange(student.id, e.target.value)}
+                              className="max-w-[200px] h-8 bg-transparent border-none text-[11px] font-medium text-right focus:bg-slate-50 dark:focus:bg-slate-900 transition-colors"
+                            />
+                            <div className="absolute right-0 bottom-0 w-0 h-[1px] bg-slate-200 dark:bg-slate-700 transition-all group-focus-within/input:w-full" />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-24">
+                      <div className="h-12 w-12 bg-slate-50 dark:bg-slate-900 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100 dark:border-slate-800">
+                        <Users className="h-6 w-6 text-slate-300" />
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="text"
-                        placeholder="Add remarks..."
-                        value={remarks[student.id] || ""}
-                        onChange={(e) => handleRemarksChange(student.id, e.target.value)}
-                        className="max-w-xs"
-                      />
+                      <h3 className="text-sm font-bold">No students found</h3>
+                      <p className="text-xs text-muted-foreground mt-1">Adjust your search to find students in this class.</p>
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </div>
         </CardContent>
       </Card>
 
-      {/* Submit Button */}
-      <div className="flex justify-end gap-2">
-        <Button onClick={() => setShowConfirmation(true)} disabled={loading}>
-          {loading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            "Save Attendance"
-          )}
-        </Button>
+      {/* Floating Action Ribbon */}
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-5 duration-500">
+        <div className="bg-slate-900 dark:bg-white text-white dark:text-black py-2.5 px-6 rounded-2xl shadow-2xl shadow-black/20 flex items-center gap-6 border-4 border-white/10 dark:border-slate-100">
+          <div className="flex items-center gap-4 border-r border-white/20 dark:border-slate-200 pr-6 mr-2">
+            <div className="flex items-center gap-1.5">
+              <div className="h-2 w-2 rounded-full bg-emerald-400" />
+              <span className="text-[10px] font-black uppercase italic">{statusCounts.present} Handled</span>
+            </div>
+          </div>
+          <Button
+            onClick={() => setShowConfirmation(true)}
+            disabled={loading}
+            className="bg-emerald-500 hover:bg-emerald-400 dark:bg-emerald-600 dark:text-white h-9 px-6 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all hover:scale-105 active:scale-95"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <Check className="h-4 w-4 mr-2" />
+                Submit Daily Log
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
-      {/* Confirmation Dialog */}
+      {/* Confirmation Dialog - Modernized */}
       <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
-        <AlertDialogContent>
+        <AlertDialogContent className="border-none dark:bg-slate-950 rounded-3xl p-8">
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Attendance Mark</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to mark attendance for {students.length} students on{" "}
-              {format(new Date(attendanceDate), "MMM dd, yyyy")}?
+            <div className="h-12 w-12 bg-orange-50 dark:bg-orange-900/20 rounded-2xl flex items-center justify-center mb-4">
+              <FileText className="h-6 w-6 text-orange-500" />
+            </div>
+            <AlertDialogTitle className="text-2xl font-black italic">Finalize Log?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm font-medium">
+              You are about to record attendance for <span className="text-foreground font-bold">{students.length} students</span> for date <span className="text-foreground font-bold">{format(new Date(attendanceDate), "MMM dd, yyyy")}</span>. This action will update the master academic records.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSubmit} disabled={loading}>
-              {loading ? "Saving..." : "Confirm"}
+          <AlertDialogFooter className="mt-8 gap-3">
+            <AlertDialogCancel className="h-12 border-none bg-slate-100 dark:bg-slate-900 text-xs font-black uppercase rounded-2xl">Re-check</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleSubmit}
+              disabled={loading}
+              className="h-12 bg-slate-900 dark:bg-white dark:text-black text-xs font-black uppercase rounded-2xl px-8"
+            >
+              {loading ? "Processing..." : "Confirm & Save"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

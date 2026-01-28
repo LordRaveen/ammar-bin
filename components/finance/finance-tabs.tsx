@@ -30,6 +30,8 @@ import { InvoicesTab } from "@/components/finance/invoices-tab"
 import { FeesTab } from "@/components/finance/fees-tab"
 import { StudentsTab } from "@/components/finance/students-tab"
 import { PaymentsTab } from "@/components/finance/payments-tab"
+import { ReversalsTab } from "@/components/finance/reversals-tab"
+import { ReportsTab } from "@/components/finance/reports-tab"
 import {
     XAxis,
     YAxis,
@@ -142,8 +144,8 @@ export function FinanceTabs({
             <TabsContent value="overview" className="space-y-6 pt-4">
                 {/* KPI Cards */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <Card className="border shadow-none">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <Card className="border shadow-none gap-2">
+                        <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle className="text-sm font-medium text-muted-foreground">Collected Today</CardTitle>
                             <DollarSign className="h-4 w-4 text-emerald-600" />
                         </CardHeader>
@@ -156,8 +158,8 @@ export function FinanceTabs({
                         </CardContent>
                     </Card>
 
-                    <Card className="border shadow-none">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <Card className="border shadow-none gap-2">
+                        <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle className="text-sm font-medium text-muted-foreground">Pending Balance</CardTitle>
                             <Clock className="h-4 w-4 text-orange-600" />
                         </CardHeader>
@@ -167,8 +169,8 @@ export function FinanceTabs({
                         </CardContent>
                     </Card>
 
-                    <Card className="border shadow-none">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <Card className="border shadow-none gap-2">
+                        <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle className="text-sm font-medium text-muted-foreground">Collection Rate</CardTitle>
                             <BadgePercent className="h-4 w-4 text-blue-600" />
                         </CardHeader>
@@ -183,8 +185,8 @@ export function FinanceTabs({
                         </CardContent>
                     </Card>
 
-                    <Card className="border shadow-none">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <Card className="border shadow-none gap-2">
+                        <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle className="text-sm font-medium text-muted-foreground">Today's Invoices</CardTitle>
                             <FileText className="h-4 w-4 text-indigo-600" />
                         </CardHeader>
@@ -449,27 +451,14 @@ export function FinanceTabs({
             </TabsContent>
 
             <TabsContent value="reversals">
-                <Card className="border shadow-none mt-4">
-                    <CardHeader>
-                        <CardTitle>Payment Reversals</CardTitle>
-                        <CardDescription>Manage and approve payment reversals</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-muted-foreground italic">Payment reversal interface coming soon</p>
-                    </CardContent>
-                </Card>
+                <ReversalsTab userRole={userRole} />
             </TabsContent>
 
             <TabsContent value="report">
-                <Card className="border shadow-none mt-4">
-                    <CardHeader>
-                        <CardTitle>Financial Report</CardTitle>
-                        <CardDescription>Generate financial reports and analytics</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-muted-foreground italic text-sm">Financial reporting and data export tools are being prepared.</p>
-                    </CardContent>
-                </Card>
+                <ReportsTab
+                    invoices={initialInvoices}
+                    payments={initialPayments}
+                />
             </TabsContent>
         </Tabs>
     )

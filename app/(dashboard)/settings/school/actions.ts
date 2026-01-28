@@ -21,6 +21,7 @@ export async function updateSchoolSettings(formData: FormData) {
       student_id_prefix: formData.get("student_id_prefix") as string,
       staff_id_prefix: formData.get("staff_id_prefix") as string,
       number_of_terms: parseInt(formData.get("number_of_terms") as string),
+      payment_mode: formData.get("payment_mode") as string,
     };
 
     devLog.debug("Updating school settings:", updateData);
@@ -37,7 +38,7 @@ export async function updateSchoolSettings(formData: FormData) {
 
     revalidatePath("/settings/school");
     devLog.info("School settings updated successfully");
-    
+
     return { success: true };
   } catch (error) {
     devLog.error("Error in updateSchoolSettings:", error);

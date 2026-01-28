@@ -38,6 +38,11 @@ export default async function AuthenticatedLayout({
     }
   }
 
+  const { data: settings } = await supabase
+    .from("school_settings")
+    .select("payment_mode")
+    .single()
+
   const user = {
     id: authUser.id,
     email: authUser.email || "",
@@ -50,7 +55,7 @@ export default async function AuthenticatedLayout({
       <SidebarProvider>
         <AppSidebar user={user} />
         <SidebarInset>
-          <AppHeader />
+          <AppHeader paymentMode={settings?.payment_mode || "test"} />
           <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
         </SidebarInset>
       </SidebarProvider>

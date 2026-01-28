@@ -343,7 +343,8 @@ export function FamilyCard({
             dueDate: calculateDueDate(invoice.due_date),
             balance: balance,
             status: status,
-            amount: Number(item.amount) // Keep original amount for ref
+            amount: Number(item.amount), // Keep original amount for ref
+            invoiceId: invoice.id // Include invoiceId here
           }
         })
 
