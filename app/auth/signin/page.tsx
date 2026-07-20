@@ -13,11 +13,12 @@ import { useState, useRef, useEffect } from "react"
 import { devLog } from "@/lib/logger"
 import { getRoleDashboardUrl } from "@/lib/auth/role-redirect"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { IconAlertTriangle, IconLock } from "@tabler/icons-react"
+import { IconAlertTriangle, IconLock, IconEye, IconEyeOff } from "@tabler/icons-react"
 
 export default function SignInPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [lockoutInfo, setLockoutInfo] = useState<{
@@ -237,14 +238,31 @@ export default function SignInPage() {
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      disabled={isLoading || lockoutInfo?.locked}
-                    />
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        className="pr-10"
+                        required
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        disabled={isLoading || lockoutInfo?.locked}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+                        onClick={() => setShowPassword(!showPassword)}
+                        tabIndex={-1}
+                      >
+                        {showPassword ? (
+                          <IconEyeOff className="h-4 w-4" />
+                        ) : (
+                          <IconEye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                   <div className="flex items-center justify-end">
                     <Link href="/auth/forgot-password" className="text-sm text-primary hover:underline">

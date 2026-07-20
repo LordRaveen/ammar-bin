@@ -1,0 +1,82 @@
+{
+  "timestamp": "2026-07-20T06:22:39.895Z",
+  "studentId": "cbf4046c-fe98-4e63-80a1-68cec2e5c680",
+  "sessionId": "c1cd73ae-c8bd-4669-a9d5-6b0e776b3bfb",
+  "termId": "ef500655-3c4e-4ce6-933c-cb377182212d",
+  "result": {
+    "id": "9b993d3e-505f-457f-915d-4d9a8634c4dd",
+    "student_id": "cbf4046c-fe98-4e63-80a1-68cec2e5c680",
+    "session_id": "c1cd73ae-c8bd-4669-a9d5-6b0e776b3bfb",
+    "term_id": "ef500655-3c4e-4ce6-933c-cb377182212d",
+    "class_id": "212afbf1-3db0-4fa9-b5a4-25e100a9dbd4",
+    "total_score": 363,
+    "average_score": 90.75,
+    "position": 1,
+    "total_subjects": 4,
+    "subjects_passed": 4,
+    "subjects_failed": 0,
+    "remarks": null,
+    "teacher_remark": "excellent\n",
+    "principal_remark": null,
+    "generated_at": "2026-07-19T20:49:54.909+00:00",
+    "is_published": false,
+    "published_at": null,
+    "parent_can_view": false,
+    "attendance_present": 98,
+    "total_school_days": 100
+  },
+  "scoresLength": 12,
+  "scoresError": null,
+  "scoresSample": [
+    {
+      "id": "f82113f4-c252-4c2c-8416-34b393ac14f8",
+      "assessment_id": "dbb64717-3fe2-441b-a138-c37c496f1f8b",
+      "student_id": "cbf4046c-fe98-4e63-80a1-68cec2e5c680",
+      "score": 17,
+      "grade": "A+",
+      "remarks": "Excellent",
+      "entered_by": "3462dcc4-da47-4f7f-a5d0-1325fec0e79b",
+      "created_at": "2026-01-15T15:54:54.209853+00:00",
+      "updated_at": "2026-07-19T20:50:20.796363+00:00",
+      "assessments": {
+        "id": "dbb64717-3fe2-441b-a138-c37c496f1f8b",
+        "term_id": "ef500655-3c4e-4ce6-933c-cb377182212d",
+        "subjects": {
+          "code": "ENGL",
+          "name": "English Language"
+        },
+        "session_id": "c1cd73ae-c8bd-4669-a9d5-6b0e776b3bfb",
+        "assessment_types": {
+          "name": "CA Test 1",
+          "max_score": 20
+        },
+        "assessment_type_id": "f923521f-e268-45f1-9dea-6acb81d9f9fd"
+      }
+    },
+    {
+      "id": "4384cdb5-0580-411c-af03-aa30740f6231",
+      "assessment_id": "a0d10319-bdcd-4847-bd65-b99f96909e3c",
+      "student_id": "cbf4046c-fe98-4e63-80a1-68cec2e5c680",
+      "score": 20,
+      "grade": "A+",
+      "remarks": "Excellent",
+      "entered_by": "3462dcc4-da47-4f7f-a5d0-1325fec0e79b",
+      "created_at": "2026-01-15T15:54:54.339246+00:00",
+      "updated_at": "2026-07-19T20:50:20.920224+00:00",
+      "assessments": {
+        "id": "a0d10319-bdcd-4847-bd65-b99f96909e3c",
+        "term_id": "ef500655-3c4e-4ce6-933c-cb377182212d",
+        "subjects": {
+          "code": "ENGL",
+          "name": "English Language"
+        },
+        "session_id": "c1cd73ae-c8bd-4669-a9d5-6b0e776b3bfb",
+        "assessment_types": {
+          "name": "CA Test 2",
+          "max_score": 20
+        },
+        "assessment_type_id": "550b2761-84df-456e-865f-7fc69f23303b"
+      }
+    }
+  ]
+}

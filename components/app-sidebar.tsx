@@ -76,13 +76,8 @@ const getNavigationByRole = (role: UserRole) => {
     },
     {
       title: "Assessments",
-      url: "/assessments",
-      icon: IconClipboardCheck,
-    },
-    {
-      title: "Results",
       url: "/assessments/results",
-      icon: IconChartBar,
+      icon: IconClipboardCheck,
     },
     {
       title: "Assignments",
@@ -135,13 +130,8 @@ const getNavigationByRole = (role: UserRole) => {
     },
     {
       title: "Assessments",
-      url: "/assessments",
-      icon: IconClipboardCheck,
-    },
-    {
-      title: "Results",
       url: "/assessments/results",
-      icon: IconChartBar,
+      icon: IconClipboardCheck,
     },
   ]
 

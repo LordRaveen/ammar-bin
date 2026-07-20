@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Search, Trash2, Pencil, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search, Trash2, Pencil, ChevronLeft, ChevronRight, Printer } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -35,6 +36,9 @@ export function StudentsClientPage({
   const [students, setStudents] = useState(initialStudents)
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
+
+  const activeSession = sessions.find((s) => s.is_active)
+  const activeTerm = terms.find((t) => t.is_active && t.session_id === activeSession?.id)
   const [genderFilter, setGenderFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [deleteStudentId, setDeleteStudentId] = useState<string | null>(null)
@@ -192,6 +196,20 @@ export function StudentsClientPage({
                   </TableCell>
                   <TableCell className="text-right px-2 py-2">
                     <div className="flex items-center justify-end gap-2">
+                      {activeSession && activeTerm && (
+                        <Link
+                          href={`/assessments/results/${student.id}?session=${activeSession.id}&term=${activeTerm.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Print Report Card"
+                          >
+                            <Printer className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      )}
                       {(userRole === "admin" || userRole === "super_admin") && (
                         <>
                           <Button

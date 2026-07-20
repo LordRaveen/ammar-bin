@@ -18,15 +18,20 @@ import React from "react"
 import { NotificationsPopover } from "@/components/notifications-popover"
 import { CommandMenu } from "@/components/command-menu"
 
-function generateBreadcrumbs(pathname: string) {
+function generateBreadcrumbs(pathname: string, labels: Record<string, string>) {
   const segments = pathname.split("/").filter(Boolean)
 
   const breadcrumbs = segments.map((segment, index) => {
     const path = "/" + segments.slice(0, index + 1).join("/")
-    const label = segment
+    let label = labels[segment] || segment
       .split("-")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ")
+
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(segment)
+    if (isUUID && !labels[segment]) {
+      label = "Report Card"
+    }
 
     return {
       label,
@@ -47,7 +52,24 @@ interface AppHeaderProps {
 export function AppHeader({ paymentMode = "test" }: AppHeaderProps) {
   const { toggleSidebar } = useSidebar()
   const pathname = usePathname()
-  const breadcrumbs = generateBreadcrumbs(pathname)
+  const [labels, setLabels] = React.useState<Record<string, string>>({})
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const globalLabels = (window as any).__breadcrumbLabels || {}
+      setLabels({ ...globalLabels })
+      
+      const handleUpdate = () => {
+        const updated = (window as any).__breadcrumbLabels || {}
+        setLabels({ ...updated })
+      }
+      
+      window.addEventListener('breadcrumb-update', handleUpdate)
+      return () => window.removeEventListener('breadcrumb-update', handleUpdate)
+    }
+  }, [pathname])
+
+  const breadcrumbs = React.useMemo(() => generateBreadcrumbs(pathname, labels), [pathname, labels])
   const { theme, setTheme } = useTheme()
 
   return (

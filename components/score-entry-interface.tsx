@@ -1221,18 +1221,42 @@ function ScoreEntryForm({
   return (
     <div className="space-y-6">
       {/* Student Info */}
-      <div className="flex items-center gap-4 rounded-lg border p-4">
-        <Avatar className="h-12 w-12">
-          {student.photo_url && <AvatarImage src={student.photo_url || "/placeholder.svg"} />}
-          <AvatarFallback>
-            {student.first_name[0]}{student.last_name[0]}
-          </AvatarFallback>
-        </Avatar>
-        <div>
-          <p className="font-semibold">
-            {student.first_name} {student.middle_name} {student.last_name}
-          </p>
-          <p className="text-muted-foreground text-sm">{student.student_id}</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border p-4 bg-zinc-50/50 dark:bg-zinc-900/10">
+        <div className="flex items-center gap-4">
+          <Avatar className="h-12 w-12">
+            {student.photo_url && <AvatarImage src={student.photo_url || "/placeholder.svg"} />}
+            <AvatarFallback>
+              {student.first_name[0]}{student.last_name[0]}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <p className="font-semibold">
+              {student.first_name} {student.middle_name} {student.last_name}
+            </p>
+            <p className="text-muted-foreground text-xs">{student.student_id}</p>
+          </div>
+        </div>
+
+        {/* Inline KPI Info */}
+        <div className="flex items-center gap-6">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Total Score</p>
+            <p className="text-lg font-bold mt-0.5 text-zinc-800 dark:text-zinc-100">
+              {total.toFixed(1)}<span className="text-xs font-semibold text-zinc-400 dark:text-zinc-500">/{maxScore}</span>
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Grade</p>
+            <p className="text-lg font-bold mt-0.5 text-zinc-800 dark:text-zinc-100">{grade}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Status</p>
+            <div className="mt-1">
+              <Badge variant={total >= passmark ? "default" : "destructive"} className="text-[10px] font-bold">
+                {total >= passmark ? "Pass" : "Fail"}
+              </Badge>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1294,27 +1318,7 @@ function ScoreEntryForm({
         </div>
       </div>
 
-      {/* Calculated Results */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-lg border p-4">
-          <p className="text-muted-foreground text-sm">Total Score</p>
-          <p className="text-2xl font-bold">
-            {total.toFixed(1)}/{maxScore}
-          </p>
-        </div>
 
-        <div className="rounded-lg border p-4">
-          <p className="text-muted-foreground text-sm">Grade</p>
-          <p className="text-2xl font-bold">{grade}</p>
-        </div>
-
-        <div className="rounded-lg border p-4">
-          <p className="text-muted-foreground text-sm">Status</p>
-          <Badge variant={total >= passmark ? "default" : "destructive"} className="mt-1">
-            {total >= passmark ? "Pass" : "Fail"}
-          </Badge>
-        </div>
-      </div>
 
       {/* Remarks */}
       <div className="space-y-2">

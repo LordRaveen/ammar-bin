@@ -4,9 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { ArrowLeft, Printer } from "lucide-react"
+import { ChevronLeft, Printer, Trophy, Award } from "lucide-react"
 import { ResultsFilter } from "@/components/results-filter"
-import { GenerateResultsButton } from "@/components/generate-results-button"
+import { ClassResultCard } from "@/components/class-result-card"
 
 export const dynamic = "force-dynamic"
 
@@ -49,135 +49,67 @@ export default async function ResultsPage({
     .eq("is_active", true)
     .order("name")
 
-  // Get results if class, session, and term selected
-  let results = null
-  if (params.class && selectedSession && selectedTerm) {
-    const { data, error } = await supabase
-      .from("student_results")
-      .select(`
-        *,
-        students (
-          id,
-          student_id,
-          first_name,
-          middle_name,
-          last_name
-        )
-      `)
-      .eq("class_id", params.class)
-      .eq("session_id", selectedSession)
-      .eq("term_id", selectedTerm)
-      .order("position")
+  // Group classes by section for better UI
+  const groupedClasses = classes?.reduce((acc: any, cls: any) => {
+    const sectionName = cls.sections?.name || "Other"
+    if (!acc[sectionName]) acc[sectionName] = []
+    acc[sectionName].push(cls)
+    return acc
+  }, {})
 
-    results = data || []
-  }
-
-  const hasResults = results && results.length > 0
+  const sectionOrder = ["Pre-Nursery", "Nursery", "Primary", "Junior Secondary", "Senior Secondary"]
+  const sortedSections = Object.keys(groupedClasses || {}).sort((a, b) => {
+    const aIndex = sectionOrder.findIndex(o => a.toLowerCase().includes(o.toLowerCase()))
+    const bIndex = sectionOrder.findIndex(o => b.toLowerCase().includes(o.toLowerCase()))
+    return (aIndex === -1 ? 99 : aIndex) - (bIndex === -1 ? 99 : bIndex)
+  })
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Link href="/assessments">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">View Results</h1>
-            <p className="text-muted-foreground">Process and view student results</p>
-          </div>
+      <div className="flex items-center gap-4 mb-4">
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-bold tracking-tight">Print Class Results</h1>
         </div>
-
-        {params.class && selectedSession && selectedTerm && (
-          <GenerateResultsButton
-            classId={params.class}
-            sessionId={selectedSession}
-            termId={selectedTerm}
-            hasResults={!!hasResults}
-          />
-        )}
       </div>
 
       <ResultsFilter
         sessions={sessions || []}
         terms={terms || []}
-        classes={classes || []}
         defaultSession={selectedSession}
         defaultTerm={selectedTerm}
       />
 
-      {params.class && selectedSession && selectedTerm && (!results || results.length === 0) && (
-        <Card>
-          <CardContent className="pt-6 flex flex-col items-center justify-center py-10 space-y-4">
-            <p className="text-muted-foreground text-center">
-              No results found for the selected class, session, and term. Results need to be generated first from
-              student scores.
-            </p>
-            <GenerateResultsButton
-              classId={params.class}
-              sessionId={selectedSession}
-              termId={selectedTerm}
-              hasResults={false}
-            />
-          </CardContent>
-        </Card>
-      )}
-
-      {results && results.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Class Results</CardTitle>
-            <CardDescription>{results.length} student(s) in class</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2">Position</th>
-                    <th className="text-left p-2">Student ID</th>
-                    <th className="text-left p-2">Name</th>
-                    <th className="text-center p-2">Total Score</th>
-                    <th className="text-center p-2">Average</th>
-                    <th className="text-center p-2">Subjects</th>
-                    <th className="text-center p-2">Passed</th>
-                    <th className="text-center p-2">Failed</th>
-                    <th className="text-left p-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {results.map((result: any) => (
-                    <tr key={result.id} className="border-b">
-                      <td className="p-2">
-                        <Badge>{result.position}</Badge>
-                      </td>
-                      <td className="p-2">{result.students.student_id}</td>
-                      <td className="p-2">
-                        {result.students.first_name} {result.students.last_name}
-                      </td>
-                      <td className="p-2 text-center font-medium">{result.total_score?.toFixed(1) || "0.0"}</td>
-                      <td className="p-2 text-center">{result.average_score?.toFixed(1) || "0.0"}%</td>
-                      <td className="p-2 text-center">{result.total_subjects || 0}</td>
-                      <td className="p-2 text-center text-green-600 font-medium">{result.subjects_passed || 0}</td>
-                      <td className="p-2 text-center text-red-600 font-medium">{result.subjects_failed || 0}</td>
-                      <td className="p-2">
-                        <Link
-                          href={`/assessments/results/${result.student_id}?session=${selectedSession}&term=${selectedTerm}`}
-                        >
-                          <Button size="sm" variant="outline">
-                            <Printer className="h-4 w-4 mr-2" />
-                            View Report
-                          </Button>
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      {selectedSession && selectedTerm ? (
+        <div className="space-y-8 mt-8">
+          {sortedSections.map((sectionName) => (
+            <div key={sectionName} className="space-y-4">
+              <h2 className="text-sm font-black uppercase tracking-widest text-zinc-400 dark:text-zinc-500 border-b border-zinc-200 dark:border-zinc-800 pb-2">
+                {sectionName}
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {groupedClasses[sectionName].map((cls: any) => (
+                  <ClassResultCard
+                    key={cls.id}
+                    classId={cls.id}
+                    className={cls.name}
+                    sectionName={sectionName}
+                    sessionId={selectedSession}
+                    termId={selectedTerm}
+                  />
+                ))}
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          ))}
+          {sortedSections.length === 0 && (
+            <div className="text-center py-12 text-zinc-500">
+              No active classes found.
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-20 text-center text-zinc-500 space-y-2">
+          <p>Please select a session and term above to view classes.</p>
+        </div>
       )}
     </div>
   )

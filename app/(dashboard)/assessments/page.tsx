@@ -63,8 +63,7 @@ export default async function AssessmentsPage() {
           <Link href="/assessments/results">
             <Card className="hover:bg-accent transition-colors cursor-pointer h-full">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5" />
+                <CardTitle className="flex text-xl items-center gap-2">
                   View Results
                 </CardTitle>
                 <CardDescription>

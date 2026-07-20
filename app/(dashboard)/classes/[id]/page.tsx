@@ -45,6 +45,7 @@ import { ReassignTeacherModal } from "@/components/reassign-teacher-modal"
 import { removeStudentFromClass, removeSubjectFromClass, updateClass, deleteClass } from "./actions"
 import { ScoreEntryInterface } from "@/components/score-entry-interface"
 import { MarkAttendanceInterface } from "@/components/mark-attendance-interface"
+import { ResultFinalizationInterface } from "@/components/result-finalization-interface"
 import { isAdmin } from "@/lib/auth/role-redirect"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
@@ -137,6 +138,7 @@ export default function ClassDetailsPage() {
   const [showAssignSubjectTeacherModal, setShowAssignSubjectTeacherModal] = useState(false)
   const [showReassignTeacherModal, setShowReassignTeacherModal] = useState(false)
   const [allSections, setAllSections] = useState<any[]>([])
+  const [allClasses, setAllClasses] = useState<any[]>([])
   const [isUpdatingSettings, setIsUpdatingSettings] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
 
@@ -243,6 +245,13 @@ export default function ClassDetailsPage() {
         .eq("is_active", true)
 
       setAllSections(sectionsData || [])
+
+      const { data: classesData } = await supabase
+        .from("classes")
+        .select("id, name, section:sections(name)")
+        .order("name")
+
+      setAllClasses(classesData || [])
 
       const { data: enrollments } = await supabase
         .from("student_enrollments")
@@ -541,7 +550,7 @@ export default function ClassDetailsPage() {
       <Tabs defaultValue="overview" className="space-y-8">
         <div className="flex justify-start">
           <TabsList className="bg-slate-100/50 dark:bg-slate-900/50 p-1 h-auto gap-0.5 border border-slate-200/50 dark:border-slate-800">
-            {["overview", "students", "subjects", "scores", "attendance", "settings"].map((tab) => (
+            {["overview", "students", "subjects", "scores", "attendance", "finalize", "settings"].map((tab) => (
               <TabsTrigger
                 key={tab}
                 value={tab}
@@ -947,6 +956,44 @@ export default function ClassDetailsPage() {
             termId={selectedTerm}
             students={enrolledStudents}
           />
+        </TabsContent>
+
+        <TabsContent value="finalize" className="outline-none animate-in fade-in-50 duration-500">
+          <Card className="border shadow-none bg-white dark:bg-slate-950">
+            <CardHeader className="pb-4 border-b border-zinc-100 dark:border-zinc-900/60">
+              <CardTitle className="text-base font-bold">Finalize Results & Evaluate Skills</CardTitle>
+              <CardDescription>Assess student affective/psychomotor skills and submit tutor comments.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              {classId && selectedSession && selectedTerm && enrolledStudents.length > 0 ? (
+                <ResultFinalizationInterface
+                  sessions={sessions}
+                  terms={terms}
+                  classData={classDetails}
+                  classes={allClasses}
+                  students={enrolledStudents.map((s) => ({
+                    id: s.id,
+                    student_id: s.student_id,
+                    first_name: s.first_name,
+                    middle_name: s.middle_name,
+                    last_name: s.last_name,
+                    photo_url: s.photo_url,
+                    date_of_birth: s.date_of_birth,
+                    gender: s.gender
+                  }))}
+                  initialSessionId={selectedSession}
+                  initialTermId={selectedTerm}
+                  initialClassId={classId}
+                  showSelectors={false}
+                  showTitle={false}
+                />
+              ) : (
+                <div className="p-12 text-center text-muted-foreground">
+                  No enrolled students or active academic term selection found.
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-8 outline-none animate-in fade-in-50 duration-500">

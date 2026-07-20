@@ -52,11 +52,14 @@ export default async function ResultFinalizationPage({
     { data: sessions },
     { data: terms },
     { data: classData },
+    { data: classes },
     { data: students },
+    { data: school },
   ] = await Promise.all([
     supabase.from("sessions").select("id, name").order("start_date", { ascending: false }),
-    supabase.from("terms").select("id, name, session_id").eq("session_id", sessionId),
+    supabase.from("terms").select("id, name, session_id, total_school_days").eq("session_id", sessionId),
     supabase.from("classes").select("id, name, section:sections(name)").eq("id", classId).single(),
+    supabase.from("classes").select("id, name, section:sections(name)").order("name"),
     supabase
       .from("student_enrollments")
       .select(`
@@ -75,6 +78,7 @@ export default async function ResultFinalizationPage({
       .eq("session_id", sessionId)
       .eq("term_id", termId)
       .eq("is_active", true),
+    supabase.from("school_settings").select("*").maybeSingle(),
   ])
 
   return (
@@ -84,6 +88,8 @@ export default async function ResultFinalizationPage({
           sessions={sessions || []}
           terms={terms || []}
           classData={classData}
+          classes={classes || []}
+          school={school}
           students={students?.map((s) => s.student).filter(Boolean) || []}
           initialSessionId={sessionId}
           initialTermId={termId}

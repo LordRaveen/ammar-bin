@@ -47,8 +47,8 @@ export default async function SettingsPage() {
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 max-w-full overflow-hidden">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">Manage school configuration, fees, and academic settings</p>
+        <h1 className="text-xl font-bold tracking-tight">Settings</h1>
+        <p className="text-muted-foreground text-sm">Manage school configuration, fees, and academic settings</p>
       </div>
 
       <Tabs defaultValue="general" className="space-y-4 max-w-full">

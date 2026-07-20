@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Student Report Card</title>
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #e5e5e5;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    color: #111;
+  }
+  .page {
+    width: 210mm;
+    height: 297mm;
+    margin: 10mm auto;
+    padding: 8mm 9mm;
+    background: #fff;
+    border: 3px solid #000;
+    display: flex;
+    flex-direction: column;
+  }
+  .footer-block {
+    margin-top: auto;
+  }
+
+  /* ---------- Header ---------- */
+  .header {
+    display: grid;
+    grid-template-columns: 90px 1fr 90px;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 2px solid #000;
+    padding-bottom: 8px;
+  }
+  .crest { width: 84px; height: 84px; }
+  .school-name {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin: 0 0 2px;
+  }
+  .school-line {
+    text-align: center;
+    font-size: 11px;
+    margin: 2px 0;
+  }
+  .school-line.italic { font-style: italic; }
+  .report-title {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-top: 4px;
+  }
+  .photo-block { text-align: center; }
+  .photo {
+    width: 68px;
+    height: 78px;
+    border: 1px solid #000;
+    background: #eee;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    overflow: hidden;
+    margin: 0 auto;
+  }
+  .photo svg { width: 50px; height: 60px; fill: #111; }
+  .term-badge {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    margin-top: 4px;
+  }
+
+  /* ---------- Student name ---------- */
+  .student-name {
+    text-align: center;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin: 10px 0 2px;
+  }
+  .student-meta {
+    text-align: center;
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+  .student-meta span { margin: 0 6px; }
+
+  /* ---------- Info strip ---------- */
+  .info-strip {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    border-top: 1px solid #000;
+    border-bottom: 1px solid #000;
+    font-size: 11.5px;
+    padding: 6px 0;
+    margin-bottom: 10px;
+  }
+  .info-strip .col {
+    padding: 0 10px;
+    border-left: 1px solid #000;
+    line-height: 1.7;
+  }
+  .info-strip .col:first-child { border-left: none; }
+  .info-strip b { font-weight: 700; }
+
+  /* ---------- Layout: table + sidebar ---------- */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 200px;
+    gap: 10px;
+  }
+
+  /* ---------- Subjects table ---------- */
+  table.subjects {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+  table.subjects th, table.subjects td {
+    border: 1px solid #000;
+    padding: 4px 5px;
+    text-align: center;
+  }
+  table.subjects thead th {
+    font-size: 10px;
+    font-weight: 700;
+    height: 92px;
+    vertical-align: bottom;
+    padding-bottom: 6px;
+  }
+  table.subjects thead th.rot span {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    white-space: nowrap;
+    display: inline-block;
+  }
+  table.subjects thead th.subj-head { text-align: left; vertical-align: middle; font-size: 12px; }
+  table.subjects tbody td.subj-name { text-align: left; }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar-title {
+    font-size: 11px;
+    font-weight: 700;
+    margin: 0 0 3px;
+  }
+  table.skills {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10.5px;
+    margin-bottom: 10px;
+  }
+  table.skills td {
+    border: 1px solid #000;
+    padding: 3px 5px;
+  }
+  table.skills td.score { width: 26px; text-align: center; }
+
+  table.grading {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10.5px;
+    margin-bottom: 10px;
+  }
+  table.grading td {
+    border: 1px solid #000;
+    padding: 3px 6px;
+  }
+  table.grading td.grade { width: 24px; text-align: center; font-weight: 700; }
+
+  .signature-box {
+    font-size: 10.5px;
+    font-weight: 700;
+    margin-top: 4px;
+  }
+  .signature-line {
+    margin-top: 34px;
+    border-top: 1px solid #000;
+  }
+
+  /* ---------- Summary ---------- */
+  .summary-title {
+    font-size: 12px;
+    font-weight: 700;
+    margin: 12px 0 4px;
+  }
+  table.summary {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+  table.summary td {
+    border: 1px solid #000;
+    padding: 6px 8px;
+  }
+  table.summary td.label { font-weight: 700; width: 1%; white-space: nowrap; }
+  table.summary td.value { width: 1%; white-space: nowrap; font-weight: 700; }
+
+  .remarks { font-size: 12.5px; margin: 6px 0; }
+  .remarks b { margin-right: 6px; }
+  .remarks .underline {
+    font-weight: 700;
+    border-bottom: 1px solid #000;
+    padding-bottom: 1px;
+  }
+
+  .info-parents {
+    border-top: 1px solid #000;
+    margin-top: 10px;
+    padding-top: 8px;
+    text-align: center;
+    font-size: 11px;
+    line-height: 1.6;
+  }
+  .info-parents b { font-weight: 700; }
+
+  /* ---------- Print ---------- */
+  @media print {
+    body { background: #fff; }
+    .page {
+      margin: 0;
+      border: 2px solid #000;
+      box-shadow: none;
+      width: 210mm;
+      height: 297mm;
+    }
+    .no-print { display: none !important; }
+  }
+
+  .toolbar {
+    max-width: 210mm;
+    margin: 8px auto;
+    text-align: right;
+  }
+  .toolbar button {
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+    padding: 8px 16px;
+    border: 1px solid #333;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .toolbar button:hover { background: #f2f2f2; }
+</style>
+</head>
+<body>
+
+<div class="toolbar no-print">
+  <button onclick="window.print()">Print / Save as PDF</button>
+</div>
+
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <svg class="crest" viewBox="0 0 100 100">
+      <path d="M50 5 L90 15 V45 C90 70 72 90 50 98 C28 90 10 70 10 45 V15 Z" fill="#0a3b6b" stroke="#000" stroke-width="1.5"/>
+      <path d="M50 5 L90 15 V45 C90 70 72 90 50 98 Z" fill="#153a86"/>
+      <path d="M50 5 L10 15 V45 C10 70 28 90 50 98 Z" fill="#8c1c1c" opacity="0.85"/>
+      <circle cx="50" cy="48" r="20" fill="#fff" opacity="0.9"/>
+      <text x="50" y="55" text-anchor="middle" font-size="20" font-family="Georgia, serif" fill="#0a3b6b" font-weight="700">S</text>
+    </svg>
+
+    <div>
+      <p class="school-name">SCHOOL NAME</p>
+      <p class="school-line italic">Motto: School Motto Goes Here</p>
+      <p class="school-line italic">School Address, City</p>
+      <p class="school-line">TEL: 0000000000, EMAIL: info@school.ng</p>
+      <p class="report-title">«« STUDENTS ACADEMIC REPORT CARD »»</p>
+    </div>
+
+    <div class="photo-block">
+      <div class="photo">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M4 22c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+      </div>
+      <p class="term-badge">2nd &#9794;</p>
+    </div>
+  </div>
+
+  <!-- STUDENT NAME -->
+  <p class="student-name">STUDENT FULL NAME</p>
+  <p class="student-meta">
+    <span>Gender: <b>—</b></span> | <span>Admission Number: <b>—</b></span> | <span>Age: <b>—</b></span>
+  </p>
+
+  <!-- INFO STRIP -->
+  <div class="info-strip">
+    <div class="col">
+      Term: <b>—</b><br>
+      Session: <b>—</b><br>
+      Resumption: <b>—</b>
+    </div>
+    <div class="col">
+      Class: <b>—</b><br>
+      Students in Class: <b>—</b><br>
+      Class Teacher: <b>—</b>
+    </div>
+    <div class="col">
+      Total Days In Term: <b>—</b><br>
+      Total Days Present: <b>—</b><br>
+      Total Days Absent: <b>—</b>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- SUBJECTS TABLE -->
+    <table class="subjects">
+      <thead>
+        <tr>
+          <th class="subj-head">SUBJECTS</th>
+          <th class="rot"><span>1st CA (20)</span></th>
+          <th class="rot"><span>2nd CA (20)</span></th>
+          <th class="rot"><span>EXAM (60)</span></th>
+          <th class="rot"><span>TOTAL (100)</span></th>
+          <th class="rot"><span>GRADE</span></th>
+          <th class="rot"><span>SUBJECT POSITION</span></th>
+          <th class="rot"><span>SUBJECT HIGHEST</span></th>
+          <th class="rot"><span>SUBJECT LOWEST</span></th>
+          <th class="rot"><span>SUBJECT AVERAGE</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- repeat this row per subject -->
+        <tr>
+          <td class="subj-name">Subject Name</td>
+          <td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>
+        </tr>
+        <tr>
+          <td class="subj-name">Subject Name</td>
+          <td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>
+        </tr>
+        <tr>
+          <td class="subj-name">Subject Name</td>
+          <td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>
+        </tr>
+        <tr>
+          <td class="subj-name">Subject Name</td>
+          <td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>
+        </tr>
+        <tr>
+          <td class="subj-name">Subject Name</td>
+          <td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>
+        </tr>
+        <tr>
+          <td class="subj-name">Subject Name</td>
+          <td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>
+        </tr>
+        <tr>
+          <td class="subj-name">Subject Name</td>
+          <td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>
+        </tr>
+        <tr>
+          <td class="subj-name">Subject Name</td>
+          <td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>
+        </tr>
+        <tr>
+          <td class="subj-name">Subject Name</td>
+          <td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>
+        </tr>
+        <tr>
+          <td class="subj-name">Subject Name</td>
+          <td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- SIDEBAR -->
+    <div>
+      <p class="sidebar-title">AFFECTIVE SKILLS</p>
+      <table class="skills">
+        <tr><td>Punctuality</td><td class="score">—</td></tr>
+        <tr><td>Politeness</td><td class="score">—</td></tr>
+        <tr><td>Neatness</td><td class="score">—</td></tr>
+        <tr><td>Honesty</td><td class="score">—</td></tr>
+        <tr><td>Leadership skill</td><td class="score">—</td></tr>
+        <tr><td>Cooperation</td><td class="score">—</td></tr>
+        <tr><td>Attentiveness</td><td class="score">—</td></tr>
+        <tr><td>Perseverance</td><td class="score">—</td></tr>
+        <tr><td>Attitude to work</td><td class="score">—</td></tr>
+      </table>
+
+      <p class="sidebar-title">PSYCHOMOTOR SKILLS</p>
+      <table class="skills">
+        <tr><td>Handwriting</td><td class="score">—</td></tr>
+        <tr><td>Verbal fluency</td><td class="score">—</td></tr>
+        <tr><td>Sports</td><td class="score">—</td></tr>
+        <tr><td>Handling tools</td><td class="score">—</td></tr>
+        <tr><td>Drawing &amp; painting</td><td class="score">—</td></tr>
+      </table>
+
+      <p class="sidebar-title">GRADING SYSTEM</p>
+      <table class="grading">
+        <tr><td class="grade">A</td><td>80–100</td></tr>
+        <tr><td class="grade">B</td><td>60–79</td></tr>
+        <tr><td class="grade">C</td><td>55–59</td></tr>
+        <tr><td class="grade">D</td><td>45–54</td></tr>
+        <tr><td class="grade">F</td><td>0–44</td></tr>
+      </table>
+
+      <p class="sidebar-title">SIGNATURE / STAMP</p>
+      <div class="signature-line"></div>
+    </div>
+  </div>
+
+  <!-- FOOTER: summary, remarks, info to parents — pinned to bottom of page -->
+  <div class="footer-block">
+    <p class="summary-title">SUMMARY</p>
+    <table class="summary">
+      <tr>
+        <td class="label">TOTAL SCORE:</td><td class="value">— / —</td>
+        <td class="label">AVG. SCORE:</td><td class="value">— %</td>
+        <td class="label">GRADE:</td><td class="value">—</td>
+      </tr>
+    </table>
+
+    <p class="remarks"><b>CLASS TEACHER REMARKS:</b> <span class="underline">—</span></p>
+    <p class="remarks"><b>SCHOOL HEAD REMARKS:</b> <span class="underline">—</span></p>
+
+    <div class="info-parents">
+      <b>INFO TO PARENTS:</b> Add any closing note for parents here — resumption date, PTA meeting, fee reminders, etc.
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
