@@ -340,6 +340,16 @@ async function updateStudentResult(
 
   const averageScore = totalSubjects > 0 ? totalScore / totalSubjects : 0
 
+  // Fetch existing student_result to preserve remarks & attendance
+  const { data: existingResult } = await supabase
+    .from("student_results")
+    .select("teacher_remark, principal_remark, attendance_present, total_school_days")
+    .eq("student_id", studentId)
+    .eq("class_id", classId)
+    .eq("session_id", sessionId)
+    .eq("term_id", termId)
+    .maybeSingle()
+
   // Upsert student result
   await supabase.from("student_results").upsert(
     {
@@ -352,10 +362,14 @@ async function updateStudentResult(
       total_subjects: totalSubjects,
       subjects_passed: subjectsPassed,
       subjects_failed: subjectsFailed,
+      teacher_remark: existingResult?.teacher_remark ?? null,
+      principal_remark: existingResult?.principal_remark ?? null,
+      attendance_present: existingResult?.attendance_present ?? null,
+      total_school_days: existingResult?.total_school_days ?? null,
       generated_at: new Date().toISOString(),
     },
     {
-      onConflict: "student_id,class_id,session_id,term_id",
+      onConflict: "student_id,session_id,term_id",
     },
   )
 }

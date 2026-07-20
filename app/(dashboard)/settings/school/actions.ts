@@ -18,10 +18,11 @@ export async function updateSchoolSettings(formData: FormData) {
       phone_primary: formData.get("phone_primary") as string,
       phone_secondary: formData.get("phone_secondary") as string,
       email: formData.get("email") as string,
+      logo_url: (formData.get("logo_url") as string) || null,
+      principal_name: (formData.get("principal_name") as string) || null,
       student_id_prefix: formData.get("student_id_prefix") as string,
       staff_id_prefix: formData.get("staff_id_prefix") as string,
       number_of_terms: parseInt(formData.get("number_of_terms") as string),
-      payment_mode: formData.get("payment_mode") as string,
     };
 
     devLog.debug("Updating school settings:", updateData);

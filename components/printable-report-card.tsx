@@ -51,9 +51,11 @@ export function PrintableReportCard({
     studentAge = `${Math.abs(ageDate.getUTCFullYear() - 1970)} Yrs`
   }
 
-  const resumptionDate = term?.resumption_date 
-    ? new Date(term.resumption_date).toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' })
-    : "—"
+  const resumptionDate = term?.resumption_date || term?.next_term_resumption_date
+    ? new Date(term.resumption_date || term.next_term_resumption_date).toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' })
+    : term?.end_date
+      ? new Date(term.end_date).toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' })
+      : "—"
 
   const totalDaysInTerm = result?.total_school_days || term?.total_school_days || 100
   const daysPresent = result?.attendance_present !== undefined && result?.attendance_present !== null ? result.attendance_present : "—"
@@ -70,6 +72,9 @@ export function PrintableReportCard({
 
   const teacherRemarkText = result?.teacher_remark || result?.teacher_comment || "—"
   const principalRemarkText = result?.principal_remark || result?.principal_comment || "—"
+
+  const schoolPhone = school?.phone_primary || school?.phone || school?.primary_phone || "—"
+  const schoolPhoneSecondary = school?.phone_secondary
 
   const getSkillRating = (category: string, name: string) => {
     const found = skills?.find(
@@ -314,7 +319,9 @@ export function PrintableReportCard({
 
         .rc-remarks { font-size: 12.5px; margin: 6px 0; }
         .rc-remarks b { margin-right: 6px; }
-        .rc-remarks .underline {
+        .rc-remarks { font-size: 12.5px; margin: 6px 0; }
+        .rc-remarks b { margin-right: 6px; }
+        .rc-remark-text {
           font-weight: 700;
           border-bottom: 1px solid #000;
           padding-bottom: 1px;
@@ -348,10 +355,9 @@ export function PrintableReportCard({
 
           <div>
             <p className="rc-school-name">{school?.school_name || "SCHOOL NAME"}</p>
-            <p className="rc-school-line italic">Motto: {school?.motto || "School Motto Goes Here"}</p>
             <p className="rc-school-line italic">{school?.address || "School Address, City"}</p>
-            <p className="rc-school-line">TEL: {school?.phone || "0000000000"}, EMAIL: {school?.email || "info@school.ng"}</p>
-            <p className="rc-report-title">«« STUDENTS ACADEMIC REPORT CARD »»</p>
+            <p className="rc-school-line">TEL: {schoolPhone}{schoolPhoneSecondary ? ` / ${schoolPhoneSecondary}` : ""}, EMAIL: {school?.email || "info@school.ng"}</p>
+            <p className="rc-report-title">STUDENTS ACADEMIC REPORT CARD</p>
           </div>
 
           <div className="rc-photo-block">
@@ -425,7 +431,6 @@ export function PrintableReportCard({
                   <td>{data?.subject_average ?? "—"}</td>
                 </tr>
               ))}
-              {/* Optional: Add filler rows if subject count is too low to match template aesthetics */}
             </tbody>
           </table>
 
@@ -468,6 +473,9 @@ export function PrintableReportCard({
 
             <p className="rc-sidebar-title">SIGNATURE / STAMP</p>
             <div className="rc-signature-line"></div>
+            <p style={{ fontSize: '10px', textTransform: 'uppercase', textAlign: 'center', marginTop: '4px', fontWeight: 700 }}>
+              {school?.principal_name || ""} (School Head)
+            </p>
           </div>
         </div>
 
@@ -484,8 +492,11 @@ export function PrintableReportCard({
             </tbody>
           </table>
 
-          <p className="rc-remarks"><b>CLASS TEACHER REMARKS:</b> <span className="underline">{teacherRemarkText}</span></p>
-          <p className="rc-remarks"><b>SCHOOL HEAD REMARKS:</b> <span className="underline">{principalRemarkText}</span></p>
+          <p className="rc-remarks"><b>CLASS TEACHER REMARKS:</b> <span className="rc-remark-text">{teacherRemarkText}</span></p>
+          <p className="rc-remarks"><b>SCHOOL HEAD REMARKS:</b> <span className="rc-remark-text">{principalRemarkText}</span></p>
+          <p style={{ fontSize: '10.5px', marginTop: '2px', fontStyle: 'italic', fontWeight: 600 }}>
+            Head Teacher / Principal: <span style={{ fontStyle: 'normal' }}>{school?.principal_name || "Mallam Jaafar"}</span>
+          </p>
 
           <div className="rc-info-parents">
             <b>INFO TO PARENTS:</b> {school?.parent_info || "Please note resumption date and settle all school fees prior to resumption."}

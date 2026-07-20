@@ -55,11 +55,12 @@ export default async function ResultFinalizationPage({
     { data: classes },
     { data: students },
     { data: school },
+    { data: teachers },
   ] = await Promise.all([
     supabase.from("sessions").select("id, name").order("start_date", { ascending: false }),
-    supabase.from("terms").select("id, name, session_id, total_school_days").eq("session_id", sessionId),
-    supabase.from("classes").select("id, name, section:sections(name)").eq("id", classId).single(),
-    supabase.from("classes").select("id, name, section:sections(name)").order("name"),
+    supabase.from("terms").select("*").eq("session_id", sessionId),
+    supabase.from("classes").select("id, name, class_teacher_id, section:sections(name)").eq("id", classId).single(),
+    supabase.from("classes").select("id, name, class_teacher_id, section:sections(name)").order("name"),
     supabase
       .from("student_enrollments")
       .select(`
@@ -79,7 +80,25 @@ export default async function ResultFinalizationPage({
       .eq("term_id", termId)
       .eq("is_active", true),
     supabase.from("school_settings").select("*").maybeSingle(),
+    supabase.from("teachers").select("id, first_name, last_name"),
   ])
+
+  const teachersMap = new Map(
+    teachers?.map((t) => [t.id, `${t.first_name || ""} ${t.last_name || ""}`.trim()]) || []
+  )
+
+  const enrichedClassData = classData
+    ? {
+        ...classData,
+        class_teacher: classData.class_teacher_id ? teachersMap.get(classData.class_teacher_id) || "—" : "—",
+      }
+    : null
+
+  const enrichedClasses =
+    classes?.map((c) => ({
+      ...c,
+      class_teacher: c.class_teacher_id ? teachersMap.get(c.class_teacher_id) || "—" : "—",
+    })) || []
 
   return (
     <div className="flex h-full flex-col">
@@ -87,8 +106,8 @@ export default async function ResultFinalizationPage({
         <ResultFinalizationInterface
           sessions={sessions || []}
           terms={terms || []}
-          classData={classData}
-          classes={classes || []}
+          classData={enrichedClassData}
+          classes={enrichedClasses}
           school={school}
           students={students?.map((s) => s.student).filter(Boolean) || []}
           initialSessionId={sessionId}

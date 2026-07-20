@@ -88,6 +88,19 @@ export async function generateClassResults(
       }
     })
 
+    // 4.5 Fetch existing student_results for this class/session/term to preserve remarks & attendance
+    const { data: existingResults } = await supabase
+      .from('student_results')
+      .select('student_id, teacher_remark, principal_remark, attendance_present, total_school_days')
+      .eq('class_id', classId)
+      .eq('session_id', sessionId)
+      .eq('term_id', termId)
+
+    const existingMap = new Map<string, any>()
+    existingResults?.forEach(r => {
+      existingMap.set(r.student_id, r)
+    })
+
     // Calculate final stats for each student
     const finalResults = []
 
@@ -108,6 +121,7 @@ export async function generateClassResults(
       }
 
       const averageScore = totalSubjects > 0 ? totalScore / totalSubjects : 0
+      const existing = existingMap.get(studentId)
 
       finalResults.push({
         student_id: studentId,
@@ -119,6 +133,10 @@ export async function generateClassResults(
         total_subjects: totalSubjects,
         subjects_passed: subjectsPassed,
         subjects_failed: subjectsFailed,
+        teacher_remark: existing?.teacher_remark ?? null,
+        principal_remark: existing?.principal_remark ?? null,
+        attendance_present: existing?.attendance_present ?? null,
+        total_school_days: existing?.total_school_days ?? null,
         generated_at: new Date().toISOString()
       })
     }
@@ -127,36 +145,21 @@ export async function generateClassResults(
     // Sort by average score descending
     finalResults.sort((a, b) => b.average_score - a.average_score)
 
-    // Assign positions (handling ties if needed, but simple rank for now)
+    // Assign positions
     finalResults.forEach((result, index) => {
       // @ts-ignore
       result.position = index + 1
     })
 
-    // 6. Upsert into student_results
-    // We'll do this in a loop or bulk upsert if possible. 
-    // Supabase upsert works well.
-    
-    // We need to handle the case where we want to update existing records based on student_id, class, session, term
-    // The unique constraint might not be set up on these 4 fields combined in the DB schema provided.
-    // So we might need to delete existing for this batch and insert new, OR rely on an ID.
-    // Let's try to delete existing results for this class/session/term first to be safe and avoid duplicates if no unique constraint exists.
-    
-    const { error: deleteError } = await supabase
-      .from('student_results')
-      .delete()
-      .eq('class_id', classId)
-      .eq('session_id', sessionId)
-      .eq('term_id', termId)
-    
-    if (deleteError) throw deleteError
-
+    // 6. Upsert into student_results without destroying existing remarks/attendance
     if (finalResults.length > 0) {
-      const { error: insertError } = await supabase
+      const { error: upsertError } = await supabase
         .from('student_results')
-        .insert(finalResults)
+        .upsert(finalResults, {
+          onConflict: 'student_id,session_id,term_id'
+        })
       
-      if (insertError) throw insertError
+      if (upsertError) throw upsertError
     }
 
     revalidatePath('/assessments/results')

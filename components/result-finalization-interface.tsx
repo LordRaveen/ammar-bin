@@ -252,6 +252,28 @@ export function ResultFinalizationInterface({
             (subjectScoresMap[subjName].exam || 0)
         })
 
+        // Sort subjectScoresMap by class subjects order
+        const { data: classSubjs } = await supabase
+          .from("class_subjects")
+          .select("subject:subjects(name)")
+          .eq("class_id", initialClassId || classData?.id)
+
+        const classSubjectOrder = classSubjs?.map((cs: any) => cs.subject?.name).filter(Boolean) || []
+        
+        const sortedSubjectScoresMap: Record<string, any> = {}
+        const orderMap = new Map(classSubjectOrder.map((name: string, index: number) => [name.toLowerCase(), index]))
+        
+        Object.keys(subjectScoresMap)
+          .sort((a, b) => {
+            const indexA = orderMap.has(a.toLowerCase()) ? orderMap.get(a.toLowerCase())! : 999
+            const indexB = orderMap.has(b.toLowerCase()) ? orderMap.get(b.toLowerCase())! : 999
+            if (indexA !== indexB) return indexA - indexB
+            return a.localeCompare(b)
+          })
+          .forEach((k) => {
+            sortedSubjectScoresMap[k] = subjectScoresMap[k]
+          })
+
         // Fetch skills
         const { data: skillsData } = await supabase
           .from("student_skills")
@@ -269,15 +291,23 @@ export function ResultFinalizationInterface({
           .eq("term_id", termId)
           .maybeSingle()
 
+        const targetClass = activeClassObj || classData
         cards.push({
           student: {
             ...studentObj,
-            classes: classData ? { name: classData.name, section: classData.section } : null
+            classes: targetClass ? { 
+              name: targetClass.name, 
+              section: targetClass.section,
+              class_teacher: targetClass.class_teacher || targetClass.class_teacher_name || targetClass.teacher_name || "—"
+            } : null
           },
           session: currentSession,
           term: currentTerm,
-          result: resultData,
-          subjectScores: subjectScoresMap,
+          result: {
+            ...resultData,
+            total_students: students.length
+          },
+          subjectScores: sortedSubjectScoresMap,
           school,
           skills: skillsData || []
         })
@@ -401,64 +431,42 @@ export function ResultFinalizationInterface({
     return true
   })
 
-  // Fetch completion stats
+  // Fetch completion stats (Parallelized)
   useEffect(() => {
     async function fetchCompletionStats() {
       if (!initialClassId || !sessionId || !termId) return
 
-      // Fetch scores completion
-      const { data: scoresData } = await supabase
-        .from("student_scores")
-        .select("student_id")
-        .in(
-          "student_id",
-          students.map((s) => s.id)
-        )
+      const studentIds = students.map((s) => s.id)
+      if (studentIds.length === 0) return
 
-      const studentsWithScores = new Set(scoresData?.map((s) => s.student_id))
+      const [scoresRes, skillsRes, resultsRes] = await Promise.all([
+        supabase.from("student_scores").select("student_id").in("student_id", studentIds),
+        supabase.from("student_skills").select("student_id, rating").eq("session_id", sessionId).eq("term_id", termId).in("student_id", studentIds),
+        supabase.from("student_results").select("student_id, attendance_present, teacher_remark, principal_remark").eq("session_id", sessionId).eq("term_id", termId).in("student_id", studentIds),
+      ])
+
+      const studentsWithScores = new Set(scoresRes.data?.map((s) => s.student_id))
       setScoresCompletion({
         completed: studentsWithScores.size,
         total: students.length,
       })
       setCompletedScoresSet(studentsWithScores)
 
-      // Fetch skills completion
-      const { data: skillsData } = await supabase
-        .from("student_skills")
-        .select("student_id, rating")
-        .eq("session_id", sessionId)
-        .eq("term_id", termId)
-        .in(
-          "student_id",
-          students.map((s) => s.id)
-        )
-
-      const studentsWithSkills = new Set(skillsData?.filter((s) => s.rating !== null).map((s) => s.student_id))
+      const studentsWithSkills = new Set(skillsRes.data?.filter((s) => s.rating !== null).map((s) => s.student_id))
       setSkillsCompletion({
         completed: studentsWithSkills.size,
         total: students.length,
       })
       setCompletedSkillsSet(studentsWithSkills)
 
-      // Fetch attendance & remarks completion
-      const { data: resultsData } = await supabase
-        .from("student_results")
-        .select("student_id, attendance_present, teacher_remark, principal_remark")
-        .eq("session_id", sessionId)
-        .eq("term_id", termId)
-        .in(
-          "student_id",
-          students.map((s) => s.id)
-        )
-
       const studentsWithAttendance = new Set(
-        resultsData
+        resultsRes.data
           ?.filter((r) => r.attendance_present !== null && r.attendance_present !== undefined && r.attendance_present > 0)
           .map((r) => r.student_id)
       )
 
       const studentsWithRemarks = new Set(
-        resultsData
+        resultsRes.data
           ?.filter((r) => (r.teacher_remark && r.teacher_remark.trim().length > 0) || (r.principal_remark && r.principal_remark.trim().length > 0))
           .map((r) => r.student_id)
       )
@@ -479,25 +487,45 @@ export function ResultFinalizationInterface({
     fetchCompletionStats()
   }, [initialClassId, sessionId, termId, students, supabase, refreshKey])
 
-  // Fetch student data when selected
+  // Fetch student data when selected (Parallelized)
   useEffect(() => {
     async function fetchStudentData() {
       if (!selectedStudent) return
       setLoading(true)
 
       try {
-        // Fetch scores
-        const { data: scoresData } = await supabase
-          .from("student_scores")
-          .select(`
-            score,
-            grade,
-            assessment:assessments(
-              subject:subjects(name),
-              assessment_type:assessment_types(name)
-            )
-          `)
-          .eq("student_id", selectedStudent.id)
+        const [scoresRes, skillsRes, resultRes] = await Promise.all([
+          supabase
+            .from("student_scores")
+            .select(`
+              score,
+              grade,
+              assessment:assessments(
+                subject:subjects(name),
+                assessment_type:assessment_types(name)
+              )
+            `)
+            .eq("student_id", selectedStudent.id),
+
+          supabase
+            .from("student_skills")
+            .select("skill_category, skill_name, rating")
+            .eq("student_id", selectedStudent.id)
+            .eq("session_id", sessionId)
+            .eq("term_id", termId),
+
+          supabase
+            .from("student_results")
+            .select("teacher_remark, principal_remark, attendance_present, total_school_days")
+            .eq("student_id", selectedStudent.id)
+            .eq("session_id", sessionId)
+            .eq("term_id", termId)
+            .maybeSingle()
+        ])
+
+        const scoresData = scoresRes.data
+        const skillsData = skillsRes.data
+        const resultData = resultRes.data
 
         // Organize scores by subject
         const scoresBySubject = new Map<string, any>()
@@ -529,22 +557,31 @@ export function ResultFinalizationInterface({
           }
         })
 
-        // Calculate totals
-        const scoresArray = Array.from(scoresBySubject.values()).map((s) => ({
-          ...s,
-          total: (s.ca1 || 0) + (s.ca2 || 0) + (s.exam || 0),
-        }))
+        // Fetch class subjects ordering
+        const { data: classSubjs } = await supabase
+          .from("class_subjects")
+          .select("subject:subjects(name)")
+          .eq("class_id", initialClassId || classData?.id)
+
+        const classSubjectOrder = classSubjs?.map((cs: any) => cs.subject?.name).filter(Boolean) || []
+        const orderMap = new Map(classSubjectOrder.map((name: string, index: number) => [name.toLowerCase(), index]))
+
+        // Calculate totals and sort by unified class subject order
+        const scoresArray = Array.from(scoresBySubject.values())
+          .map((s) => ({
+            ...s,
+            total: (s.ca1 || 0) + (s.ca2 || 0) + (s.exam || 0),
+          }))
+          .sort((a, b) => {
+            const indexA = orderMap.has(a.subject_name.toLowerCase()) ? orderMap.get(a.subject_name.toLowerCase())! : 999
+            const indexB = orderMap.has(b.subject_name.toLowerCase()) ? orderMap.get(b.subject_name.toLowerCase())! : 999
+            if (indexA !== indexB) return indexA - indexB
+            return a.subject_name.localeCompare(b.subject_name)
+          })
 
         setScores(scoresArray)
 
-        // Fetch skills
-        const { data: skillsData } = await supabase
-          .from("student_skills")
-          .select("skill_category, skill_name, rating")
-          .eq("student_id", selectedStudent.id)
-          .eq("session_id", sessionId)
-          .eq("term_id", termId)
-
+        // Process skills
         const dbSkillsMap = new Map<string, number | null>()
         skillsData?.forEach((s) => {
           if (s.skill_name) {
@@ -567,15 +604,7 @@ export function ResultFinalizationInterface({
         setAffectiveSkills(affective)
         setPsychomotorSkills(psychomotor)
 
-        // Fetch remarks & attendance
-        const { data: resultData } = await supabase
-          .from("student_results")
-          .select("teacher_remark, principal_remark, attendance_present, total_school_days")
-          .eq("student_id", selectedStudent.id)
-          .eq("session_id", sessionId)
-          .eq("term_id", termId)
-          .maybeSingle()
-
+        // Set remarks & attendance
         setTeacherRemarks(resultData?.teacher_remark || "")
         setPrincipalRemarks(resultData?.principal_remark || "")
         setAttendancePresent(resultData?.attendance_present !== undefined && resultData?.attendance_present !== null ? String(resultData.attendance_present) : "0")
@@ -599,15 +628,23 @@ export function ResultFinalizationInterface({
           }
         })
 
+        const targetClass = activeClassObj || classData
         setPrintCardsData([
           {
             student: {
               ...selectedStudent,
-              classes: classData ? { name: classData.name, section: classData.section } : null,
+              classes: targetClass ? { 
+                name: targetClass.name, 
+                section: targetClass.section,
+                class_teacher: targetClass.class_teacher || targetClass.class_teacher_name || targetClass.teacher_name || "—"
+              } : null,
             },
             session: currentSession,
             term: currentTerm,
-            result: resultData,
+            result: {
+              ...resultData,
+              total_students: students.length
+            },
             subjectScores: currentSubjectScoresMap,
             school,
             skills: skillsData || [],
@@ -685,29 +722,24 @@ export function ResultFinalizationInterface({
     setLoading(true)
 
     try {
-      // Save skills
+      // Get current user id
       const userRes = await supabase.auth.getUser()
       const userId = userRes.data.user?.id
 
+      // Prepare bulk skills payload
       const allSkills = [...affectiveSkills, ...psychomotorSkills]
-      for (const skill of allSkills) {
-        const { error: skillErr } = await supabase
-          .from("student_skills")
-          .upsert({
-            student_id: selectedStudent.id,
-            session_id: sessionId,
-            term_id: termId,
-            class_id: initialClassId,
-            skill_category: skill.skill_category,
-            skill_name: skill.skill_name,
-            rating: skill.rating,
-            assessed_by: userId,
-          }, { onConflict: "student_id, session_id, term_id, skill_name" })
+      const skillsPayload = allSkills.map((skill) => ({
+        student_id: selectedStudent.id,
+        session_id: sessionId,
+        term_id: termId,
+        class_id: initialClassId,
+        skill_category: skill.skill_category,
+        skill_name: skill.skill_name,
+        rating: skill.rating,
+        assessed_by: userId,
+      }))
 
-        if (skillErr) throw skillErr
-      }
-
-      // Save remarks & attendance
+      // Prepare results payload
       const totalScore = scores.reduce((sum, s) => sum + s.total, 0)
       const maxScore = scores.length * 100
       const averageScore = scores.length > 0 ? (totalScore / maxScore) * 100 : 0
@@ -717,7 +749,7 @@ export function ResultFinalizationInterface({
       const presentNum = parseInt(attendancePresent, 10) || 0
       const totalNum = parseInt(attendanceTotal, 10) || 0
 
-      const { error: resultErr } = await supabase.from("student_results").upsert({
+      const resultPayload = {
         student_id: selectedStudent.id,
         session_id: sessionId,
         term_id: termId,
@@ -731,9 +763,20 @@ export function ResultFinalizationInterface({
         principal_remark: principalRemarks,
         attendance_present: presentNum,
         total_school_days: totalNum,
-      }, { onConflict: "student_id, session_id, term_id" })
+      }
 
-      if (resultErr) throw resultErr
+      // Execute bulk skills upsert AND result upsert in PARALLEL!
+      const [skillsRes, resultRes] = await Promise.all([
+        supabase
+          .from("student_skills")
+          .upsert(skillsPayload, { onConflict: "student_id, session_id, term_id, skill_name" }),
+        supabase
+          .from("student_results")
+          .upsert(resultPayload, { onConflict: "student_id, session_id, term_id" }),
+      ])
+
+      if (skillsRes.error) throw skillsRes.error
+      if (resultRes.error) throw resultRes.error
 
       // Trigger instant refresh for top KPI completion cards
       setRefreshKey((prev) => prev + 1)
@@ -1178,7 +1221,11 @@ export function ResultFinalizationInterface({
                         disabled={isPreparingPrint}
                         className="h-7 gap-1.5 px-2.5 text-xs font-semibold rounded-r-none border-r border-border/60 hover:bg-accent"
                       >
-                        <Printer className="h-3.5 w-3.5" />
+                        {isPreparingPrint ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                        ) : (
+                          <Printer className="h-3.5 w-3.5" />
+                        )}
                         {isPreparingPrint ? "Preparing..." : "Print"}
                       </Button>
 
@@ -1268,7 +1315,11 @@ export function ResultFinalizationInterface({
                               disabled={selectedStudentIdsForPrint.length === 0 || isPreparingPrint}
                               className="w-full h-8 text-xs font-bold gap-2"
                             >
-                              <Printer className="h-3.5 w-3.5" />
+                              {isPreparingPrint ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Printer className="h-3.5 w-3.5" />
+                              )}
                               {isPreparingPrint
                                 ? "Preparing..."
                                 : `Print ${selectedStudentIdsForPrint.length} Selected`}

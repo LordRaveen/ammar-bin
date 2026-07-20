@@ -272,16 +272,14 @@ export default function SignInPage() {
                   {error && (
                     <Alert
                       variant={lockoutInfo?.locked ? "destructive" : "default"}
-                      className={lockoutInfo?.locked ? "" : "border-amber-500 bg-amber-50 text-amber-900"}
+                      className={lockoutInfo?.locked ? "" : "border-amber-500 bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-500/30"}
                     >
-                      <div className="flex gap-2">
-                        {lockoutInfo?.locked ? (
-                          <IconLock className="h-4 w-4" />
-                        ) : (
-                          <IconAlertTriangle className="h-4 w-4" />
-                        )}
-                        <AlertDescription className="text-sm">{error}</AlertDescription>
-                      </div>
+                      {lockoutInfo?.locked ? (
+                        <IconLock className="h-4 w-4" />
+                      ) : (
+                        <IconAlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                      )}
+                      <AlertDescription className="text-sm font-medium text-amber-900 dark:text-amber-200">{error}</AlertDescription>
                     </Alert>
                   )}
                   <Button type="submit" className="w-full" disabled={isLoading || lockoutInfo?.locked}>
