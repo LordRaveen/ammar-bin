@@ -410,27 +410,32 @@ export function PrintableReportCard({
                 <th className="rot"><span>EXAM (60)</span></th>
                 <th className="rot"><span>TOTAL (100)</span></th>
                 <th className="rot"><span>GRADE</span></th>
-                <th className="rot"><span>SUBJECT POSITION</span></th>
-                <th className="rot"><span>SUBJECT HIGHEST</span></th>
-                <th className="rot"><span>SUBJECT LOWEST</span></th>
-                <th className="rot"><span>SUBJECT AVERAGE</span></th>
+                <th className="rot"><span>CLASS AVERAGE</span></th>
+                <th className="rot"><span>REMARKS</span></th>
               </tr>
             </thead>
             <tbody>
-              {Object.entries(subjectScores || {}).map(([subjName, data]: [string, any]) => (
-                <tr key={subjName}>
-                  <td className="subj-name">{subjName}</td>
-                  <td>{data?.ca1 !== undefined && data?.ca1 !== null ? data.ca1 : "—"}</td>
-                  <td>{data?.ca2 !== undefined && data?.ca2 !== null ? data.ca2 : "—"}</td>
-                  <td>{data?.exam !== undefined && data?.exam !== null ? data.exam : "—"}</td>
-                  <td style={{ fontWeight: 700 }}>{data?.total !== undefined && data?.total !== null ? data.total : "—"}</td>
-                  <td style={{ fontWeight: 700 }}>{data?.grade || "—"}</td>
-                  <td>{data?.subject_position ?? "—"}</td>
-                  <td>{data?.subject_highest ?? "—"}</td>
-                  <td>{data?.subject_lowest ?? "—"}</td>
-                  <td>{data?.subject_average ?? "—"}</td>
-                </tr>
-              ))}
+              {Object.entries(subjectScores || {}).map(([subjName, data]: [string, any]) => {
+                const totalScore = data?.total || 0
+                const defaultRemark = data?.remark || (
+                  totalScore >= 80 ? "Excellent" :
+                  totalScore >= 60 ? "Very Good" :
+                  totalScore >= 55 ? "Good" :
+                  totalScore >= 45 ? "Fair" : "Needs Imp."
+                )
+                return (
+                  <tr key={subjName}>
+                    <td className="subj-name">{subjName}</td>
+                    <td>{data?.ca1 !== undefined && data?.ca1 !== null ? data.ca1 : "—"}</td>
+                    <td>{data?.ca2 !== undefined && data?.ca2 !== null ? data.ca2 : "—"}</td>
+                    <td>{data?.exam !== undefined && data?.exam !== null ? data.exam : "—"}</td>
+                    <td style={{ fontWeight: 700 }}>{data?.total !== undefined && data?.total !== null ? data.total : "—"}</td>
+                    <td style={{ fontWeight: 700 }}>{data?.grade || "—"}</td>
+                    <td>{data?.subject_average !== undefined && data?.subject_average !== null ? `${data.subject_average}%` : "—"}</td>
+                    <td style={{ fontSize: '10px', fontWeight: 600 }}>{defaultRemark}</td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
 
@@ -471,10 +476,10 @@ export function PrintableReportCard({
               </tbody>
             </table>
 
-            <p className="rc-sidebar-title">SIGNATURE / STAMP</p>
+            <p className="rc-sidebar-title">SIGNATURE (Principal)</p>
             <div className="rc-signature-line"></div>
             <p style={{ fontSize: '10px', textTransform: 'uppercase', textAlign: 'center', marginTop: '4px', fontWeight: 700 }}>
-              {school?.principal_name || ""} (School Head)
+              {school?.principal_name || ""}
             </p>
           </div>
         </div>

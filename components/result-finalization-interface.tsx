@@ -20,6 +20,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Badge } from "@/components/ui/badge"
 import { CheckCircle2, ChevronLeft, Save, SlidersHorizontal, ArrowLeft, Loader2, RotateCcw, Pencil, Printer, ChevronDown, Download, FileText, Image as ImageIcon, ChevronsUpDown, Check, Filter, ExternalLink } from "lucide-react"
 import { PrintableReportCard } from "@/components/printable-report-card"
+import { SessionTermSelector } from "@/components/session-term-selector"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { exportReportCardsAsPDF, exportReportCardsAsImages } from "@/lib/export-report-card"
 import { createBrowserClient } from "@/lib/supabase/client"
@@ -190,6 +191,79 @@ export function ResultFinalizationInterface({
     )
   }
 
+  const getResumptionDate = (term: any, session: any) => {
+    if (term?.resumption_date) return term.resumption_date
+    if (term?.next_term_resumption_date) return term.next_term_resumption_date
+
+    const termNum = term?.term_number || (term?.name?.includes("1") ? 1 : term?.name?.includes("2") ? 2 : 3)
+    if (termNum < 3) {
+      const nextTerm = terms.find(
+        (t) => (t.session_id === session?.id || t.session_id === term?.session_id) &&
+          (t.term_number === termNum + 1 || t.name?.includes(String(termNum + 1)))
+      )
+      if (nextTerm?.start_date) return nextTerm.start_date
+    } else {
+      const sortedSessions = [...sessions].sort(
+        (a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
+      )
+      const currentIndex = sortedSessions.findIndex((s) => s.id === session?.id || s.id === term?.session_id)
+      if (currentIndex >= 0 && currentIndex < sortedSessions.length - 1) {
+        return sortedSessions[currentIndex + 1].start_date
+      }
+    }
+    return term?.end_date || null
+  }
+
+  const getClassSubjectAverages = async (cId: string, sId: string, tId: string) => {
+    try {
+      const { data: scores } = await supabase
+        .from("student_scores")
+        .select(`
+          student_id,
+          score,
+          assessment:assessments!inner(
+            class_id,
+            session_id,
+            term_id,
+            subject:subjects(name)
+          )
+        `)
+        .eq("assessment.class_id", cId)
+        .eq("assessment.session_id", sId)
+        .eq("assessment.term_id", tId)
+
+      const subjectStudentTotals: Record<string, Record<string, number>> = {}
+
+      scores?.forEach((item: any) => {
+        const subjName = item.assessment?.subject?.name
+        const stId = item.student_id
+        if (!subjName || !stId) return
+
+        if (!subjectStudentTotals[subjName]) {
+          subjectStudentTotals[subjName] = {}
+        }
+        if (!subjectStudentTotals[subjName][stId]) {
+          subjectStudentTotals[subjName][stId] = 0
+        }
+        subjectStudentTotals[subjName][stId] += item.score || 0
+      })
+
+      const classAverages: Record<string, number> = {}
+      Object.entries(subjectStudentTotals).forEach(([subjName, stTotals]) => {
+        const studentCount = Object.keys(stTotals).length
+        if (studentCount > 0) {
+          const totalSum = Object.values(stTotals).reduce((sum, val) => sum + val, 0)
+          classAverages[subjName] = Math.round((totalSum / studentCount) * 10) / 10
+        }
+      })
+
+      return classAverages
+    } catch (err) {
+      console.error("Error computing class subject averages:", err)
+      return {}
+    }
+  }
+
   const preparePrintDataForStudents = async (studentIds: string[]) => {
     if (studentIds.length === 0) return
     setIsPreparingPrint(true)
@@ -197,7 +271,11 @@ export function ResultFinalizationInterface({
     try {
       const cards: any[] = []
       const currentSession = sessions.find((s) => s.id === sessionId)
-      const currentTerm = terms.find((t) => t.id === termId)
+      const rawTerm = terms.find((t) => t.id === termId)
+      const computedResumption = getResumptionDate(rawTerm, currentSession)
+      const currentTerm = rawTerm ? { ...rawTerm, resumption_date: computedResumption } : null
+
+      const classAverages = await getClassSubjectAverages(initialClassId, sessionId, termId)
 
       for (const stId of studentIds) {
         const studentObj = students.find((s) => s.id === stId) || selectedStudent
@@ -250,6 +328,8 @@ export function ResultFinalizationInterface({
             (subjectScoresMap[subjName].ca1 || 0) +
             (subjectScoresMap[subjName].ca2 || 0) +
             (subjectScoresMap[subjName].exam || 0)
+          
+          subjectScoresMap[subjName].subject_average = classAverages[subjName] ?? null
         })
 
         // Sort subjectScoresMap by class subjects order
@@ -271,7 +351,10 @@ export function ResultFinalizationInterface({
             return a.localeCompare(b)
           })
           .forEach((k) => {
-            sortedSubjectScoresMap[k] = subjectScoresMap[k]
+            sortedSubjectScoresMap[k] = {
+              ...subjectScoresMap[k],
+              subject_average: classAverages[k] ?? null
+            }
           })
 
         // Fetch skills
@@ -566,11 +649,14 @@ export function ResultFinalizationInterface({
         const classSubjectOrder = classSubjs?.map((cs: any) => cs.subject?.name).filter(Boolean) || []
         const orderMap = new Map(classSubjectOrder.map((name: string, index: number) => [name.toLowerCase(), index]))
 
+        const classAverages = await getClassSubjectAverages(initialClassId || classData?.id, sessionId, termId)
+
         // Calculate totals and sort by unified class subject order
         const scoresArray = Array.from(scoresBySubject.values())
           .map((s) => ({
             ...s,
             total: (s.ca1 || 0) + (s.ca2 || 0) + (s.exam || 0),
+            subject_average: classAverages[s.subject_name] ?? null,
           }))
           .sort((a, b) => {
             const indexA = orderMap.has(a.subject_name.toLowerCase()) ? orderMap.get(a.subject_name.toLowerCase())! : 999
@@ -609,8 +695,10 @@ export function ResultFinalizationInterface({
         setPrincipalRemarks(resultData?.principal_remark || "")
         setAttendancePresent(resultData?.attendance_present !== undefined && resultData?.attendance_present !== null ? String(resultData.attendance_present) : "0")
 
-        const currentTerm = terms.find((t) => t.id === termId)
+        const rawTerm = terms.find((t) => t.id === termId)
         const currentSession = sessions.find((s) => s.id === sessionId)
+        const computedResumption = getResumptionDate(rawTerm, currentSession)
+        const currentTerm = rawTerm ? { ...rawTerm, resumption_date: computedResumption } : null
         const defaultSchoolDays = currentTerm?.total_school_days || 100
         setAttendanceTotal(resultData?.total_school_days ? String(resultData.total_school_days) : String(defaultSchoolDays))
 
@@ -624,6 +712,7 @@ export function ResultFinalizationInterface({
             exam: s.exam,
             total: s.total,
             grade: s.grade,
+            subject_average: s.subject_average,
             remark: "",
           }
         })
@@ -882,32 +971,14 @@ export function ResultFinalizationInterface({
             </div>
           )}
           {showSelectors && (
-            <div className="flex gap-2">
-              <Select value={sessionId} onValueChange={handleSessionChange}>
-                <SelectTrigger className="w-[160px] h-8 text-xs">
-                  <SelectValue placeholder="Select session" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sessions.map((session) => (
-                    <SelectItem key={session.id} value={session.id} className="text-xs">
-                      {session.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={termId} onValueChange={handleTermChange}>
-                <SelectTrigger className="w-[160px] h-8 text-xs">
-                  <SelectValue placeholder="Select term" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredTerms.map((term) => (
-                    <SelectItem key={term.id} value={term.id} className="text-xs">
-                      {term.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <SessionTermSelector
+              sessions={sessions}
+              terms={terms}
+              selectedSessionId={sessionId}
+              selectedTermId={termId}
+              updateUrlOnSelect={true}
+              size="sm"
+            />
           )}
         </div>
       )}

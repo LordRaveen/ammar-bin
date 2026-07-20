@@ -71,7 +71,7 @@ export function GeneralSettingsTab({ settings }: { settings: any }) {
   }
 
   return (
-    <Card className="border-zinc-200 dark:border-zinc-800 shadow-xs">
+    <Card className="border-0 shadow-xs">
       <CardHeader>
         <CardTitle>School Information & Branding</CardTitle>
         <CardDescription>Update your school crest logo, basic details, and contact information</CardDescription>

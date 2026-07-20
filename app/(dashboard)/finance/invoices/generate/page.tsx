@@ -13,7 +13,7 @@ export default async function GenerateInvoicePage() {
     supabase.from("sessions").select("*").eq("is_active", true).maybeSingle(),
     supabase.from("terms").select("*").eq("is_active", true).maybeSingle(),
     supabase.from("classes").select("*, section:sections(name)").eq("is_active", true).order("name"),
-    supabase.from("sessions").select("*, terms:terms(*)").order("start_date", { ascending: false }),
+    supabase.from("sessions").select("*, terms:terms(*)").order("name", { ascending: false }),
   ])
 
   return (

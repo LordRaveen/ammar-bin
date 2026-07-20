@@ -3,60 +3,88 @@
 import { createClient } from "@/lib/supabase/server"
 import { requireAdmin } from "@/lib/auth/get-user"
 import { revalidatePath } from "next/cache"
-import { redirect } from "next/navigation"
 import { devLog } from "@/lib/logger"
 
-export async function createSession(formData: FormData) {
+export async function createNewSession(formData: FormData) {
   try {
     await requireAdmin()
     const supabase = await createClient()
 
-    const sessionData = {
-      name: formData.get("name") as string,
-      start_date: formData.get("start_date") as string,
-      end_date: formData.get("end_date") as string,
-      is_active: formData.get("is_active") === "on",
+    const name = formData.get("name") as string
+    const startDate = (formData.get("start_date") as string) || null
+    const endDate = (formData.get("end_date") as string) || null
+
+    if (!name) {
+      return { success: false, error: "Session name is required" }
     }
 
-    devLog.debug("Creating session:", sessionData)
+    devLog.debug("Creating new session:", name)
 
     // Create session
-    const { data: session, error: sessionError } = await supabase.from("sessions").insert(sessionData).select().single()
+    const { data: session, error: sessionError } = await supabase
+      .from("sessions")
+      .insert({
+        name,
+        start_date: startDate,
+        end_date: endDate,
+        is_active: false,
+      })
+      .select()
+      .single()
 
     if (sessionError) {
       devLog.error("Failed to create session:", sessionError)
-      throw sessionError
+      return { success: false, error: sessionError.message }
     }
 
-    // Create terms
-    const terms = []
-    for (let i = 1; i <= 3; i++) {
-      const termData = {
-        session_id: session.id,
-        name: formData.get(`term_${i}_name`) as string,
-        term_number: i,
-        start_date: formData.get(`term_${i}_start`) as string,
-        end_date: formData.get(`term_${i}_end`) as string,
-        is_active: formData.get(`term_${i}_active`) === "on",
-      }
-      terms.push(termData)
-    }
+    // Automatically create 3 terms for this session
+    const terms = [
+      { session_id: session.id, name: "First Term", term_number: 1, is_active: false, start_date: null, end_date: null },
+      { session_id: session.id, name: "Second Term", term_number: 2, is_active: false, start_date: null, end_date: null },
+      { session_id: session.id, name: "Third Term", term_number: 3, is_active: false, start_date: null, end_date: null },
+    ]
 
     const { error: termsError } = await supabase.from("terms").insert(terms)
 
     if (termsError) {
       devLog.error("Failed to create terms:", termsError)
-      throw termsError
+      return { success: false, error: termsError.message }
     }
 
-    devLog.info("Session created successfully:", session.id)
-    revalidatePath("/settings/sessions")
-  } catch (error) {
-    devLog.error("Error in createSession:", error)
-    throw error
+    devLog.info("Session and 3 terms created successfully:", session.id)
+    revalidatePath("/settings")
+    return { success: true }
+  } catch (error: any) {
+    devLog.error("Error in createNewSession:", error)
+    return { success: false, error: error.message || "Failed to create session" }
   }
+}
 
-  redirect("/settings/sessions")
+export async function updateTermDates(formData: FormData) {
+  try {
+    await requireAdmin()
+    const supabase = await createClient()
+
+    const termId = formData.get("term_id") as string
+    const startDate = (formData.get("start_date") as string) || null
+    const endDate = (formData.get("end_date") as string) || null
+
+    const { error } = await supabase
+      .from("terms")
+      .update({ start_date: startDate, end_date: endDate })
+      .eq("id", termId)
+
+    if (error) {
+      devLog.error("Failed to update term dates:", error)
+      return { success: false, error: error.message }
+    }
+
+    revalidatePath("/settings")
+    return { success: true }
+  } catch (error: any) {
+    devLog.error("Error in updateTermDates:", error)
+    return { success: false, error: error.message || "Failed to update term dates" }
+  }
 }
 
 export async function setActiveSession(sessionId: string) {
@@ -79,9 +107,10 @@ export async function setActiveSession(sessionId: string) {
 
     devLog.info("Active session set successfully:", sessionId)
     revalidatePath("/settings")
+    return { success: true }
   } catch (error) {
     devLog.error("Error in setActiveSession:", error)
-    throw error
+    return { success: false, error: "Failed to set active session" }
   }
 }
 
@@ -105,8 +134,9 @@ export async function setActiveTerm(termId: string, sessionId: string) {
 
     devLog.info("Active term set successfully:", termId)
     revalidatePath("/settings")
+    return { success: true }
   } catch (error) {
     devLog.error("Error in setActiveTerm:", error)
-    throw error
+    return { success: false, error: "Failed to set active term" }
   }
 }

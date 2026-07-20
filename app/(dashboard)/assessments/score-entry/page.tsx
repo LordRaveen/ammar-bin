@@ -12,10 +12,11 @@ export default async function ScoreEntryPage({
   const user = await requireAuth(["super_admin", "admin", "teacher"])
   const supabase = await createServerClient()
 
-  // Get active session and term
-  const { data: activeSession } = await supabase.from("sessions").select("*, terms(*)").eq("is_active", true).single()
+  // Get all sessions and terms from DB
+  const { data: sessions } = await supabase.from("sessions").select("*, terms(*)").order("name", { ascending: false })
 
-  const activeTerm = activeSession?.terms?.find((t: any) => t.is_active)
+  const activeSession = sessions?.find((s: any) => s.is_active) || sessions?.[0]
+  const activeTerm = activeSession?.terms?.find((t: any) => t.is_active) || activeSession?.terms?.[0]
 
   if (!activeSession || !activeTerm) {
     return (
@@ -26,7 +27,7 @@ export default async function ScoreEntryPage({
         </div>
         <div className="rounded-lg border border-dashed p-12 text-center">
           <p className="text-muted-foreground">
-            No active session or term found. Please activate a session and term first.
+            No session or term found in database. Please create a session in Settings first.
           </p>
         </div>
       </div>

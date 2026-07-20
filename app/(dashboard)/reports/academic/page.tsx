@@ -18,7 +18,7 @@ export default async function AcademicReportsPage() {
   const { data: subjectPerformance } = await supabase.from("vw_subject_performance").select("*")
 
   // Fetch sessions for filtering
-  const { data: sessions } = await supabase.from("sessions").select("*").order("start_date", { ascending: false })
+  const { data: sessions } = await supabase.from("sessions").select("*, terms(*)").order("name", { ascending: false })
 
   // Fetch classes for filtering
   const { data: classes } = await supabase.from("classes").select("*").order("name")

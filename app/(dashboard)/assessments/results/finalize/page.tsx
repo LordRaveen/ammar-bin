@@ -57,8 +57,8 @@ export default async function ResultFinalizationPage({
     { data: school },
     { data: teachers },
   ] = await Promise.all([
-    supabase.from("sessions").select("id, name").order("start_date", { ascending: false }),
-    supabase.from("terms").select("*").eq("session_id", sessionId),
+    supabase.from("sessions").select("*").order("name", { ascending: false }),
+    supabase.from("terms").select("*").order("term_number", { ascending: true }),
     supabase.from("classes").select("id, name, class_teacher_id, section:sections(name)").eq("id", classId).single(),
     supabase.from("classes").select("id, name, class_teacher_id, section:sections(name)").order("name"),
     supabase

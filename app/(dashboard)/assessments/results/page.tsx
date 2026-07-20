@@ -22,12 +22,12 @@ export default async function ResultsPage({
   const { data: sessions } = await supabase
     .from("sessions")
     .select("id, name, is_active")
-    .order("start_date", { ascending: false })
+    .order("name", { ascending: false })
 
   const { data: terms } = await supabase
     .from("terms")
-    .select("id, name, session_id, is_active")
-    .order("start_date", { ascending: false })
+    .select("id, name, session_id, is_active, term_number")
+    .order("term_number", { ascending: true })
 
   let selectedSession = params.session
   let selectedTerm = params.term
