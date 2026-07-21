@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Plus, Loader2, UserPlus } from "lucide-react"
-import { registerStudent } from "@/app/(dashboard)/students/actions"
+import { registerStudent } from "@/app/(dashboard)/students/register/actions"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AddGuardianFromStudentModal } from "@/components/add-guardian-from-student-modal"
 

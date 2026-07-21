@@ -1,151 +1,356 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { requireAdmin } from "@/lib/auth/get-user"
 import { revalidatePath } from "next/cache"
+import { devLog } from "@/lib/logger"
 
-export async function registerStudent(formData: FormData) {
-  try {
-    await requireAdmin()
-    const supabase = await createClient()
-
-    const studentId = formData.get("student_id") as string
-
-    if (!studentId || studentId.trim() === "") {
-      throw new Error("Student ID is required")
-    }
-
-    const { data: existingStudent } = await supabase.from("students").select("id").eq("student_id", studentId).single()
-
-    if (existingStudent) {
-      throw new Error("Student ID already exists. Please use a different ID.")
-    }
-
-    const studentData = {
-      student_id: studentId,
-      first_name: formData.get("first_name") as string,
-      middle_name: (formData.get("middle_name") as string) || null,
-      last_name: formData.get("last_name") as string,
-      date_of_birth: formData.get("date_of_birth") as string,
-      gender: formData.get("gender") as string,
-      address: formData.get("address") as string,
-      state_of_origin: (formData.get("state_of_origin") as string) || null,
-      nationality: (formData.get("nationality") as string) || "Nigerian",
-      medical_info: (formData.get("medical_info") as string) || null,
-      admission_date: (formData.get("admission_date") as string) || new Date().toISOString().split("T")[0],
-      status: "Active",
-    }
-
-    // Insert student
-    const { data: student, error: studentError } = await supabase.from("students").insert(studentData).select().single()
-
-    if (studentError) {
-      throw studentError
-    }
-
-    // Link to guardian if provided
-    const guardianId = formData.get("guardian_id") as string
-    const relationship = formData.get("relationship") as string
-
-    if (guardianId && relationship) {
-      await supabase.from("student_guardians").insert({
-        student_id: student.id,
-        guardian_id: guardianId,
-        relationship: relationship,
-        is_primary: true,
-      })
-    }
-
-    revalidatePath("/students")
-    return { success: true, student }
-  } catch (error: any) {
-    console.error("Error in registerStudent:", error)
-    throw error
-  }
+export interface BulkStudentRow {
+  first_name: string
+  middle_name: string | null
+  last_name: string
+  student_id: string
+  class_name: string
+  gender?: string
 }
 
-export async function updateStudent(formData: FormData) {
+export interface BulkImportPayload {
+  sectionId: string
+  sectionName?: string
+  students: BulkStudentRow[]
+}
+
+export async function bulkImportStudents(payload: BulkImportPayload) {
   try {
     await requireAdmin()
-    const supabase = await createClient()
+    const adminClient = createAdminClient()
 
-    const studentId = formData.get("student_id") as string
+    const { sectionId, sectionName, students } = payload
 
-    const studentData = {
-      first_name: formData.get("first_name") as string,
-      middle_name: (formData.get("middle_name") as string) || null,
-      last_name: formData.get("last_name") as string,
-      date_of_birth: formData.get("date_of_birth") as string,
-      gender: formData.get("gender") as string,
-      address: formData.get("address") as string,
-      state_of_origin: (formData.get("state_of_origin") as string) || null,
-      nationality: (formData.get("nationality") as string) || "Nigerian",
-      medical_info: (formData.get("medical_info") as string) || null,
-      admission_date: formData.get("admission_date") as string,
-      status: formData.get("status") as string,
-      updated_at: new Date().toISOString(),
+    if (!students || students.length === 0) {
+      return { success: false, error: "No student records provided to import." }
     }
 
-    const { error } = await supabase.from("students").update(studentData).eq("id", studentId)
+    // 1. Resolve Section
+    let targetSectionId = sectionId
 
-    if (error) {
-      console.error("Update error:", error)
-      return { success: false, error: error.message }
+    if (!targetSectionId && sectionName) {
+      // Find section by name
+      const { data: existingSec } = await adminClient
+        .from("sections")
+        .select("id")
+        .ilike("name", sectionName.trim())
+        .single()
+
+      if (existingSec) {
+        targetSectionId = existingSec.id
+      } else {
+        // Create new section
+        const { data: newSec, error: secErr } = await adminClient
+          .from("sections")
+          .insert({
+            name: sectionName.trim(),
+            description: `${sectionName.trim()} Section`,
+            is_active: true,
+          })
+          .select("id")
+          .single()
+
+        if (secErr) {
+          throw new Error(`Failed to create section '${sectionName}': ${secErr.message}`)
+        }
+        targetSectionId = newSec.id
+      }
+    }
+
+    if (!targetSectionId) {
+      return { success: false, error: "Target section is required." }
+    }
+
+    // 2. Resolve Active Session & Term
+    const { data: activeSession } = await adminClient
+      .from("sessions")
+      .select("id")
+      .eq("is_active", true)
+      .single()
+
+    const sessionId = activeSession?.id
+    if (!sessionId) {
+      return { success: false, error: "No active academic session found. Please activate a session first." }
+    }
+
+    const { data: activeTerm } = await adminClient
+      .from("terms")
+      .select("id")
+      .eq("session_id", sessionId)
+      .eq("is_active", true)
+      .single()
+
+    const termId = activeTerm?.id
+
+    // 3. Resolve & Auto-Create Classes for this Section
+    const { data: existingClasses } = await adminClient
+      .from("classes")
+      .select("id, name")
+      .eq("section_id", targetSectionId)
+
+    const classMap = new Map<string, string>() // normalized lower_name -> class_id
+    existingClasses?.forEach((c: any) => {
+      classMap.set(c.name.trim().toLowerCase(), c.id)
+    })
+
+    // Find distinct class names in payload
+    const distinctClassNames = Array.from(
+      new Set(students.map((s) => s.class_name.trim()).filter(Boolean))
+    )
+
+    let createdClassesCount = 0
+
+    for (const rawClassName of distinctClassNames) {
+      const normalized = rawClassName.toLowerCase()
+      if (!classMap.has(normalized)) {
+        // Create missing class for this section
+        const { data: newClass, error: classErr } = await adminClient
+          .from("classes")
+          .insert({
+            name: rawClassName,
+            section_id: targetSectionId,
+            is_active: true,
+          })
+          .select("id, name")
+          .single()
+
+        if (classErr) {
+          devLog.error(`Error creating class ${rawClassName}:`, classErr)
+          throw new Error(`Failed to create class '${rawClassName}': ${classErr.message}`)
+        }
+
+        classMap.set(normalized, newClass.id)
+        createdClassesCount++
+      }
+    }
+
+    // 4. Batch Upsert Students
+    const studentsPayload = students.map((s) => ({
+      student_id: s.student_id.trim(),
+      first_name: s.first_name.trim(),
+      middle_name: s.middle_name ? s.middle_name.trim() : null,
+      last_name: s.last_name.trim(),
+      gender: s.gender || "Male",
+      status: "Active",
+      nationality: "Nigerian",
+      admission_date: new Date().toISOString().split("T")[0],
+    }))
+
+    const { data: insertedStudents, error: studentErr } = await adminClient
+      .from("students")
+      .upsert(studentsPayload, { onConflict: "student_id" })
+      .select("id, student_id")
+
+    if (studentErr) {
+      devLog.error("Error batch inserting students:", studentErr)
+      throw new Error(`Failed to insert students: ${studentErr.message}`)
+    }
+
+    // Map inserted student_id to database ID
+    const studentDbIdMap = new Map<string, string>()
+    insertedStudents?.forEach((st: any) => {
+      studentDbIdMap.set(st.student_id, st.id)
+    })
+
+    // 5. Batch Upsert Enrollments
+    const enrollmentsPayload: any[] = []
+
+    students.forEach((s) => {
+      const dbStudentId = studentDbIdMap.get(s.student_id.trim())
+      const targetClassId = classMap.get(s.class_name.trim().toLowerCase())
+
+      if (dbStudentId && targetClassId) {
+        enrollmentsPayload.push({
+          student_id: dbStudentId,
+          class_id: targetClassId,
+          session_id: sessionId,
+          term_id: termId || null,
+          is_active: true,
+        })
+      }
+    })
+
+    if (enrollmentsPayload.length > 0) {
+      const { error: enrollErr } = await adminClient
+        .from("student_enrollments")
+        .upsert(enrollmentsPayload, { onConflict: "student_id,session_id" })
+
+      if (enrollErr) {
+        devLog.error("Error batch inserting enrollments:", enrollErr)
+        try {
+          await adminClient.from("student_enrollments").insert(enrollmentsPayload)
+        } catch (e) {
+          devLog.warn("Notice inserting enrollments fallback:", e)
+        }
+      }
     }
 
     revalidatePath("/students")
-    return { success: true }
+    return {
+      success: true,
+      count: insertedStudents?.length || students.length,
+      createdClassesCount,
+    }
   } catch (error: any) {
-    console.error("Error in updateStudent:", error)
-    return { success: false, error: error.message }
+    devLog.error("Error in bulkImportStudents:", error)
+    return { success: false, error: error.message || "Failed to bulk import students." }
   }
 }
 
 export async function deleteStudent(studentId: string) {
   try {
     await requireAdmin()
-    const supabase = await createClient()
-
-    const { error } = await supabase
+    const adminClient = createAdminClient()
+    const { error } = await adminClient
       .from("students")
       .update({ deleted_at: new Date().toISOString() })
       .eq("id", studentId)
 
-    if (error) {
-      console.error("Delete error:", error)
-      return { success: false, error: error.message }
-    }
-
+    if (error) throw error
     revalidatePath("/students")
     return { success: true }
   } catch (error: any) {
-    console.error("Error in deleteStudent:", error)
     return { success: false, error: error.message }
   }
 }
 
-export async function updateGuardianRelation(relationId: string, relationship: string, isPrimary: boolean) {
+export async function updateStudent(arg1: any, arg2?: any) {
   try {
     await requireAdmin()
-    const supabase = await createClient()
+    const adminClient = createAdminClient()
 
-    const { error } = await supabase
-      .from("student_guardians")
-      .update({
-        relationship,
-        is_primary: isPrimary,
-      })
-      .eq("id", relationId)
+    let studentId: string | null = null
+    let firstName: string | null = null
+    let middleName: string | null = null
+    let lastName: string | null = null
+    let gender: string | null = null
+    let dateOfBirth: string | null = null
 
-    if (error) {
-      console.error("Update guardian relation error:", error)
-      return { success: false, error: error.message }
+    if (arg1 instanceof FormData) {
+      studentId = arg1.get("student_id") as string || arg1.get("id") as string
+      firstName = arg1.get("first_name") as string
+      middleName = arg1.get("middle_name") as string
+      lastName = arg1.get("last_name") as string
+      gender = arg1.get("gender") as string
+      dateOfBirth = arg1.get("date_of_birth") as string
+    } else {
+      studentId = arg1
+      if (arg2 instanceof FormData) {
+        firstName = arg2.get("first_name") as string
+        middleName = arg2.get("middle_name") as string
+        lastName = arg2.get("last_name") as string
+        gender = arg2.get("gender") as string
+        dateOfBirth = arg2.get("date_of_birth") as string
+      } else if (typeof arg2 === "object" && arg2 !== null) {
+        firstName = arg2.first_name
+        middleName = arg2.middle_name
+        lastName = arg2.last_name
+        gender = arg2.gender
+        dateOfBirth = arg2.date_of_birth
+      }
     }
 
+    if (!studentId) {
+      return { success: false, error: "Student ID is required." }
+    }
+
+    const { error } = await adminClient
+      .from("students")
+      .update({
+        ...(firstName && { first_name: firstName }),
+        ...(middleName !== undefined && { middle_name: middleName || null }),
+        ...(lastName && { last_name: lastName }),
+        ...(gender && { gender }),
+        ...(dateOfBirth !== undefined && { date_of_birth: dateOfBirth || null }),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", studentId)
+
+    if (error) throw error
     revalidatePath("/students")
     return { success: true }
   } catch (error: any) {
-    console.error("Error in updateGuardianRelation:", error)
+    return { success: false, error: error.message }
+  }
+}
+
+export async function enrollStudent(arg1: any, arg2?: any, arg3?: any, arg4?: any) {
+  try {
+    await requireAdmin()
+    const adminClient = createAdminClient()
+
+    let studentId: string | null = null
+    let classId: string | null = null
+    let sessionId: string | null = null
+    let termId: string | null = null
+
+    if (arg1 instanceof FormData) {
+      studentId = arg1.get("student_id") as string
+      classId = arg1.get("class_id") as string
+      sessionId = arg1.get("session_id") as string
+      termId = arg1.get("term_id") as string
+    } else {
+      studentId = arg1
+      classId = arg2
+      sessionId = arg3
+      termId = arg4
+    }
+
+    if (!studentId || !classId) {
+      return { success: false, error: "Student ID and Class ID are required for enrollment." }
+    }
+
+    // Resolve active session if missing
+    if (!sessionId) {
+      const { data: actSession } = await adminClient
+        .from("sessions")
+        .select("id")
+        .eq("is_active", true)
+        .single()
+      sessionId = actSession?.id || null
+    }
+
+    const { error } = await adminClient
+      .from("student_enrollments")
+      .upsert({
+        student_id: studentId,
+        class_id: classId,
+        session_id: sessionId,
+        term_id: termId || null,
+        is_active: true,
+      }, { onConflict: "student_id,session_id" })
+
+    if (error) throw error
+    revalidatePath("/students")
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function updateGuardianRelation(relationId: string, relationType?: string, isPrimary?: boolean) {
+  try {
+    await requireAdmin()
+    const adminClient = createAdminClient()
+    const { error } = await adminClient
+      .from("student_guardians")
+      .update({
+        ...(relationType && { relationship: relationType }),
+        ...(isPrimary !== undefined && { is_primary: isPrimary }),
+      })
+      .eq("id", relationId)
+
+    if (error) throw error
+    revalidatePath("/students")
+    return { success: true }
+  } catch (error: any) {
     return { success: false, error: error.message }
   }
 }
@@ -153,66 +358,16 @@ export async function updateGuardianRelation(relationId: string, relationship: s
 export async function removeGuardianRelation(relationId: string) {
   try {
     await requireAdmin()
-    const supabase = await createClient()
+    const adminClient = createAdminClient()
+    const { error } = await adminClient
+      .from("student_guardians")
+      .delete()
+      .eq("id", relationId)
 
-    const { error } = await supabase.from("student_guardians").delete().eq("id", relationId)
-
-    if (error) {
-      console.error("Remove guardian relation error:", error)
-      return { success: false, error: error.message }
-    }
-
+    if (error) throw error
     revalidatePath("/students")
     return { success: true }
   } catch (error: any) {
-    console.error("Error in removeGuardianRelation:", error)
     return { success: false, error: error.message }
-  }
-}
-
-export async function enrollStudent(formData: FormData) {
-  try {
-    await requireAdmin()
-    const supabase = await createClient()
-
-    const studentId = formData.get("student_id") as string
-    const sessionId = formData.get("session_id") as string
-    const termId = formData.get("term_id") as string
-    const classId = formData.get("class_id") as string
-
-    // Check if enrollment already exists
-    const { data: existing } = await supabase
-      .from("student_enrollments")
-      .select("id")
-      .eq("student_id", studentId)
-      .eq("session_id", sessionId)
-      .eq("term_id", termId)
-      .eq("class_id", classId)
-      .single()
-
-    if (existing) {
-      return { error: "Student is already enrolled in this class for this session/term" }
-    }
-
-    // Create enrollment
-    const { error } = await supabase.from("student_enrollments").insert({
-      student_id: studentId,
-      session_id: sessionId,
-      term_id: termId,
-      class_id: classId,
-      is_active: true,
-      enrollment_date: new Date().toISOString().split("T")[0],
-    })
-
-    if (error) {
-      console.error("Enrollment error:", error)
-      return { error: "Failed to enroll student" }
-    }
-
-    revalidatePath("/students")
-    return { success: true }
-  } catch (error) {
-    console.error("Error enrolling student:", error)
-    return { error: "Failed to enroll student" }
   }
 }

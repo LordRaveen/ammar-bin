@@ -13,7 +13,9 @@ import { RegisterStudentModal } from "@/components/register-student-modal"
 import { StudentDetailsSheet } from "@/components/student-details-sheet"
 import { DeleteStudentDialog } from "@/components/delete-student-dialog"
 import { EditStudentModal } from "@/components/edit-student-modal"
+import { BulkAddStudentsModal } from "@/components/bulk-add-students-modal"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { FileSpreadsheet } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface StudentsClientPageProps {
@@ -22,6 +24,7 @@ interface StudentsClientPageProps {
   sessions: any[]
   terms: any[]
   classes: any[]
+  sections?: any[]
   userRole: string
 }
 
@@ -31,11 +34,13 @@ export function StudentsClientPage({
   sessions,
   terms,
   classes,
+  sections = [],
   userRole,
 }: StudentsClientPageProps) {
   const [students] = useState(initialStudents)
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
+  const [bulkImportOpen, setBulkImportOpen] = useState(false)
 
   const activeSession = sessions.find((s) => s.is_active)
   const activeTerm = terms.find((t) => t.is_active && t.session_id === activeSession?.id)
@@ -128,7 +133,20 @@ export function StudentsClientPage({
                 : "Manage student records, class enrollments, and academic status"}
             </p>
           </div>
-          {userRole !== "teacher" && <RegisterStudentModal guardians={guardians} />}
+          {userRole !== "teacher" && (
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => setBulkImportOpen(true)}
+                variant="outline"
+                size="sm"
+                className="h-9 gap-1.5 text-xs font-medium border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400"
+              >
+                <FileSpreadsheet className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                Bulk Import
+              </Button>
+              <RegisterStudentModal guardians={guardians} />
+            </div>
+          )}
         </div>
 
         {/* Compact KPI Row (5 Cards matching Users Page) */}
@@ -444,6 +462,17 @@ export function StudentsClientPage({
           }}
         />
       )}
+
+      <BulkAddStudentsModal
+        open={bulkImportOpen}
+        onOpenChange={setBulkImportOpen}
+        sections={sections}
+        existingClasses={classes}
+        onSuccess={() => {
+          // Window reload or state refresh handled by server action revalidatePath
+          window.location.reload()
+        }}
+      />
     </>
   )
 }

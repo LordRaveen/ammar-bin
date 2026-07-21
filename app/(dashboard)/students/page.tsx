@@ -79,6 +79,7 @@ export default async function StudentsPage({
     { data: sessionsData },
     { data: termsData },
     { data: classesData },
+    { data: sectionsData },
   ] = await Promise.all([
     studentsQuery,
     supabase.from("guardians").select("id, first_name, last_name, phone").order("first_name"),
@@ -92,6 +93,7 @@ export default async function StudentsPage({
       `)
       .eq("is_active", true)
       .order("name"),
+    supabase.from("sections").select("*").eq("is_active", true).order("name"),
   ])
 
   return (
@@ -101,10 +103,8 @@ export default async function StudentsPage({
       sessions={sessionsData || []}
       terms={termsData || []}
       classes={classesData || []}
+      sections={sectionsData || []}
       userRole={user.role}
-      totalCount={count || 0}
-      currentPage={1}
-      pageSize={20}
     />
   )
 }

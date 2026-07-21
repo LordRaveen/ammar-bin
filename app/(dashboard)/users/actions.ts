@@ -20,13 +20,30 @@ export async function addStaff(formData: FormData) {
       .select("staff_id_prefix")
       .single()
 
+    const prefix = settings?.staff_id_prefix || "STAFF"
     const year = new Date().getFullYear()
-    const { count } = await supabase
-      .from("user_profiles")
-      .select("*", { count: "exact", head: true })
 
-    const staffNumber = String((count || 0) + 1).padStart(3, "0")
-    const staffId = `${settings?.staff_id_prefix || "STAFF"}/${year}/${staffNumber}`
+    const adminClient = createAdminClient()
+
+    // Query existing staff_ids to find the highest number
+    const { data: existingStaff } = await adminClient
+      .from("user_profiles")
+      .select("staff_id")
+      .like("staff_id", `${prefix}/${year}/%`)
+
+    let maxNum = 0
+    existingStaff?.forEach((s: any) => {
+      if (s.staff_id) {
+        const parts = s.staff_id.split("/")
+        const num = parseInt(parts[parts.length - 1], 10)
+        if (!isNaN(num) && num > maxNum) {
+          maxNum = num
+        }
+      }
+    })
+
+    let currentNum = maxNum
+    let staffId = `${prefix}/${year}/${String(currentNum + 1).padStart(3, "0")}`
 
     const phone = formData.get("phone") as string
     const cleanPhone = phone ? phone.replace(/[^\d]/g, "") : ""
@@ -35,9 +52,10 @@ export async function addStaff(formData: FormData) {
       tempPassword = cleanPhone
     }
 
-    if (createAccount && email) {
-      const adminClient = createAdminClient()
+    const createAccount = formData.get("create_account") === "true" || formData.get("createAccount") === "true" || formData.get("create_account") === "on" || true
+    let userId: string | null = null
 
+    if (createAccount && email) {
       const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
         email: email,
         password: tempPassword,
@@ -46,23 +64,45 @@ export async function addStaff(formData: FormData) {
       })
 
       if (authError) {
-        devLog.error("Failed to create auth user:", authError)
-        return { success: false, error: `Failed to create user account: ${authError.message}` }
+        if (
+          authError.code === "email_exists" ||
+          authError.status === 422 ||
+          authError.message?.toLowerCase().includes("already been registered") ||
+          authError.message?.toLowerCase().includes("email_exists")
+        ) {
+          devLog.info("Email already registered in Auth, fetching existing user:", email)
+          const { data: listData } = await adminClient.auth.admin.listUsers()
+          const existingUser = listData?.users?.find(
+            (u) => u.email?.toLowerCase() === email.toLowerCase()
+          )
+          if (existingUser) {
+            userId = existingUser.id
+          } else {
+            return { success: false, error: "A user account with this email address already exists." }
+          }
+        } else {
+          devLog.error("Failed to create auth user:", authError)
+          return { success: false, error: `Failed to create user account: ${authError.message}` }
+        }
+      } else {
+        userId = authData.user.id
       }
 
-      userId = authData.user.id
-
-      // Create user role entry
-      await supabase.from("user_roles").insert({
-        user_id: userId,
-        role: role,
-        is_active: true,
-      })
+      if (userId) {
+        // Create or update user role entry
+        await adminClient.from("user_roles").upsert(
+          {
+            user_id: userId,
+            role: role,
+            is_active: true,
+          },
+          { onConflict: "user_id,role" }
+        )
+      }
     }
 
-    const staffData = {
+    const baseStaffData = {
       user_id: userId,
-      staff_id: staffId,
       first_name: formData.get("first_name") as string,
       middle_name: (formData.get("middle_name") as string) || null,
       last_name: formData.get("last_name") as string,
@@ -73,33 +113,84 @@ export async function addStaff(formData: FormData) {
       address: (formData.get("address") as string) || null,
       qualification: (formData.get("qualification") as string) || null,
       specialization: (formData.get("specialization") as string) || null,
-      employment_date: (formData.get("employment_date") as string) || new Date().toISOString().split("T")[0],
       employment_type: (formData.get("employment_type") as string) || "Full-time",
       role: role,
       status: "Active",
     }
 
-    devLog.debug("Inserting staff into user_profiles:", staffData)
+    let profile: any = null
+    let profileError: any = null
 
-    const { data: profile, error: profileError } = await supabase
-      .from("user_profiles")
-      .insert(staffData)
-      .select()
-      .single()
+    // Try inserting profile with auto-incrementing staff_id on collision
+    for (let attempt = 0; attempt < 10; attempt++) {
+      currentNum += 1
+      staffId = `${prefix}/${year}/${String(currentNum).padStart(3, "0")}`
 
-    if (profileError) {
-      devLog.error("Failed to create user_profile:", profileError)
-      return { success: false, error: profileError.message }
+      const staffData = {
+        ...baseStaffData,
+        staff_id: staffId,
+      }
+
+      devLog.debug(`Upserting staff into user_profiles (attempt ${attempt + 1}):`, staffData)
+
+      const res = await adminClient
+        .from("user_profiles")
+        .upsert(staffData, { onConflict: "email" })
+        .select()
+        .single()
+
+      if (!res.error) {
+        profile = res.data
+        profileError = null
+        break
+      }
+
+      if (res.error.code === "23505" && res.error.message?.includes("staff_id")) {
+        devLog.info(`Staff ID collision for ${staffId}, incrementing to next number...`)
+        continue
+      }
+
+      profileError = res.error
+      break
     }
 
-    // Insert into teachers table if it exists
-    try {
-      await supabase.from("teachers").insert(staffData)
-    } catch (e) {
-      // Ignore if view or constrained
+    if (profileError || !profile) {
+      devLog.error("Failed to create user_profile:", profileError)
+      return { success: false, error: profileError?.message || "Failed to create user profile" }
+    }
+
+    const employmentDate = (formData.get("employment_date") as string) || new Date().toISOString().split("T")[0]
+
+    // Upsert into teachers table if role is teacher
+    if (role === "teacher") {
+      try {
+        await adminClient.from("teachers").upsert(
+          {
+            user_id: userId,
+            staff_id: staffId,
+            first_name: staffData.first_name,
+            middle_name: staffData.middle_name,
+            last_name: staffData.last_name,
+            email: staffData.email,
+            phone: staffData.phone,
+            gender: staffData.gender,
+            date_of_birth: staffData.date_of_birth,
+            address: staffData.address,
+            qualification: staffData.qualification,
+            specialization: staffData.specialization,
+            employment_date: employmentDate,
+            employment_type: staffData.employment_type,
+            status: staffData.status,
+          },
+          { onConflict: "email" }
+        )
+      } catch (e) {
+        devLog.warn("Notice upserting into teachers table:", e)
+      }
     }
 
     revalidatePath("/users")
+    revalidatePath("/teachers")
     return { success: true, profile }
   } catch (error: any) {
     devLog.error("Error in addStaff:", error)
