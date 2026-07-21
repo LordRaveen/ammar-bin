@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { requireAdmin } from "@/lib/auth/get-user"
 import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
 import { devLog } from "@/lib/logger"
 
 export async function createNewSession(formData: FormData) {
@@ -15,7 +16,7 @@ export async function createNewSession(formData: FormData) {
     const endDate = (formData.get("end_date") as string) || null
 
     if (!name) {
-      return { success: false, error: "Session name is required" }
+      throw new Error("Session name is required")
     }
 
     devLog.debug("Creating new session:", name)
@@ -34,7 +35,7 @@ export async function createNewSession(formData: FormData) {
 
     if (sessionError) {
       devLog.error("Failed to create session:", sessionError)
-      return { success: false, error: sessionError.message }
+      throw sessionError
     }
 
     // Automatically create 3 terms for this session
@@ -48,16 +49,17 @@ export async function createNewSession(formData: FormData) {
 
     if (termsError) {
       devLog.error("Failed to create terms:", termsError)
-      return { success: false, error: termsError.message }
+      throw termsError
     }
 
     devLog.info("Session and 3 terms created successfully:", session.id)
     revalidatePath("/settings")
-    return { success: true }
   } catch (error: any) {
     devLog.error("Error in createNewSession:", error)
-    return { success: false, error: error.message || "Failed to create session" }
+    throw error
   }
+
+  redirect("/settings/sessions")
 }
 
 export async function updateTermDates(formData: FormData) {

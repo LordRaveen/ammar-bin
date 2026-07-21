@@ -7,12 +7,19 @@ import { FeeManagementTab } from "@/components/settings/fee-management-tab"
 import { GradingSystemTab } from "@/components/settings/grading-system-tab"
 import { FeeTemplatesTab } from "@/components/settings/fee-templates-tab"
 import { SubjectManagementTab } from "@/components/settings/subject-management-tab"
+import { SecurityTab } from "@/components/settings/security-tab"
 
 export const dynamic = "force-dynamic"
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ tab?: string }>
+}) {
   await requireAdmin()
   const supabase = await createClient()
+  const params = searchParams ? await searchParams : {}
+  const activeTab = params?.tab || "general"
 
   const [
     { data: schoolSettings },
@@ -23,6 +30,10 @@ export default async function SettingsPage() {
     { data: classes },
     { data: gradingSchemes },
     { data: subjects },
+    { data: rawAuditLogs },
+    { data: lockouts },
+    { data: loginAttempts },
+    { data: teachers },
   ] = await Promise.all([
     supabase.from("school_settings").select("*").maybeSingle(),
     supabase.from("sessions").select("*, terms:terms(*)").order("start_date", { ascending: false }),
@@ -32,7 +43,17 @@ export default async function SettingsPage() {
     supabase.from("classes").select("*, section:sections(name)").eq("is_active", true).order("name"),
     supabase.from("grading_schemes").select("*").order("min_score", { ascending: false }),
     supabase.from("subjects").select("*").order("name"),
+    supabase.from("audit_logs").select("*").order("performed_at", { ascending: false }).limit(100),
+    supabase.from("account_lockouts").select("*").order("locked_until", { ascending: false }),
+    supabase.from("login_attempts").select("*").order("created_at", { ascending: false }).limit(50),
+    supabase.from("user_profiles").select("id, first_name, last_name, email"),
   ])
+
+  const teacherMap = new Map((teachers || []).map((t: any) => [t.id, `${t.first_name} ${t.last_name}`]))
+  const auditLogs = (rawAuditLogs || []).map((log: any) => ({
+    ...log,
+    performed_by_name: teacherMap.get(log.performed_by) || "System",
+  }))
 
   let feeStructures = null
   if (activeSessions?.id && activeTerms?.id) {
@@ -48,17 +69,18 @@ export default async function SettingsPage() {
     <div className="flex flex-1 flex-col gap-4 p-4 max-w-full overflow-hidden">
       <div>
         <h1 className="text-xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground text-sm">Manage school configuration, fees, and academic settings</p>
+        <p className="text-muted-foreground text-sm">Manage school configuration, fees, academic settings, and security</p>
       </div>
 
-      <Tabs defaultValue="general" className="space-y-4 max-w-full">
-        <TabsList className="grid w-full grid-cols-6 lg:w-auto">
+      <Tabs defaultValue={activeTab} className="space-y-4 max-w-full">
+        <TabsList className="grid w-full grid-cols-7 lg:w-auto">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="session">Academic Session</TabsTrigger>
           <TabsTrigger value="fees">Fee Management</TabsTrigger>
           <TabsTrigger value="templates">Fee Templates</TabsTrigger>
           <TabsTrigger value="grading">Grading System</TabsTrigger>
           <TabsTrigger value="subjects">Subjects</TabsTrigger>
+          <TabsTrigger value="security">Security & Audit</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-4 max-w-full">
@@ -89,6 +111,10 @@ export default async function SettingsPage() {
 
         <TabsContent value="subjects" className="space-y-4 max-w-full">
           <SubjectManagementTab subjects={subjects || []} />
+        </TabsContent>
+
+        <TabsContent value="security" className="space-y-4 max-w-full">
+          <SecurityTab auditLogs={auditLogs} lockouts={lockouts || []} loginAttempts={loginAttempts || []} />
         </TabsContent>
       </Tabs>
     </div>

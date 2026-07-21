@@ -20,7 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { createSession } from "../actions";
+import { createNewSession } from "../actions";
 import Link from "next/link";
 
 export const dynamic = 'force-dynamic'
@@ -29,34 +29,8 @@ export default async function NewSessionPage() {
   await requireAdmin();
 
   return (
-    <>
-      <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-        <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="mr-2 h-4" />
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/settings/sessions">Sessions & Terms</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>New Session</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      </header>
+    <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
 
-      <div className="flex flex-1 flex-col gap-4 p-4 md:p-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Create New Session</h1>
-          <p className="text-muted-foreground">
-            Add a new academic session with terms
-          </p>
-        </div>
 
         <Card>
           <CardHeader>
@@ -66,7 +40,7 @@ export default async function NewSessionPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={createSession} className="space-y-6">
+            <form action={createNewSession} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="name">Session Name</Label>
                 <Input
@@ -172,12 +146,10 @@ export default async function NewSessionPage() {
                 <Button variant="outline" asChild>
                   <Link href="/settings/sessions">Cancel</Link>
                 </Button>
-                <Button type="submit">Create Session</Button>
               </div>
             </form>
           </CardContent>
         </Card>
       </div>
-    </>
   );
 }

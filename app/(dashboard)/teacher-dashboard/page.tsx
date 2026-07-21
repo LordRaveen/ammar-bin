@@ -249,32 +249,22 @@ export default async function TeacherDashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-3">
-              <Link href="/assessments/score-entry">
+              <Link href="/teacher/results">
                 <div className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent transition-colors cursor-pointer">
                   <ClipboardCheck className="h-5 w-5 text-primary" />
                   <div>
-                    <p className="font-medium">Enter Scores</p>
-                    <p className="text-xs text-muted-foreground">Add student assessment scores</p>
+                    <p className="font-medium">Class Results & Scores</p>
+                    <p className="text-xs text-muted-foreground">Manage and entry assessment scores</p>
                   </div>
                 </div>
               </Link>
 
-              <Link href="/students">
+              <Link href="/teacher/attendance">
                 <div className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent transition-colors cursor-pointer">
                   <Users className="h-5 w-5 text-primary" />
                   <div>
-                    <p className="font-medium">View Students</p>
-                    <p className="text-xs text-muted-foreground">See your student roster</p>
-                  </div>
-                </div>
-              </Link>
-
-              <Link href="/assessments/results">
-                <div className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent transition-colors cursor-pointer">
-                  <FileText className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="font-medium">View Results</p>
-                    <p className="text-xs text-muted-foreground">Check student performance</p>
+                    <p className="font-medium">Class Attendance</p>
+                    <p className="text-xs text-muted-foreground">Mark daily student attendance</p>
                   </div>
                 </div>
               </Link>

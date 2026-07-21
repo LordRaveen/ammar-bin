@@ -26,13 +26,36 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     if (sessionId) {
       query = query.eq("session_id", sessionId)
     }
-    if (termId) {
-      query = query.eq("term_id", termId)
-    }
-
-    const { data, error } = await query
+    let { data, error } = await query
 
     if (error) throw error
+
+    // Fallback: If 0 students found with term_id filter, query session-level active enrollments
+    if ((!data || data.length === 0) && termId) {
+      let fallbackQuery = supabase
+        .from("student_enrollments")
+        .select(`
+          students (
+            id,
+            student_id,
+            first_name,
+            middle_name,
+            last_name,
+            gender
+          )
+        `)
+        .eq("class_id", params.id)
+        .eq("is_active", true)
+
+      if (sessionId) {
+        fallbackQuery = fallbackQuery.eq("session_id", sessionId)
+      }
+
+      const { data: fallbackData, error: fallbackError } = await fallbackQuery
+      if (!fallbackError && fallbackData) {
+        data = fallbackData
+      }
+    }
 
     const students = data?.map((enrollment: any) => enrollment.students).filter(Boolean) || []
 

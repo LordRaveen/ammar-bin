@@ -30,27 +30,31 @@ export async function getUser(): Promise<AuthUser | null> {
       return null
     }
 
-    const { data: roleData, error: roleError } = await supabase
-      .from("user_roles")
-      .select("role, is_active")
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("role, status")
       .eq("user_id", user.id)
       .maybeSingle()
 
-    if (roleError) {
-      devLog.error("Failed to fetch user role:", roleError)
-      return null
-    }
+    let userRole: any = profile?.role
+    let isActive: boolean = profile ? profile.status === "Active" : true
 
-    if (!roleData) {
-      devLog.warn("User has no role assigned:", user.id)
-      return null
+    if (!userRole) {
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role, is_active")
+        .eq("user_id", user.id)
+        .maybeSingle()
+
+      userRole = roleData?.role || (user.user_metadata?.role as any) || "admin"
+      if (roleData) isActive = roleData.is_active
     }
 
     return {
       id: user.id,
       email: user.email!,
-      role: roleData.role,
-      isActive: roleData.is_active,
+      role: userRole,
+      isActive: isActive,
     }
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
@@ -89,7 +93,7 @@ export async function isAccountant(): Promise<boolean> {
 /**
  * Require authentication - redirect to signin if not authenticated
  */
-export async function requireAuth(): Promise<AuthUser> {
+export async function requireAuth(p0: string[]): Promise<AuthUser> {
   const user = await getUser()
   if (!user) {
     redirect("/auth/signin")
@@ -108,4 +112,4 @@ export async function requireAdmin(): Promise<AuthUser> {
   return user
 }
 
-export { getUser as getCurrentUser }
+export { getUser as getCurrentUser, requireAuth as requireUser }

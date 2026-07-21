@@ -212,13 +212,23 @@ export default function ClassDetailsPage() {
           teacherData = teacher
         }
 
-        const { count: studentCount } = await supabase
+        let { count: studentCount } = await supabase
           .from("student_enrollments")
           .select("*", { count: "exact", head: true })
           .eq("class_id", classId)
           .eq("session_id", selectedSession)
           .eq("term_id", selectedTerm)
           .eq("is_active", true)
+
+        if (!studentCount || studentCount === 0) {
+          const { count: sessionCount } = await supabase
+            .from("student_enrollments")
+            .select("*", { count: "exact", head: true })
+            .eq("class_id", classId)
+            .eq("session_id", selectedSession)
+            .eq("is_active", true)
+          studentCount = sessionCount
+        }
 
         const { count: subjectCount } = await supabase
           .from("class_subjects")
@@ -253,13 +263,23 @@ export default function ClassDetailsPage() {
 
       setAllClasses(classesData || [])
 
-      const { data: enrollments } = await supabase
+      let { data: enrollments } = await supabase
         .from("student_enrollments")
         .select("id, students(*)")
         .eq("class_id", classId)
         .eq("session_id", selectedSession)
         .eq("term_id", selectedTerm)
         .eq("is_active", true)
+
+      if (!enrollments || enrollments.length === 0) {
+        const { data: fallbackEnrollments } = await supabase
+          .from("student_enrollments")
+          .select("id, students(*)")
+          .eq("class_id", classId)
+          .eq("session_id", selectedSession)
+          .eq("is_active", true)
+        enrollments = fallbackEnrollments
+      }
 
       if (enrollments) {
         const students = enrollments.map((e) => ({

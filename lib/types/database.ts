@@ -3,7 +3,7 @@
  * These match the database schema
  */
 
-export type UserRole = 'super_admin' | 'admin' | 'teacher' | 'accountant' | 'parent';
+export type UserRole = 'super_admin' | 'admin' | 'teacher' | 'accountant' | 'cashier' | 'parent';
 
 export type StudentStatus = 'Active' | 'Inactive' | 'Graduated' | 'Withdrawn';
 

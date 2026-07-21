@@ -960,6 +960,7 @@ function TableView({
                           inputMode="decimal"
                           value={editValue}
                           onChange={(e) => handleInputChange(e.target.value, 'ca1')}
+                          onFocus={(e) => e.target.select()}
                           onBlur={() => handleCellBlur(student.id)}
                           onKeyDown={(e) => handleKeyDown(e, student.id, rowIndex, 0)}
                           className={cn("h-8 w-16", getCellBorderColor(student.id, 'ca1', editValue))}
@@ -968,6 +969,7 @@ function TableView({
                       ) : (
                         <button
                           onClick={() => handleCellClick(student.id, "ca1", score.ca1, rowIndex, 0)}
+                          onDoubleClick={() => handleCellClick(student.id, "ca1", score.ca1, rowIndex, 0)}
                           className={cn(
                             "h-8 w-16 rounded border bg-background px-2 text-left hover:bg-accent transition-colors",
                             getCellBorderColor(student.id, 'ca1', score.ca1)
@@ -985,6 +987,7 @@ function TableView({
                           inputMode="decimal"
                           value={editValue}
                           onChange={(e) => handleInputChange(e.target.value, 'ca2')}
+                          onFocus={(e) => e.target.select()}
                           onBlur={() => handleCellBlur(student.id)}
                           onKeyDown={(e) => handleKeyDown(e, student.id, rowIndex, 1)}
                           className={cn("h-8 w-16", getCellBorderColor(student.id, 'ca2', editValue))}
@@ -993,6 +996,7 @@ function TableView({
                       ) : (
                         <button
                           onClick={() => handleCellClick(student.id, "ca2", score.ca2, rowIndex, 1)}
+                          onDoubleClick={() => handleCellClick(student.id, "ca2", score.ca2, rowIndex, 1)}
                           className={cn(
                             "h-8 w-16 rounded border bg-background px-2 text-left hover:bg-accent transition-colors",
                             getCellBorderColor(student.id, 'ca2', score.ca2)
@@ -1010,6 +1014,7 @@ function TableView({
                           inputMode="decimal"
                           value={editValue}
                           onChange={(e) => handleInputChange(e.target.value, 'exam')}
+                          onFocus={(e) => e.target.select()}
                           onBlur={() => handleCellBlur(student.id)}
                           onKeyDown={(e) => handleKeyDown(e, student.id, rowIndex, 2)}
                           className={cn("h-8 w-16", getCellBorderColor(student.id, 'exam', editValue))}
@@ -1018,6 +1023,7 @@ function TableView({
                       ) : (
                         <button
                           onClick={() => handleCellClick(student.id, "exam", score.exam, rowIndex, 2)}
+                          onDoubleClick={() => handleCellClick(student.id, "exam", score.exam, rowIndex, 2)}
                           className={cn(
                             "h-8 w-16 rounded border bg-background px-2 text-left hover:bg-accent transition-colors",
                             getCellBorderColor(student.id, 'exam', score.exam)
@@ -1048,6 +1054,7 @@ function TableView({
                           ref={inputRef}
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
+                          onFocus={(e) => e.target.select()}
                           onBlur={() => handleCellBlur(student.id)}
                           onKeyDown={(e) => handleKeyDown(e, student.id, rowIndex, 3)}
                           className={cn("h-8 w-32", getCellBorderColor(student.id, 'remark', editValue))}

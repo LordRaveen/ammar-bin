@@ -1,10 +1,8 @@
-export const dynamic = "force-dynamic"
-
 import { Suspense } from "react"
 import { createServerClient } from "@/lib/supabase/server"
 import { ResultFinalizationInterface } from "@/components/result-finalization-interface"
-import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Card, CardContent } from "@/components/ui/card"
 
 export default async function ResultFinalizationPage({
   searchParams,
@@ -14,18 +12,19 @@ export default async function ResultFinalizationPage({
   const params = await searchParams
   const supabase = await createServerClient()
 
-  // Fetch active session and term if not provided
+  // Fetch active session if not provided
   const { data: activeSession } = await supabase
     .from("sessions")
-    .select("id, name")
+    .select("id")
     .eq("is_active", true)
     .single()
 
   const sessionId = params.session || activeSession?.id
 
+  // Fetch active term if not provided
   const { data: activeTerm } = await supabase
     .from("terms")
-    .select("id, name")
+    .select("id")
     .eq("session_id", sessionId)
     .eq("is_active", true)
     .single()
@@ -53,7 +52,8 @@ export default async function ResultFinalizationPage({
     { data: terms },
     { data: classData },
     { data: classes },
-    { data: students },
+    { data: enrollmentsData },
+    { data: classSubjects },
     { data: school },
     { data: teachers },
   ] = await Promise.all([
@@ -77,10 +77,13 @@ export default async function ResultFinalizationPage({
       `)
       .eq("class_id", classId)
       .eq("session_id", sessionId)
-      .eq("term_id", termId)
       .eq("is_active", true),
+    supabase
+      .from("class_subjects")
+      .select("subject:subjects(id, name, code)")
+      .eq("class_id", classId),
     supabase.from("school_settings").select("*").maybeSingle(),
-    supabase.from("teachers").select("id, first_name, last_name"),
+    supabase.from("user_profiles").select("id, first_name, last_name"),
   ])
 
   const teachersMap = new Map(
@@ -100,6 +103,16 @@ export default async function ResultFinalizationPage({
       class_teacher: c.class_teacher_id ? teachersMap.get(c.class_teacher_id) || "—" : "—",
     })) || []
 
+  const subjects = classSubjects?.map((cs: any) => cs.subject).filter(Boolean) || []
+
+  const studentMap = new Map<string, any>()
+  enrollmentsData?.forEach((e: any) => {
+    if (e.student && e.student.id && !studentMap.has(e.student.id)) {
+      studentMap.set(e.student.id, e.student)
+    }
+  })
+  const uniqueStudents = Array.from(studentMap.values())
+
   return (
     <div className="flex h-full flex-col">
       <Suspense fallback={<Skeleton className="h-full w-full" />}>
@@ -108,11 +121,14 @@ export default async function ResultFinalizationPage({
           terms={terms || []}
           classData={enrichedClassData}
           classes={enrichedClasses}
-          school={school}
-          students={students?.map((s) => s.student).filter(Boolean) || []}
+          students={uniqueStudents}
+          subjects={subjects}
+          initialClassId={classId}
           initialSessionId={sessionId}
           initialTermId={termId}
-          initialClassId={classId}
+          schoolSettings={school}
+          showBackButton={true}
+          showClassScoresButton={true}
         />
       </Suspense>
     </div>

@@ -36,11 +36,7 @@ export function NotificationsPopover() {
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
-    fetchNotifications()
-
-    // Poll for new notifications every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000)
-    return () => clearInterval(interval)
+    // Disabled continuous notification fetching
   }, [])
 
   const fetchNotifications = async () => {

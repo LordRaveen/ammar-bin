@@ -60,12 +60,7 @@ const getNavigationByRole = (role: UserRole) => {
       icon: IconUsers,
     },
     {
-      title: "Teachers",
-      url: "/teachers",
-      icon: IconUsersGroup,
-    },
-    {
-      title: "Users",
+      title: "Staff & Users",
       url: "/users",
       icon: IconUsersGroup,
     },
@@ -77,11 +72,6 @@ const getNavigationByRole = (role: UserRole) => {
     {
       title: "Assessments",
       url: "/assessments/results",
-      icon: IconClipboardCheck,
-    },
-    {
-      title: "Assignments",
-      url: "/assignments",
       icon: IconClipboardCheck,
     },
     {
@@ -100,16 +90,6 @@ const getNavigationByRole = (role: UserRole) => {
       icon: IconSpeakerphone,
     },
     {
-      title: "Audit Trail",
-      url: "/finance/audit-trail",
-      icon: IconHistory,
-    },
-    {
-      title: "Account Lockouts",
-      url: "/settings/account-lockouts",
-      icon: IconShield,
-    },
-    {
       title: "Settings",
       url: "/settings",
       icon: IconSettings,
@@ -119,18 +99,13 @@ const getNavigationByRole = (role: UserRole) => {
   const teacherNav = [
     ...baseNav,
     {
-      title: "Students",
-      url: "/students",
-      icon: IconUsers,
-    },
-    {
       title: "Attendance",
       url: "/teacher/attendance",
       icon: IconCalendarEvent,
     },
     {
-      title: "Assessments",
-      url: "/assessments/results",
+      title: "Class Results",
+      url: "/teacher/results",
       icon: IconClipboardCheck,
     },
   ]
@@ -178,11 +153,6 @@ const getNavigationByRole = (role: UserRole) => {
       title: "Reports",
       url: "/reports",
       icon: IconFileText,
-    },
-    {
-      title: "Audit Trail",
-      url: "/finance/audit-trail",
-      icon: IconHistory,
     },
   ]
 

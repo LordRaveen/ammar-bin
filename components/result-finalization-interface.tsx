@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef, useMemo } from "react"
+import { useRouter, usePathname } from 'next/navigation'
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -18,9 +18,10 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle2, ChevronLeft, Save, SlidersHorizontal, ArrowLeft, Loader2, RotateCcw, Pencil, Printer, ChevronDown, Download, FileText, Image as ImageIcon, ChevronsUpDown, Check, Filter, ExternalLink } from "lucide-react"
+import { CheckCircle2, ChevronLeft, Save, SlidersHorizontal, ArrowLeft, Loader2, RotateCcw, Pencil, Printer, ChevronDown, Download, FileText, Image as ImageIcon, ChevronsUpDown, Check, Filter, ExternalLink, BookOpen, User, Users, Book, Award, TrendingUp, BarChart3 } from "lucide-react"
 import { PrintableReportCard } from "@/components/printable-report-card"
 import { SessionTermSelector } from "@/components/session-term-selector"
+import { SubjectResultView } from "@/components/subject-result-view"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { exportReportCardsAsPDF, exportReportCardsAsImages } from "@/lib/export-report-card"
 import { createBrowserClient } from "@/lib/supabase/client"
@@ -83,12 +84,16 @@ interface Props {
   classData: any
   classes?: any[]
   school?: any
+  schoolSettings?: any
+  subjects?: any[]
   students: Student[]
   initialSessionId: string
   initialTermId: string
   initialClassId: string
   showSelectors?: boolean
   showTitle?: boolean
+  showBackButton?: boolean
+  showClassScoresButton?: boolean
 }
 
 export function ResultFinalizationInterface({
@@ -96,15 +101,21 @@ export function ResultFinalizationInterface({
   terms,
   classData,
   classes = [],
-  school,
+  school: schoolProp,
+  schoolSettings,
+  subjects,
   students: initialStudents,
   initialSessionId,
   initialTermId,
   initialClassId,
   showSelectors = true,
   showTitle = true,
+  showBackButton = false,
+  showClassScoresButton = false,
 }: Props) {
+  const school = schoolProp || schoolSettings
   const router = useRouter()
+  const pathname = usePathname()
   const supabase = createBrowserClient()
 
   const [sessionId, setSessionId] = useState(initialSessionId)
@@ -115,6 +126,31 @@ export function ResultFinalizationInterface({
     initialStudents[0] || null
   )
   const [classDropdownOpen, setClassDropdownOpen] = useState(false)
+  const [viewMode, setViewMode] = useState<"student" | "subject">("student")
+  const [classSubjectsList, setClassSubjectsList] = useState<any[]>(subjects || [])
+
+  useEffect(() => {
+    if (subjects && subjects.length > 0) {
+      setClassSubjectsList(subjects)
+      return
+    }
+    async function fetchClassSubjs() {
+      const currentClassId = initialClassId || classData?.id
+      if (!currentClassId) return
+      try {
+        const { data: cSubjs } = await supabase
+          .from("class_subjects")
+          .select("subject:subjects(id, name, code)")
+          .eq("class_id", currentClassId)
+
+        const subjs = cSubjs?.map((cs: any) => cs.subject).filter(Boolean) || []
+        setClassSubjectsList(subjs)
+      } catch (err) {
+        console.error("Error fetching class subjects:", err)
+      }
+    }
+    fetchClassSubjs()
+  }, [initialClassId, classData?.id, supabase, subjects])
 
   // React to prop updates
   useEffect(() => {
@@ -216,26 +252,27 @@ export function ResultFinalizationInterface({
 
   const getClassSubjectAverages = async (cId: string, sId: string, tId: string) => {
     try {
+      const { data: assessments } = await supabase
+        .from("assessments")
+        .select("id, subject:subjects(name)")
+        .eq("class_id", cId)
+        .eq("session_id", sId)
+        .eq("term_id", tId)
+
+      if (!assessments || assessments.length === 0) return {}
+
+      const assSubjMap = new Map(assessments.map((a: any) => [a.id, a.subject?.name]))
+      const assessmentIds = assessments.map((a: any) => a.id)
+
       const { data: scores } = await supabase
         .from("student_scores")
-        .select(`
-          student_id,
-          score,
-          assessment:assessments!inner(
-            class_id,
-            session_id,
-            term_id,
-            subject:subjects(name)
-          )
-        `)
-        .eq("assessment.class_id", cId)
-        .eq("assessment.session_id", sId)
-        .eq("assessment.term_id", tId)
+        .select("student_id, score, assessment_id")
+        .in("assessment_id", assessmentIds)
 
       const subjectStudentTotals: Record<string, Record<string, number>> = {}
 
       scores?.forEach((item: any) => {
-        const subjName = item.assessment?.subject?.name
+        const subjName = assSubjMap.get(item.assessment_id)
         const stId = item.student_id
         if (!subjName || !stId) return
 
@@ -289,6 +326,9 @@ export function ResultFinalizationInterface({
             grade,
             remarks,
             assessment:assessments(
+              class_id,
+              session_id,
+              term_id,
               subject:subjects(name, code),
               assessment_type:assessment_types(name)
             )
@@ -297,8 +337,13 @@ export function ResultFinalizationInterface({
 
         const subjectScoresMap: Record<string, any> = {}
         scoresData?.forEach((scoreItem: any) => {
-          const subjName = scoreItem.assessment?.subject?.name
-          const assessmentType = scoreItem.assessment?.assessment_type?.name
+          const ass = scoreItem.assessment
+          if (ass?.class_id && ass.class_id !== initialClassId) return
+          if (ass?.session_id && ass.session_id !== sessionId) return
+          if (ass?.term_id && ass.term_id !== termId) return
+
+          const subjName = ass?.subject?.name
+          const assessmentType = ass?.assessment_type?.name
 
           if (!subjName) return
 
@@ -484,8 +529,19 @@ export function ResultFinalizationInterface({
     setFilterRemarks("all")
   }
 
+  // Deduplicate incoming students by ID to prevent duplicate key rendering errors
+  const uniqueStudents = useMemo(() => {
+    const map = new Map<string, any>()
+    students?.forEach((st) => {
+      if (st && st.id && !map.has(st.id)) {
+        map.set(st.id, st)
+      }
+    })
+    return Array.from(map.values())
+  }, [students])
+
   // Filter students based on search and filters
-  const filteredStudents = students.filter((student) => {
+  const filteredStudents = uniqueStudents.filter((student) => {
     const fullName = `${student.first_name} ${student.middle_name || ""} ${student.last_name}`.toLowerCase()
     const matchesSearch = fullName.includes(searchQuery.toLowerCase()) || student.student_id.toLowerCase().includes(searchQuery.toLowerCase())
     if (!matchesSearch) return false
@@ -523,7 +579,16 @@ export function ResultFinalizationInterface({
       if (studentIds.length === 0) return
 
       const [scoresRes, skillsRes, resultsRes] = await Promise.all([
-        supabase.from("student_scores").select("student_id").in("student_id", studentIds),
+        supabase
+          .from("student_scores")
+          .select(`
+            student_id,
+            assessment:assessments!inner(class_id, session_id, term_id)
+          `)
+          .eq("assessment.class_id", initialClassId || classData?.id)
+          .eq("assessment.session_id", sessionId)
+          .eq("assessment.term_id", termId)
+          .in("student_id", studentIds),
         supabase.from("student_skills").select("student_id, rating").eq("session_id", sessionId).eq("term_id", termId).in("student_id", studentIds),
         supabase.from("student_results").select("student_id, attendance_present, teacher_remark, principal_remark").eq("session_id", sessionId).eq("term_id", termId).in("student_id", studentIds),
       ])
@@ -583,12 +648,18 @@ export function ResultFinalizationInterface({
             .select(`
               score,
               grade,
-              assessment:assessments(
+              assessment:assessments!inner(
+                class_id,
+                session_id,
+                term_id,
                 subject:subjects(name),
                 assessment_type:assessment_types(name)
               )
             `)
-            .eq("student_id", selectedStudent.id),
+            .eq("student_id", selectedStudent.id)
+            .eq("assessment.class_id", initialClassId || classData?.id)
+            .eq("assessment.session_id", sessionId)
+            .eq("assessment.term_id", termId),
 
           supabase
             .from("student_skills")
@@ -751,7 +822,7 @@ export function ResultFinalizationInterface({
 
   const handleClassSwitch = (newClassId: string) => {
     if (showSelectors) {
-      router.push(`/assessments/results/finalize?session=${sessionId}&term=${termId}&class=${newClassId}`)
+      router.push(`${pathname}?session=${sessionId}&term=${termId}&class=${newClassId}`)
     } else {
       router.push(`/classes/${newClassId}`)
     }
@@ -759,16 +830,12 @@ export function ResultFinalizationInterface({
 
   const handleSessionChange = (value: string) => {
     setSessionId(value)
-    router.push(
-      `/assessments/results/finalize?session=${value}&term=${termId}&class=${initialClassId}`
-    )
+    router.push(`${pathname}?session=${value}&term=${termId}&class=${initialClassId}`)
   }
 
   const handleTermChange = (value: string) => {
     setTermId(value)
-    router.push(
-      `/assessments/results/finalize?session=${sessionId}&term=${value}&class=${initialClassId}`
-    )
+    router.push(`${pathname}?session=${sessionId}&term=${value}&class=${initialClassId}`)
   }
 
   const handleSkillRatingChange = (
@@ -883,6 +950,21 @@ export function ResultFinalizationInterface({
     }
   }
 
+  // Keyboard shortcut (Ctrl + S / Cmd + S) for student view save
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault()
+        if (viewMode === "student" && selectedStudent && !loading) {
+          handleSave()
+        }
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [viewMode, selectedStudent, loading, handleSave])
+
   const totalScore = scores.reduce((sum, s) => sum + s.total, 0)
   const maxScore = scores.length * 100 // Assuming 100 per subject
   const averageScore = scores.length > 0 ? (totalScore / maxScore) * 100 : 0
@@ -898,9 +980,11 @@ export function ResultFinalizationInterface({
         <div className="flex flex-wrap items-center justify-between gap-3">
           {showTitle && (
             <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => router.back()}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
+              {showBackButton && (
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => router.back()}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              )}
               
               {/* Vercel-style Class Switcher */}
               <div className="flex items-center gap-1.5">
@@ -954,7 +1038,7 @@ export function ResultFinalizationInterface({
                   </PopoverContent>
                 </Popover>
 
-                {(initialClassId || classData?.id) && (
+                {showClassScoresButton && (initialClassId || classData?.id) && (
                   <a
                     href={`/classes/${initialClassId || classData?.id}?tab=scores`}
                     target="_blank"
@@ -967,6 +1051,36 @@ export function ResultFinalizationInterface({
                     </Button>
                   </a>
                 )}
+
+                {/* View Mode Switcher */}
+                <div className="flex h-7 items-center rounded-lg border bg-muted/40 p-0.5 gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("student")}
+                    className={cn(
+                      "h-6 px-2 text-[11px] font-bold flex items-center gap-1 rounded-md transition-all",
+                      viewMode === "student"
+                        ? "bg-background shadow-2xs text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <User className="h-3 w-3" />
+                    <span>Student View</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("subject")}
+                    className={cn(
+                      "h-6 px-2 text-[11px] font-bold flex items-center gap-1 rounded-md transition-all",
+                      viewMode === "subject"
+                        ? "bg-background shadow-2xs text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <BookOpen className="h-3 w-3" />
+                    <span>Subject View</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -983,8 +1097,28 @@ export function ResultFinalizationInterface({
         </div>
       )}
 
-      {/* Completion Stats Grid (4 Lightly Color-Coded KPIs) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Subject View Container (Kept in DOM to prevent reloading data on tab switch) */}
+      <div className={cn(viewMode === "subject" ? "block" : "hidden")}>
+        <SubjectResultView
+          classId={initialClassId || classData?.id}
+          sessionId={sessionId}
+          termId={termId}
+          students={students}
+          subjects={classSubjectsList}
+          onSwitchToSubjectView={() => setViewMode("subject")}
+          onSaveSuccess={() => {
+            setRefreshKey((prev) => prev + 1)
+            if (selectedStudent) {
+              setSelectedStudent((prev) => (prev ? { ...prev } : null))
+            }
+          }}
+        />
+      </div>
+
+      {/* Student View Container (Kept in DOM) */}
+      <div className={cn("flex flex-col gap-4 flex-1", viewMode === "student" ? "flex" : "hidden")}>
+        {/* Completion Stats Grid (4 Lightly Color-Coded KPIs) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Scores Completion - Subtle Blue */}
         <Card className="py-0 shadow-none bg-blue-500/5 dark:bg-blue-950/20 border-blue-500/20 dark:border-blue-500/30 text-blue-950 dark:text-blue-100">
           <CardContent className="p-3 sm:p-4">
@@ -1678,6 +1812,7 @@ export function ResultFinalizationInterface({
             )}
           </CardContent>
         </Card>
+      </div>
       </div>
       </div>
 

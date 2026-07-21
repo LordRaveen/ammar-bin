@@ -16,21 +16,17 @@ export default async function UsersPage({
   const search = params.search || ""
 
   const { count } = await supabase
-    .from("teachers")
+    .from("user_profiles")
     .select("*", { count: "exact", head: true })
-    .neq("role", "Teacher")
-    .is("deleted_at", null)
 
   let query = supabase
-    .from("teachers")
+    .from("user_profiles")
     .select("*")
-    .neq("role", "Teacher")
-    .is("deleted_at", null)
     .order("created_at", { ascending: false })
 
   if (search) {
     query = query.or(
-      `first_name.ilike.%${search}%,last_name.ilike.%${search}%,staff_id.ilike.%${search}%`,
+      `first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%,staff_id.ilike.%${search}%`,
     )
   }
 
