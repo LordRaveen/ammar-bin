@@ -20,7 +20,8 @@ export default async function StudentsPage({
       student_enrollments(
         id,
         is_active,
-        class:classes(name, section:sections(name))
+        class_id,
+        class:classes(id, name, section_id, section:sections(id, name))
       )
     `,
       { count: "exact" },
@@ -52,7 +53,7 @@ export default async function StudentsPage({
               id,
               is_active,
               class_id,
-              class:classes(name, section:sections(name))
+              class:classes(id, name, section_id, section:sections(id, name))
             )
           `,
             { count: "exact" },

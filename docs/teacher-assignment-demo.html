@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teacher Assignment UI Concepts — Demo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+  
+  :root {
+    --bg: #09090b;
+    --surface: #18181b;
+    --surface-hover: #27272a;
+    --border: #27272a;
+    --border-focus: #3f3f46;
+    --text: #fafafa;
+    --text-muted: #a1a1aa;
+    --text-dim: #71717a;
+    --primary: #10b981;
+    --primary-hover: #059669;
+    --primary-dim: rgba(16, 185, 129, 0.1);
+    --accent-blue: #3b82f6;
+    --accent-blue-dim: rgba(59, 130, 246, 0.1);
+    --accent-amber: #f59e0b;
+    --accent-amber-dim: rgba(245, 158, 11, 0.1);
+    --accent-red: #ef4444;
+    --accent-red-dim: rgba(239, 68, 68, 0.1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    padding: 30px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .header {
+    margin-bottom: 30px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .header h1 {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  .header p {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .toggle-bar {
+    display: flex;
+    background: var(--surface);
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  .toggle-btn {
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .toggle-btn.active {
+    color: var(--text);
+    background: var(--border);
+  }
+
+  /* Views */
+  .view-container {
+    display: none;
+  }
+
+  .view-container.active {
+    display: block;
+  }
+
+  /* Matrix Layout (Option 1) */
+  .matrix-wrapper {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .matrix-toolbar {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .matrix-title {
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .search-input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    width: 220px;
+    outline: none;
+  }
+
+  .search-input:focus {
+    border-color: var(--border-focus);
+  }
+
+  .save-btn {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .save-btn:hover {
+    background: var(--primary-hover);
+  }
+
+  .matrix-table-container {
+    overflow-x: auto;
+  }
+
+  table.matrix-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    text-align: left;
+  }
+
+  table.matrix-table th {
+    background: var(--surface);
+    color: var(--text-muted);
+    font-weight: 600;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  table.matrix-table td {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  table.matrix-table tr:hover td {
+    background: rgba(255, 255, 255, 0.01);
+  }
+
+  .class-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .badge-tahfeez { background: var(--accent-blue-dim); color: #60a5fa; }
+  .badge-islamiyya { background: var(--primary-dim); color: #34d399; }
+  .badge-combined { background: var(--accent-amber-dim); color: #fbbf24; }
+
+  /* Custom cell dropdown mock */
+  .cell-select {
+    width: 100%;
+    min-width: 150px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .cell-select:focus {
+    border-color: var(--primary);
+  }
+
+  .cell-select.unassigned {
+    border-style: dashed;
+    border-color: var(--accent-red);
+    color: var(--accent-red);
+  }
+
+  .cell-not-applicable {
+    color: var(--text-dim);
+    font-style: italic;
+    font-size: 11px;
+  }
+
+  /* Option 2: Teacher Load Cards Layout */
+  .grid-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 20px;
+  }
+
+  .teacher-sidebar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    height: fit-content;
+  }
+
+  .teacher-sidebar h2 {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--text-muted);
+  }
+
+  .teacher-item {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    margin-bottom: 8px;
+    transition: all 0.2s;
+  }
+
+  .teacher-item:hover {
+    background: var(--surface-hover);
+  }
+
+  .teacher-item.active {
+    background: var(--primary-dim);
+    border-color: var(--primary);
+  }
+
+  .teacher-name {
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .teacher-item.active .teacher-name {
+    color: var(--primary);
+  }
+
+  .load-bar-container {
+    width: 100%;
+    height: 4px;
+    background: var(--bg);
+    border-radius: 2px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+
+  .load-bar {
+    height: 100%;
+    background: var(--accent-blue);
+    border-radius: 2px;
+  }
+
+  .teacher-item.active .load-bar {
+    background: var(--primary);
+  }
+
+  .teacher-load-text {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 3px;
+    display: block;
+  }
+
+  /* Main assignment panel */
+  .assignment-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .panel-header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 16px;
+    margin-bottom: 20px;
+  }
+
+  .panel-header h3 {
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .panel-header p {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  /* Class cards list */
+  .class-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .class-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+
+  .class-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+  }
+
+  .class-card-title {
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .subject-assignment-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 12px;
+  }
+
+  .subject-name-tag {
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+
+  /* Switch styled checkbox */
+  .switch-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mock-checkbox {
+    width: 16px;
+    height: 16px;
+    border: 1px solid var(--border-focus);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .mock-checkbox.checked {
+    background: var(--primary);
+    border-color: var(--primary);
+  }
+
+  .mock-checkbox.checked::after {
+    content: "✓";
+    color: white;
+    font-size: 10px;
+    font-weight: 900;
+  }
+
+  .assigned-teacher-label {
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  .assigned-teacher-label.mine {
+    color: var(--primary);
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <h1>Teacher Class & Subject Assignments</h1>
+      <p>Configure academic responsibilities and lessons for the active term</p>
+    </div>
+    
+    <div class="toggle-bar">
+      <button class="toggle-btn active" onclick="switchView('matrix')">Option 1: Matrix Board</button>
+      <button class="toggle-btn" onclick="switchView('cards')">Option 2: Teacher Load Cards</button>
+    </div>
+  </div>
+
+  <!-- ============================================= -->
+  <!-- OPTION 1: MATRIX VIEW -->
+  <!-- ============================================= -->
+  <div id="matrix-view" class="view-container active">
+    <div class="matrix-wrapper">
+      <div class="matrix-toolbar">
+        <div class="matrix-title">All Classes Assignment Matrix</div>
+        <div style="display: flex; gap: 10px;">
+          <input type="text" class="search-input" placeholder="Search class or subject..." />
+          <button class="save-btn">Save All Assignments</button>
+        </div>
+      </div>
+
+      <div class="matrix-table-container">
+        <table class="matrix-table">
+          <thead>
+            <tr>
+              <th style="width: 180px;">Class / School Level</th>
+              <th>Qur'an Hifz</th>
+              <th>Tajweed</th>
+              <th>Arabic</th>
+              <th>Mathematics</th>
+              <th>English</th>
+              <th>Islamic Studies</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <span style="font-weight: 700;">Raudah 1 (Tahfeez)</span>
+                  <div><span class="class-badge badge-tahfeez">Tahfeez</span></div>
+                </div>
+              </td>
+              <td>
+                <select class="cell-select">
+                  <option>Mallam Ibrahim</option>
+                  <option>Rabiatu Ahmed</option>
+                  <option>Mallam Jaafar</option>
+                </select>
+              </td>
+              <td>
+                <select class="cell-select">
+                  <option>Rabiatu Ahmed</option>
+                  <option>Mallam Ibrahim</option>
+                  <option>Mallam Jaafar</option>
+                </select>
+              </td>
+              <td><span class="cell-not-applicable">—</span></td>
+              <td><span class="cell-not-applicable">—</span></td>
+              <td><span class="cell-not-applicable">—</span></td>
+              <td><span class="cell-not-applicable">—</span></td>
+            </tr>
+
+            <tr>
+              <td>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <span style="font-weight: 700;">Class 1 (Islamiyya)</span>
+                  <div><span class="class-badge badge-islamiyya">Islamiyya</span></div>
+                </div>
+              </td>
+              <td><span class="cell-not-applicable">—</span></td>
+              <td><span class="cell-not-applicable">—</span></td>
+              <td>
+                <select class="cell-select">
+                  <option>Aisha Umar</option>
+                  <option>Rabiatu Ahmed</option>
+                  <option>Mallam Ibrahim</option>
+                </select>
+              </td>
+              <td>
+                <select class="cell-select">
+                  <option>Mallam Jaafar</option>
+                  <option>Aisha Umar</option>
+                  <option>Rabiatu Ahmed</option>
+                </select>
+              </td>
+              <td>
+                <select class="cell-select unassigned">
+                  <option selected disabled>Unassigned</option>
+                  <option>Mallam Ibrahim</option>
+                  <option>Rabiatu Ahmed</option>
+                  <option>Aisha Umar</option>
+                  <option>Mallam Jaafar</option>
+                </select>
+              </td>
+              <td>
+                <select class="cell-select">
+                  <option>Rabiatu Ahmed</option>
+                  <option>Mallam Ibrahim</option>
+                  <option>Mallam Jaafar</option>
+                </select>
+              </td>
+            </tr>
+
+            <tr>
+              <td>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <span style="font-weight: 700;">Class 1 (Combined)</span>
+                  <div><span class="class-badge badge-combined">Combined</span></div>
+                </div>
+              </td>
+              <td>
+                <select class="cell-select">
+                  <option>Mallam Ibrahim</option>
+                  <option>Rabiatu Ahmed</option>
+                </select>
+              </td>
+              <td>
+                <select class="cell-select">
+                  <option>Rabiatu Ahmed</option>
+                  <option>Mallam Ibrahim</option>
+                </select>
+              </td>
+              <td>
+                <select class="cell-select">
+                  <option>Aisha Umar</option>
+                  <option>Rabiatu Ahmed</option>
+                </select>
+              </td>
+              <td>
+                <select class="cell-select">
+                  <option>Mallam Jaafar</option>
+                  <option>Aisha Umar</option>
+                </select>
+              </td>
+              <td>
+                <select class="cell-select">
+                  <option>Aisha Umar</option>
+                  <option>Mallam Ibrahim</option>
+                </select>
+              </td>
+              <td>
+                <select class="cell-select">
+                  <option>Rabiatu Ahmed</option>
+                  <option>Mallam Ibrahim</option>
+                </select>
+              </td>
+            </tr>
+
+            <tr>
+              <td>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <span style="font-weight: 700;">Halqa 1 (Tahfeez)</span>
+                  <div><span class="class-badge badge-tahfeez">Tahfeez</span></div>
+                </div>
+              </td>
+              <td>
+                <select class="cell-select">
+                  <option>Mallam Ibrahim</option>
+                  <option>Rabiatu Ahmed</option>
+                </select>
+              </td>
+              <td>
+                <select class="cell-select unassigned">
+                  <option selected disabled>Unassigned</option>
+                  <option>Mallam Ibrahim</option>
+                  <option>Rabiatu Ahmed</option>
+                </select>
+              </td>
+              <td><span class="cell-not-applicable">—</span></td>
+              <td><span class="cell-not-applicable">—</span></td>
+              <td><span class="cell-not-applicable">—</span></td>
+              <td><span class="cell-not-applicable">—</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================= -->
+  <!-- OPTION 2: TEACHER CARDS VIEW -->
+  <!-- ============================================= -->
+  <div id="cards-view" class="view-container">
+    <div class="grid-layout">
+      <!-- Left sidebar teachers list -->
+      <div class="teacher-sidebar">
+        <h2>Teachers List</h2>
+        
+        <div class="teacher-item active">
+          <div class="teacher-name">Mallam Ibrahim</div>
+          <div class="load-bar-container">
+            <div class="load-bar" style="width: 75%;"></div>
+          </div>
+          <span class="teacher-load-text">Load: 6 classes assigned</span>
+        </div>
+
+        <div class="teacher-item">
+          <div class="teacher-name">Rabiatu Ahmed</div>
+          <div class="load-bar-container">
+            <div class="load-bar" style="width: 45%;"></div>
+          </div>
+          <span class="teacher-load-text">Load: 3 classes assigned</span>
+        </div>
+
+        <div class="teacher-item">
+          <div class="teacher-name">Aisha Umar</div>
+          <div class="load-bar-container">
+            <div class="load-bar" style="width: 90%;"></div>
+          </div>
+          <span class="teacher-load-text">Load: 8 classes assigned</span>
+        </div>
+
+        <div class="teacher-item">
+          <div class="teacher-name">Mallam Jaafar</div>
+          <div class="load-bar-container">
+            <div class="load-bar" style="width: 20%;"></div>
+          </div>
+          <span class="teacher-load-text">Load: 1 class assigned</span>
+        </div>
+      </div>
+
+      <!-- Right Side Assignment Panel -->
+      <div class="assignment-panel">
+        <div class="panel-header">
+          <h3>Duties Setup: Mallam Ibrahim</h3>
+          <p>Assign classes and subjects for this teacher by checking items below</p>
+        </div>
+
+        <div class="class-cards-grid">
+          <!-- Class Card 1 -->
+          <div class="class-card">
+            <div class="class-card-header">
+              <span class="class-card-title">Raudah 1 (Tahfeez)</span>
+              <span class="class-badge badge-tahfeez">Tahfeez</span>
+            </div>
+            <div class="subject-assignment-item">
+              <span class="subject-name-tag">Qur'an Hifz</span>
+              <div class="switch-container">
+                <div class="mock-checkbox checked"></div>
+              </div>
+            </div>
+            <div class="subject-assignment-item">
+              <span class="subject-name-tag">Tajweed</span>
+              <div class="switch-container">
+                <div class="mock-checkbox"></div>
+                <span class="assigned-teacher-label">Assigned: Rabiatu</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Class Card 2 -->
+          <div class="class-card">
+            <div class="class-card-header">
+              <span class="class-card-title">Class 1 (Islamiyya)</span>
+              <span class="class-badge badge-islamiyya">Islamiyya</span>
+            </div>
+            <div class="subject-assignment-item">
+              <span class="subject-name-tag">Arabic</span>
+              <div class="switch-container">
+                <div class="mock-checkbox"></div>
+                <span class="assigned-teacher-label">Assigned: Aisha</span>
+              </div>
+            </div>
+            <div class="subject-assignment-item">
+              <span class="subject-name-tag">Mathematics</span>
+              <div class="switch-container">
+                <div class="mock-checkbox"></div>
+                <span class="assigned-teacher-label">Assigned: Jaafar</span>
+              </div>
+            </div>
+            <div class="subject-assignment-item">
+              <span class="subject-name-tag">English</span>
+              <div class="switch-container">
+                <div class="mock-checkbox checked"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Class Card 3 (Combined) -->
+          <div class="class-card">
+            <div class="class-card-header">
+              <span class="class-card-title">Class 1 (Combined)</span>
+              <span class="class-badge badge-combined">Combined</span>
+            </div>
+            <div class="subject-assignment-item">
+              <span class="subject-name-tag">Qur'an Hifz</span>
+              <div class="switch-container">
+                <div class="mock-checkbox checked"></div>
+              </div>
+            </div>
+            <div class="subject-assignment-item">
+              <span class="subject-name-tag">Arabic</span>
+              <div class="switch-container">
+                <div class="mock-checkbox"></div>
+                <span class="assigned-teacher-label">Assigned: Aisha</span>
+              </div>
+            </div>
+            <div class="subject-assignment-item">
+              <span class="subject-name-tag">Mathematics</span>
+              <div class="switch-container">
+                <div class="mock-checkbox"></div>
+                <span class="assigned-teacher-label">Assigned: Jaafar</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function switchView(viewName) {
+      document.querySelectorAll('.view-container').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.toggle-btn').forEach(el => el.classList.remove('active'));
+      
+      if (viewName === 'matrix') {
+        document.getElementById('matrix-view').classList.add('active');
+        event.currentTarget.classList.add('active');
+      } else {
+        document.getElementById('cards-view').classList.add('active');
+        event.currentTarget.classList.add('active');
+      }
+    }
+  </script>
+
+</body>
+</html>

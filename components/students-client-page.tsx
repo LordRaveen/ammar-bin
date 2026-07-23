@@ -1,22 +1,52 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Search, Trash2, Pencil, ChevronLeft, ChevronRight, Printer, Users, GraduationCap, UserCheck, CheckCircle2, AlertCircle } from "lucide-react"
+import {
+  Search,
+  Trash2,
+  Pencil,
+  ChevronLeft,
+  ChevronRight,
+  Printer,
+  Users,
+  GraduationCap,
+  UserCheck,
+  CheckCircle2,
+  SlidersHorizontal,
+  X,
+  ChevronDown,
+} from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
 import { RegisterStudentModal } from "@/components/register-student-modal"
 import { StudentDetailsSheet } from "@/components/student-details-sheet"
 import { DeleteStudentDialog } from "@/components/delete-student-dialog"
 import { EditStudentModal } from "@/components/edit-student-modal"
 import { BulkAddStudentsModal } from "@/components/bulk-add-students-modal"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Separator } from "@/components/ui/separator"
 import { FileSpreadsheet } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { DateRangePicker } from "@/components/ui/date-range-picker"
+import { type DateRange } from "react-day-picker"
+import { format } from "date-fns"
 
 interface StudentsClientPageProps {
   initialStudents: any[]
@@ -26,6 +56,37 @@ interface StudentsClientPageProps {
   classes: any[]
   sections?: any[]
   userRole: string
+}
+
+interface Filters {
+  gender: string        // "all" | "Male" | "Female"
+  sectionId: string     // "all" | section id
+  classId: string       // "all" | class id
+  status: string        // "all" | "Active" | "Inactive"
+  enrolled: string      // "all" | "enrolled" | "not-enrolled"
+  hasGuardian: string   // "all" | "yes" | "no"
+  dateRange: DateRange | undefined
+  ageMin: string
+  ageMax: string
+}
+
+const DEFAULT_FILTERS: Filters = {
+  gender: "all",
+  sectionId: "all",
+  classId: "all",
+  status: "all",
+  enrolled: "all",
+  hasGuardian: "all",
+  dateRange: undefined,
+  ageMin: "",
+  ageMax: "",
+}
+
+function countActiveFilters(filters: Filters): number {
+  return Object.entries(filters).filter(([k, v]) => {
+    if (k === "dateRange") return v !== undefined
+    return v !== "all" && v !== ""
+  }).length
 }
 
 export function StudentsClientPage({
@@ -44,14 +105,23 @@ export function StudentsClientPage({
 
   const activeSession = sessions.find((s) => s.is_active)
   const activeTerm = terms.find((t) => t.is_active && t.session_id === activeSession?.id)
-  
+
   const [filterTab, setFilterTab] = useState<string>("all")
+  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
+  const [filterOpen, setFilterOpen] = useState(false)
   const [deleteStudentId, setDeleteStudentId] = useState<string | null>(null)
   const [editStudent, setEditStudent] = useState<any | null>(null)
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
 
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(15)
+
+  // Derive unique sections/classes from the passed classes prop
+  const uniqueSections = sections
+  const filteredClassesBySection = useMemo(() => {
+    if (filters.sectionId === "all") return classes
+    return classes.filter((c) => c.section_id === filters.sectionId)
+  }, [classes, filters.sectionId])
 
   // KPI Calculations
   const totalStudents = students.length
@@ -60,28 +130,105 @@ export function StudentsClientPage({
   const femaleCount = students.filter((s) => s.gender?.toLowerCase() === "female").length
   const activeCount = students.filter((s) => s.status === "Active").length
 
-  const filteredStudents = students.filter((student) => {
-    const search = searchTerm.toLowerCase()
-    const matchesSearch =
-      !searchTerm ||
-      student.first_name?.toLowerCase().includes(search) ||
-      student.last_name?.toLowerCase().includes(search) ||
-      student.student_id?.toLowerCase().includes(search) ||
-      student.student_enrollments?.some((e: any) => e.class?.name?.toLowerCase().includes(search))
+  const activeFilterCount = countActiveFilters(filters)
 
-    let matchesFilter = true
-    if (filterTab === "enrolled") {
-      matchesFilter = student.student_enrollments?.some((e: any) => e.is_active)
-    } else if (filterTab === "not-enrolled") {
-      matchesFilter = !student.student_enrollments || !student.student_enrollments.some((e: any) => e.is_active)
-    } else if (filterTab === "male") {
-      matchesFilter = student.gender?.toLowerCase() === "male"
-    } else if (filterTab === "female") {
-      matchesFilter = student.gender?.toLowerCase() === "female"
-    }
+  const filteredStudents = useMemo(() => {
+    return students.filter((student) => {
+      const search = searchTerm.toLowerCase()
 
-    return matchesSearch && matchesFilter
-  })
+      // Search
+      const matchesSearch =
+        !searchTerm ||
+        student.first_name?.toLowerCase().includes(search) ||
+        student.last_name?.toLowerCase().includes(search) ||
+        student.student_id?.toLowerCase().includes(search) ||
+        student.student_enrollments?.some((e: any) => e.class?.name?.toLowerCase().includes(search))
+
+      // Quick tab (all / enrolled / not-enrolled)
+      let matchesTab = true
+      if (filterTab === "enrolled") {
+        matchesTab = student.student_enrollments?.some((e: any) => e.is_active)
+      } else if (filterTab === "not-enrolled") {
+        matchesTab = !student.student_enrollments || !student.student_enrollments.some((e: any) => e.is_active)
+      }
+
+      // Gender filter
+      const matchesGender =
+        filters.gender === "all" || student.gender?.toLowerCase() === filters.gender.toLowerCase()
+
+      // Status filter
+      const matchesStatus =
+        filters.status === "all" || student.status === filters.status
+
+      // Enrolled filter (from popover)
+      let matchesEnrolled = true
+      if (filters.enrolled === "enrolled") {
+        matchesEnrolled = student.student_enrollments?.some((e: any) => e.is_active)
+      } else if (filters.enrolled === "not-enrolled") {
+        matchesEnrolled =
+          !student.student_enrollments || !student.student_enrollments.some((e: any) => e.is_active)
+      }
+
+      // Section filter — find active enrollment, check its class's section
+      const activeEnrollment = student.student_enrollments?.find((e: any) => e.is_active)
+      const matchesSection =
+        filters.sectionId === "all" ||
+        (activeEnrollment?.class?.section_id === filters.sectionId)
+
+      // Class filter
+      const matchesClass =
+        filters.classId === "all" ||
+        (activeEnrollment?.class_id === filters.classId)
+
+      // Guardian filter
+      const hasGuardian =
+        student.guardians && student.guardians.length > 0
+      const matchesGuardian =
+        filters.hasGuardian === "all" ||
+        (filters.hasGuardian === "yes" && hasGuardian) ||
+        (filters.hasGuardian === "no" && !hasGuardian)
+
+      // Date added range
+      let matchesDateAdded = true
+      if (filters.dateRange && student.created_at) {
+        const created = new Date(student.created_at)
+        const from = filters.dateRange.from ? new Date(filters.dateRange.from) : null
+        const to = filters.dateRange.to ? new Date(filters.dateRange.to) : null
+
+        if (from) {
+          from.setHours(0, 0, 0, 0)
+          if (created < from) matchesDateAdded = false
+        }
+        if (to) {
+          to.setHours(23, 59, 59, 999)
+          if (created > to) matchesDateAdded = false
+        }
+      }
+
+      // Age range
+      let matchesAge = true
+      if ((filters.ageMin || filters.ageMax) && student.date_of_birth) {
+        const dob = new Date(student.date_of_birth)
+        const now = new Date()
+        const ageYears = (now.getTime() - dob.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
+        if (filters.ageMin && ageYears < Number(filters.ageMin)) matchesAge = false
+        if (filters.ageMax && ageYears > Number(filters.ageMax)) matchesAge = false
+      }
+
+      return (
+        matchesSearch &&
+        matchesTab &&
+        matchesGender &&
+        matchesStatus &&
+        matchesEnrolled &&
+        matchesSection &&
+        matchesClass &&
+        matchesGuardian &&
+        matchesDateAdded &&
+        matchesAge
+      )
+    })
+  }, [students, searchTerm, filterTab, filters])
 
   const totalPages = Math.max(1, Math.ceil(filteredStudents.length / rowsPerPage))
   const startIndex = (currentPage - 1) * rowsPerPage
@@ -91,7 +238,12 @@ export function StudentsClientPage({
   useEffect(() => {
     setCurrentPage(1)
     setRowSelection({})
-  }, [searchTerm, filterTab])
+  }, [searchTerm, filterTab, filters])
+
+  // If section changes in filter, reset class
+  const handleSectionChange = (sectionId: string) => {
+    setFilters((prev) => ({ ...prev, sectionId, classId: "all" }))
+  }
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -115,6 +267,10 @@ export function StudentsClientPage({
   const handleRowsPerPageChange = (size: string) => {
     setRowsPerPage(Number.parseInt(size))
     setCurrentPage(1)
+  }
+
+  const clearFilters = () => {
+    setFilters(DEFAULT_FILTERS)
   }
 
   const allSelected = paginatedStudents.length > 0 && paginatedStudents.every((s) => rowSelection[s.id])
@@ -149,7 +305,7 @@ export function StudentsClientPage({
           )}
         </div>
 
-        {/* Compact KPI Row (5 Cards matching Users Page) */}
+        {/* KPI Row */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
           <div className="p-3 rounded-xl border bg-card text-card-foreground shadow-sm flex items-center justify-between">
             <div>
@@ -207,14 +363,12 @@ export function StudentsClientPage({
           <CardContent className="p-3.5 space-y-3">
             {/* Filter & Search Bar */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-              {/* Filter Tabs */}
-              <div className="flex h-9 items-center rounded-lg border bg-muted/40 p-1 gap-1 overflow-x-auto scrollbar-none">
+              {/* Quick Tabs */}
+              <div className="flex h-9 items-center rounded-lg border bg-muted/40 p-1 gap-1">
                 {[
                   { id: "all", label: `All (${students.length})` },
                   { id: "enrolled", label: `Enrolled (${enrolledCount})` },
                   { id: "not-enrolled", label: `Not Enrolled (${totalStudents - enrolledCount})` },
-                  { id: "male", label: `Male (${maleCount})` },
-                  { id: "female", label: `Female (${femaleCount})` },
                 ].map((item) => (
                   <button
                     key={item.id}
@@ -232,24 +386,306 @@ export function StudentsClientPage({
                 ))}
               </div>
 
-              {/* Search Box */}
-              <div className="relative w-full sm:w-72">
-                <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search name, ID, class..."
-                  className="pl-8 h-9 text-xs"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+              {/* Right controls: search + filter */}
+              <div className="flex items-center gap-2">
+                {/* Search Box */}
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Search name, ID, class..."
+                    className="pl-8 h-9 text-xs"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+
+                {/* Filter Popover */}
+                <Popover open={filterOpen} onOpenChange={setFilterOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "h-9 gap-1.5 text-xs font-medium relative",
+                        activeFilterCount > 0 && "border-primary text-primary"
+                      )}
+                    >
+                      <SlidersHorizontal className="h-3.5 w-3.5" />
+                      Filters
+                      {activeFilterCount > 0 && (
+                        <span className="ml-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                          {activeFilterCount}
+                        </span>
+                      )}
+                      <ChevronDown className="h-3 w-3 opacity-60" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-0 flex flex-col" style={{ maxHeight: "min(90vh, 580px)" }} align="end">
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
+                      <span className="text-sm font-semibold">Filter Students</span>
+                      {activeFilterCount > 0 && (
+                        <button
+                          onClick={clearFilters}
+                          className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <X className="h-3 w-3" />
+                          Clear all
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="p-4 space-y-4 overflow-y-auto flex-1 min-h-0">
+                      {/* Gender */}
+                      <div className="space-y-2">
+                        <Label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Gender</Label>
+                        <div className="flex gap-2 flex-wrap">
+                          {["all", "Male", "Female"].map((g) => (
+                            <button
+                              key={g}
+                              onClick={() => setFilters((prev) => ({ ...prev, gender: g }))}
+                              className={cn(
+                                "px-3 py-1 text-xs rounded-full border font-medium transition-all",
+                                filters.gender === g
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : "border-border text-muted-foreground hover:border-primary hover:text-foreground"
+                              )}
+                            >
+                              {g === "all" ? "All" : g}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Section */}
+                      <div className="space-y-2">
+                        <Label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Section</Label>
+                        <Select value={filters.sectionId} onValueChange={handleSectionChange}>
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="All sections" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all" className="text-xs">All Sections</SelectItem>
+                            {uniqueSections.map((sec) => (
+                              <SelectItem key={sec.id} value={sec.id} className="text-xs">
+                                {sec.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Class */}
+                      <div className="space-y-2">
+                        <Label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Class</Label>
+                        <Select
+                          value={filters.classId}
+                          onValueChange={(v) => setFilters((prev) => ({ ...prev, classId: v }))}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="All classes" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all" className="text-xs">All Classes</SelectItem>
+                            {filteredClassesBySection.map((cls) => (
+                              <SelectItem key={cls.id} value={cls.id} className="text-xs">
+                                {cls.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <Separator />
+
+                      {/* Status */}
+                      <div className="space-y-2">
+                        <Label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Status</Label>
+                        <div className="flex gap-2 flex-wrap">
+                          {["all", "Active", "Inactive"].map((s) => (
+                            <button
+                              key={s}
+                              onClick={() => setFilters((prev) => ({ ...prev, status: s }))}
+                              className={cn(
+                                "px-3 py-1 text-xs rounded-full border font-medium transition-all",
+                                filters.status === s
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : "border-border text-muted-foreground hover:border-primary hover:text-foreground"
+                              )}
+                            >
+                              {s === "all" ? "All" : s}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Enrollment */}
+                      <div className="space-y-2">
+                        <Label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Enrollment</Label>
+                        <div className="flex gap-2 flex-wrap">
+                          {[
+                            { id: "all", label: "All" },
+                            { id: "enrolled", label: "Enrolled" },
+                            { id: "not-enrolled", label: "Not Enrolled" },
+                          ].map((e) => (
+                            <button
+                              key={e.id}
+                              onClick={() => setFilters((prev) => ({ ...prev, enrolled: e.id }))}
+                              className={cn(
+                                "px-3 py-1 text-xs rounded-full border font-medium transition-all",
+                                filters.enrolled === e.id
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : "border-border text-muted-foreground hover:border-primary hover:text-foreground"
+                              )}
+                            >
+                              {e.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Has Guardian */}
+                      <div className="space-y-2">
+                        <Label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Guardian Assigned</Label>
+                        <div className="flex gap-2 flex-wrap">
+                          {[
+                            { id: "all", label: "All" },
+                            { id: "yes", label: "Has Guardian" },
+                            { id: "no", label: "No Guardian" },
+                          ].map((g) => (
+                            <button
+                              key={g.id}
+                              onClick={() => setFilters((prev) => ({ ...prev, hasGuardian: g.id }))}
+                              className={cn(
+                                "px-3 py-1 text-xs rounded-full border font-medium transition-all",
+                                filters.hasGuardian === g.id
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : "border-border text-muted-foreground hover:border-primary hover:text-foreground"
+                              )}
+                            >
+                              {g.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Date Added */}
+                      <div className="space-y-2">
+                        <Label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground block">Date Added</Label>
+                        <DateRangePicker
+                          date={filters.dateRange}
+                          setDate={(date) => setFilters((prev) => ({ ...prev, dateRange: date }))}
+                        />
+                      </div>
+
+                      <Separator />
+
+                      {/* Age Range */}
+                      <div className="space-y-2">
+                        <Label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Age Range (years)</Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            placeholder="Min"
+                            value={filters.ageMin}
+                            onChange={(e) => setFilters((prev) => ({ ...prev, ageMin: e.target.value }))}
+                            className="h-8 text-xs w-full"
+                          />
+                          <span className="text-muted-foreground text-xs shrink-0">to</span>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            placeholder="Max"
+                            value={filters.ageMax}
+                            onChange={(e) => setFilters((prev) => ({ ...prev, ageMax: e.target.value }))}
+                            className="h-8 text-xs w-full"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer — sticky at bottom */}
+                    <div className="px-4 py-3 border-t bg-muted/30 shrink-0">
+                      <p className="text-[11px] text-muted-foreground text-center">
+                        Showing <strong className="text-foreground">{filteredStudents.length}</strong> of {totalStudents} students
+                      </p>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
+
+            {/* Active filter chips */}
+            {activeFilterCount > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {filters.gender !== "all" && (
+                  <FilterChip label={`Gender: ${filters.gender}`} onRemove={() => setFilters((p) => ({ ...p, gender: "all" }))} />
+                )}
+                {filters.sectionId !== "all" && (
+                  <FilterChip
+                    label={`Section: ${uniqueSections.find((s) => s.id === filters.sectionId)?.name ?? filters.sectionId}`}
+                    onRemove={() => setFilters((p) => ({ ...p, sectionId: "all", classId: "all" }))}
+                  />
+                )}
+                {filters.classId !== "all" && (
+                  <FilterChip
+                    label={`Class: ${classes.find((c) => c.id === filters.classId)?.name ?? filters.classId}`}
+                    onRemove={() => setFilters((p) => ({ ...p, classId: "all" }))}
+                  />
+                )}
+                {filters.status !== "all" && (
+                  <FilterChip label={`Status: ${filters.status}`} onRemove={() => setFilters((p) => ({ ...p, status: "all" }))} />
+                )}
+                {filters.enrolled !== "all" && (
+                  <FilterChip
+                    label={filters.enrolled === "enrolled" ? "Enrolled" : "Not Enrolled"}
+                    onRemove={() => setFilters((p) => ({ ...p, enrolled: "all" }))}
+                  />
+                )}
+                {filters.hasGuardian !== "all" && (
+                  <FilterChip
+                    label={filters.hasGuardian === "yes" ? "Has Guardian" : "No Guardian"}
+                    onRemove={() => setFilters((p) => ({ ...p, hasGuardian: "all" }))}
+                  />
+                )}
+                {filters.dateRange && (
+                  <FilterChip
+                    label={`Added: ${
+                      filters.dateRange.from
+                        ? filters.dateRange.to
+                          ? `${format(filters.dateRange.from, "LLL dd, y")} - ${format(filters.dateRange.to, "LLL dd, y")}`
+                          : format(filters.dateRange.from, "LLL dd, y")
+                        : "Any time"
+                    }`}
+                    onRemove={() => setFilters((p) => ({ ...p, dateRange: undefined }))}
+                  />
+                )}
+                {(filters.ageMin || filters.ageMax) && (
+                  <FilterChip
+                    label={`Age: ${filters.ageMin || "0"}–${filters.ageMax || "∞"} yrs`}
+                    onRemove={() => setFilters((p) => ({ ...p, ageMin: "", ageMax: "" }))}
+                  />
+                )}
+              </div>
+            )}
 
             {/* High-Density Compact Table */}
             {paginatedStudents.length === 0 ? (
               <div className="text-center py-8 text-xs text-muted-foreground">
-                {searchTerm || filterTab !== "all"
-                  ? "No students found matching your search criteria."
+                {searchTerm || filterTab !== "all" || activeFilterCount > 0
+                  ? "No students found matching your criteria."
                   : "No students registered yet."}
               </div>
             ) : (
@@ -300,7 +736,19 @@ export function StudentsClientPage({
                             <TableCell className="px-2 py-1 font-bold min-w-40">
                               {student.first_name} {student.last_name}
                             </TableCell>
-                            <TableCell className="px-2 py-1 text-muted-foreground text-xs">{student.gender || "-"}</TableCell>
+                            <TableCell className="px-2 py-1">
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "text-[10px] h-5 py-0 font-normal",
+                                  student.gender?.toLowerCase() === "female"
+                                    ? "bg-pink-500/10 text-pink-700 border-pink-300 dark:text-pink-300 dark:border-pink-800"
+                                    : "bg-blue-500/10 text-blue-700 border-blue-300 dark:text-blue-300 dark:border-blue-800"
+                                )}
+                              >
+                                {student.gender || "-"}
+                              </Badge>
+                            </TableCell>
                             <TableCell className="px-2 py-1 font-medium">
                               {activeEnrollment?.class?.name ? (
                                 <Badge variant="outline" className="text-[10px] h-5 py-0 font-normal">
@@ -372,13 +820,16 @@ export function StudentsClientPage({
                   </Table>
                 </div>
 
-                {/* Compact Pagination Bar */}
+                {/* Pagination Bar */}
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1 text-xs">
                   <div className="flex items-center gap-3 text-muted-foreground">
                     <span>
-                      Showing {startIndex + 1} to {Math.min(endIndex, filteredStudents.length)} of {filteredStudents.length} students
+                      Showing {startIndex + 1} to {Math.min(endIndex, filteredStudents.length)} of{" "}
+                      {filteredStudents.length} students
                     </span>
-                    {selectedCount > 0 && <span className="font-semibold text-foreground">({selectedCount} selected)</span>}
+                    {selectedCount > 0 && (
+                      <span className="font-semibold text-foreground">({selectedCount} selected)</span>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -469,10 +920,21 @@ export function StudentsClientPage({
         sections={sections}
         existingClasses={classes}
         onSuccess={() => {
-          // Window reload or state refresh handled by server action revalidatePath
           window.location.reload()
         }}
       />
     </>
+  )
+}
+
+// Small reusable filter chip component
+function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-[11px] font-medium">
+      {label}
+      <button onClick={onRemove} className="hover:text-primary/70 transition-colors ml-0.5">
+        <X className="h-2.5 w-2.5" />
+      </button>
+    </span>
   )
 }

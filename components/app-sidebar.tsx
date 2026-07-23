@@ -18,6 +18,7 @@ import {
   IconHistory,
   IconMessage,
   IconShield,
+  IconAward,
 } from "@tabler/icons-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -63,6 +64,11 @@ const getNavigationByRole = (role: UserRole) => {
       title: "Staff & Users",
       url: "/users",
       icon: IconUsersGroup,
+    },
+    {
+      title: "Teachers",
+      url: "/teachers",
+      icon: IconAward,
     },
     {
       title: "Guardians",

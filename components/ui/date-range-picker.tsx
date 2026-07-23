@@ -18,12 +18,16 @@ interface DateRangePickerProps {
     date: DateRange | undefined
     setDate: (date: DateRange | undefined) => void
     processed?: boolean
+    fromYear?: number
+    toYear?: number
 }
 
 export function DateRangePicker({
     date,
     setDate,
     processed,
+    fromYear = 2010,
+    toYear = 2035,
 }: DateRangePickerProps) {
     return (
         <div className={cn("grid gap-2", processed && "opacity-50")}>
@@ -65,8 +69,8 @@ export function DateRangePicker({
                         onSelect={setDate}
                         numberOfMonths={2}
                         captionLayout="dropdown"
-                        fromYear={2020}
-                        toYear={2030}
+                        fromYear={fromYear}
+                        toYear={toYear}
                     />
                 </PopoverContent>
             </Popover>

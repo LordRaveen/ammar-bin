@@ -167,25 +167,25 @@ export async function addStaff(formData: FormData) {
         await adminClient.from("teachers").upsert(
           {
             user_id: userId,
-            staff_id: staffId,
-            first_name: staffData.first_name,
-            middle_name: staffData.middle_name,
-            last_name: staffData.last_name,
-            email: staffData.email,
-            phone: staffData.phone,
-            gender: staffData.gender,
-            date_of_birth: staffData.date_of_birth,
-            address: staffData.address,
-            qualification: staffData.qualification,
-            specialization: staffData.specialization,
+            staff_id: profile.staff_id,
+            first_name: profile.first_name,
+            middle_name: profile.middle_name,
+            last_name: profile.last_name,
+            email: profile.email,
+            phone: profile.phone,
+            gender: profile.gender,
+            date_of_birth: profile.date_of_birth,
+            address: profile.address,
+            qualification: profile.qualification,
+            specialization: profile.specialization,
             employment_date: employmentDate,
-            employment_type: staffData.employment_type,
-            status: staffData.status,
+            employment_type: profile.employment_type,
+            status: profile.status,
           },
           { onConflict: "email" }
         )
       } catch (e) {
-        devLog.warn("Notice upserting into teachers table:", e)
+        devLog.error("Error upserting into teachers table:", e)
       }
     }
 

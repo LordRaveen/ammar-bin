@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ammar Bin Yasir Institute — System Architecture & Flow</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+  
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface-2: #1a1a1a;
+    --border: #262626;
+    --border-light: #333;
+    --text: #e5e5e5;
+    --text-muted: #737373;
+    --text-dim: #525252;
+    --accent-green: #22c55e;
+    --accent-green-dim: #166534;
+    --accent-blue: #3b82f6;
+    --accent-blue-dim: #1e3a5f;
+    --accent-amber: #f59e0b;
+    --accent-amber-dim: #78350f;
+    --accent-red: #ef4444;
+    --accent-red-dim: #7f1d1d;
+    --accent-purple: #a855f7;
+    --accent-purple-dim: #581c87;
+    --accent-cyan: #06b6d4;
+    --accent-cyan-dim: #164e63;
+    --accent-emerald: #10b981;
+    --tahfeez: #3b82f6;
+    --islamiyya: #22c55e;
+    --combined: #f59e0b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* Header */
+  .doc-header {
+    text-align: center;
+    padding: 60px 0 50px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 50px;
+  }
+  .doc-header .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent-green);
+    background: var(--accent-green-dim);
+    padding: 6px 14px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+  }
+  .doc-header h1 {
+    font-size: 32px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .doc-header .subtitle {
+    font-size: 15px;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+  .doc-header .meta {
+    margin-top: 20px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  /* TOC */
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 50px;
+  }
+  .toc h2 {
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+  .toc ol {
+    list-style: none;
+    counter-reset: toc;
+  }
+  .toc ol li {
+    counter-increment: toc;
+    margin-bottom: 6px;
+  }
+  .toc ol li a {
+    color: var(--text);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    transition: color 0.2s;
+  }
+  .toc ol li a:hover { color: var(--accent-green); }
+  .toc ol li a::before {
+    content: counter(toc, decimal-leading-zero);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-dim);
+    min-width: 22px;
+  }
+
+  /* Sections */
+  .section {
+    margin-bottom: 60px;
+    scroll-margin-top: 30px;
+  }
+  .section-label {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent-green);
+    margin-bottom: 8px;
+  }
+  .section h2 {
+    font-size: 24px;
+    font-weight: 800;
+    margin-bottom: 6px;
+    letter-spacing: -0.3px;
+  }
+  .section .section-desc {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 28px;
+    max-width: 700px;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+  .card h3 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .card .card-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+
+  /* Status badges */
+  .status {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+  .status.done { color: var(--accent-green); background: var(--accent-green-dim); }
+  .status.partial { color: var(--accent-amber); background: var(--accent-amber-dim); }
+  .status.planned { color: var(--accent-blue); background: var(--accent-blue-dim); }
+  .status.not-started { color: var(--accent-red); background: var(--accent-red-dim); }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 16px 0;
+  }
+  th {
+    text-align: left;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  td code {
+    font-size: 12px;
+    background: var(--surface-2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    color: var(--accent-cyan);
+  }
+
+  /* Code blocks */
+  pre {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-size: 12.5px;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    overflow-x: auto;
+    line-height: 1.8;
+    margin: 16px 0;
+    color: #d4d4d8;
+  }
+
+  /* Tree diagrams */
+  .tree {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 24px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12.5px;
+    line-height: 1.9;
+    margin: 16px 0;
+    white-space: pre;
+    overflow-x: auto;
+  }
+
+  /* Flow steps */
+  .flow {
+    display: grid;
+    gap: 0;
+    margin: 20px 0;
+    position: relative;
+  }
+  .flow-step {
+    display: grid;
+    grid-template-columns: 50px 1fr;
+    gap: 16px;
+    position: relative;
+  }
+  .flow-step .step-marker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .flow-step .step-num {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--accent-green-dim);
+    color: var(--accent-green);
+    font-size: 13px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 2px solid var(--accent-green);
+  }
+  .flow-step .step-line {
+    width: 2px;
+    flex: 1;
+    background: var(--border);
+    margin: 4px 0;
+  }
+  .flow-step:last-child .step-line { display: none; }
+  .flow-step .step-content {
+    padding-bottom: 28px;
+  }
+  .flow-step .step-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .flow-step .step-detail {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+  .flow-step .step-detail ul {
+    margin-top: 6px;
+    padding-left: 16px;
+  }
+  .flow-step .step-detail li {
+    margin-bottom: 3px;
+  }
+
+  /* Callout boxes */
+  .callout {
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 16px 0;
+    font-size: 13px;
+    line-height: 1.7;
+    border-left: 3px solid;
+  }
+  .callout.info {
+    background: var(--accent-blue-dim);
+    border-color: var(--accent-blue);
+    color: #bfdbfe;
+  }
+  .callout.warning {
+    background: var(--accent-amber-dim);
+    border-color: var(--accent-amber);
+    color: #fef3c7;
+  }
+  .callout.success {
+    background: var(--accent-green-dim);
+    border-color: var(--accent-green);
+    color: #bbf7d0;
+  }
+  .callout.danger {
+    background: var(--accent-red-dim);
+    border-color: var(--accent-red);
+    color: #fecaca;
+  }
+  .callout strong { font-weight: 700; }
+
+  /* Tag colors */
+  .tag-tahfeez { color: var(--tahfeez); }
+  .tag-islamiyya { color: var(--islamiyya); }
+  .tag-combined { color: var(--combined); }
+
+  /* Dividers */
+  hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 40px 0;
+  }
+
+  /* Lists */
+  ul, ol { padding-left: 20px; }
+  li { margin-bottom: 4px; font-size: 14px; }
+
+  /* Strong text */
+  strong { font-weight: 700; color: #fff; }
+
+  p { margin-bottom: 12px; font-size: 14px; }
+
+  /* Print styles */
+  @media print {
+    body { background: #fff; color: #111; }
+    .container { max-width: 100%; padding: 20px; }
+    .card, .toc, .callout, pre, .tree { border-color: #ddd; background: #f9f9f9; }
+    .status { border: 1px solid #ccc; }
+    .flow-step .step-num { border-color: #333; background: #eee; color: #333; }
+    td code { background: #f0f0f0; border-color: #ddd; color: #0a3b6b; }
+    a { color: #0a3b6b; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="doc-header">
+    <div class="badge">Internal Documentation</div>
+    <h1>Ammar Bin Yasir Institute</h1>
+    <p class="subtitle">System Architecture, Dual-School Design & Complete Operational Flow</p>
+    <p class="meta">Last Updated: July 2026 &nbsp;·&nbsp; Version 1.0</p>
+  </div>
+
+  <!-- TABLE OF CONTENTS -->
+  <div class="toc">
+    <h2>Table of Contents</h2>
+    <ol>
+      <li><a href="#school-structure">School Structure & Dual-School Architecture</a></li>
+      <li><a href="#db-schema">Database Schema Overview</a></li>
+      <li><a href="#flow-setup">Flow 1 — Academic Setup (Admin)</a></li>
+      <li><a href="#flow-staff">Flow 2 — Staff & Teacher Management</a></li>
+      <li><a href="#flow-student">Flow 3 — Student Registration & Enrollment</a></li>
+      <li><a href="#flow-scores">Flow 4 — Score Entry & Draft Management</a></li>
+      <li><a href="#flow-results">Flow 5 — Result Processing & Finalization</a></li>
+      <li><a href="#flow-reports">Flow 6 — Report Card Printing</a></li>
+      <li><a href="#flow-cumulative">Flow 7 — Cumulative (Combined Term) Results</a></li>
+      <li><a href="#flow-promotion">Flow 8 — End of Year: Student Promotion</a></li>
+      <li><a href="#templates">Report Card Templates (Nursery vs Primary)</a></li>
+      <li><a href="#roles">User Roles & Permissions</a></li>
+    </ol>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- SECTION 1: SCHOOL STRUCTURE -->
+  <!-- ========================================== -->
+  <div class="section" id="school-structure">
+    <p class="section-label">Section 01</p>
+    <h2>School Structure & Dual-School Architecture</h2>
+    <p class="section-desc">
+      Ammar Bin Yasir Institute operates two distinct schools under one organization.
+      Some students attend both, creating a unique "Combined" enrollment pattern.
+    </p>
+
+    <div class="card">
+      <h3>🕌 The Two Schools</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>School</th>
+            <th>Schedule</th>
+            <th>Focus</th>
+            <th>Example Subjects</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong class="tag-tahfeez">Tahfeez</strong></td>
+            <td>Morning</td>
+            <td>Complete memorization &amp; recitation of the Holy Qur'an</td>
+            <td>Qur'an Hifz, Tajweed, Revision, Fluency</td>
+          </tr>
+          <tr>
+            <td><strong class="tag-islamiyya">Islamiyya</strong></td>
+            <td>Evening</td>
+            <td>Broad Islamic sciences + Western academic subjects</td>
+            <td>Arabic, Fiqh, Mathematics, English, Science</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>📂 Section → Class Hierarchy</h3>
+      <p class="card-desc">Each section contains both nursery-level and primary-level classes.</p>
+      <div class="tree">Section: <strong class="tag-tahfeez">Tahfeez</strong>
+  ├── Raudah 1  (nursery)  → class_type = 'nursery'
+  ├── Raudah 2  (nursery)  → class_type = 'nursery'
+  ├── Halqa 1   (primary)  → class_type = 'primary'
+  └── Halqa 2   (primary)  → class_type = 'primary'
+
+Section: <strong class="tag-islamiyya">Islamiyya</strong>
+  ├── Raudah 1  (nursery)  → class_type = 'nursery'
+  ├── Raudah 2  (nursery)  → class_type = 'nursery'
+  ├── Class 1   (primary)  → class_type = 'primary'
+  └── Class 2   (primary)  → class_type = 'primary'
+
+Section: <strong class="tag-combined">Combined</strong>  (attends BOTH morning &amp; evening)
+  ├── Raudah 1  (nursery)  → subjects from Tahfeez + Islamiyya
+  ├── Class 1   (primary)  → subjects from Tahfeez + Islamiyya
+  └── Class 2   (primary)  → subjects from Tahfeez + Islamiyya</div>
+    </div>
+
+    <div class="card">
+      <h3>🔑 The Combined Student Solution</h3>
+      <p class="card-desc">How we handle students who attend both schools without dual enrollment.</p>
+
+      <div class="callout info">
+        <strong>Core Principle:</strong> The "combining" happens at the <strong>subject level</strong>, not the enrollment level.
+        Combined students have ONE enrollment, ONE student ID. Their class simply has subjects from both Tahfeez and Islamiyya assigned to it.
+      </div>
+
+      <p><strong>How it works:</strong></p>
+      <ul>
+        <li>Every subject has a <code>school_type</code> field: <code>'tahfeez'</code> or <code>'islamiyya'</code></li>
+        <li><strong>Pure Tahfeez class</strong> → only Tahfeez-tagged subjects assigned via <code>class_subjects</code></li>
+        <li><strong>Pure Islamiyya class</strong> → only Islamiyya-tagged subjects assigned</li>
+        <li><strong>Combined class</strong> → subjects from <strong>both</strong> are assigned</li>
+        <li>Report card groups subjects by <code>school_type</code> and shows a combined average</li>
+      </ul>
+
+      <table>
+        <thead>
+          <tr><th>Subject</th><th>school_type</th><th>Tahfeez Class</th><th>Islamiyya Class</th><th>Combined Class</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Qur'an Hifz</td><td><code>tahfeez</code></td><td>✅</td><td>—</td><td>✅</td></tr>
+          <tr><td>Tajweed</td><td><code>tahfeez</code></td><td>✅</td><td>—</td><td>✅</td></tr>
+          <tr><td>Arabic</td><td><code>islamiyya</code></td><td>—</td><td>✅</td><td>✅</td></tr>
+          <tr><td>Mathematics</td><td><code>islamiyya</code></td><td>—</td><td>✅</td><td>✅</td></tr>
+          <tr><td>English</td><td><code>islamiyya</code></td><td>—</td><td>✅</td><td>✅</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>👩‍🏫 Teachers Across Schools</h3>
+      <p class="card-desc">A teacher can teach at both schools. The system handles this via subject-level assignments.</p>
+
+      <table>
+        <thead>
+          <tr><th>Table</th><th>Purpose</th><th>Example</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>teacher_class_assignments</code></td>
+            <td>Administrative class teacher role (attendance, remarks)</td>
+            <td>Mallam Ibrahim is class teacher of Class 1 (Islamiyya)</td>
+          </tr>
+          <tr>
+            <td><code>teacher_subject_assignments</code></td>
+            <td>Teaching role: which subject in which class</td>
+            <td>Mallam Ibrahim teaches Qur'an in Class 1 (Islamiyya) AND Tajweed in Raudah 2 (Tahfeez)</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout success">
+        <strong>No conflict:</strong> A teacher with rows in <code>teacher_subject_assignments</code> pointing to different classes across Tahfeez and Islamiyya sections works seamlessly. Each row is a unique (teacher, class, subject, session) tuple.
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ========================================== -->
+  <!-- SECTION 2: DATABASE SCHEMA -->
+  <!-- ========================================== -->
+  <div class="section" id="db-schema">
+    <p class="section-label">Section 02</p>
+    <h2>Database Schema Overview</h2>
+    <p class="section-desc">Core tables and their relationships. Hosted on Supabase PostgreSQL 17.</p>
+
+    <div class="card">
+      <h3>📊 Core Tables</h3>
+      <table>
+        <thead>
+          <tr><th>Table</th><th>Purpose</th><th>Key Fields</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>sessions</code></td><td>Academic year</td><td>name, start_date, end_date, is_active</td></tr>
+          <tr><td><code>terms</code></td><td>Term within session</td><td>session_id, term_number (1/2/3), is_active</td></tr>
+          <tr><td><code>sections</code></td><td>School grouping</td><td>name (Tahfeez, Islamiyya, Combined)</td></tr>
+          <tr><td><code>classes</code></td><td>Individual class</td><td>section_id, name, class_teacher_id, <strong>class_type</strong></td></tr>
+          <tr><td><code>subjects</code></td><td>Academic subject</td><td>name, code, <strong>school_type</strong> (tahfeez/islamiyya)</td></tr>
+          <tr><td><code>class_subjects</code></td><td>Which subjects a class takes</td><td>class_id, subject_id</td></tr>
+          <tr><td><code>students</code></td><td>Student record</td><td>student_id, first_name, last_name, gender, photo_url</td></tr>
+          <tr><td><code>student_enrollments</code></td><td>Student → Class per session</td><td>student_id, class_id, session_id, is_active</td></tr>
+          <tr><td><code>guardians</code></td><td>Parent/guardian</td><td>name, phone, email, relationship</td></tr>
+          <tr><td><code>user_profiles</code></td><td>All staff accounts</td><td>user_id, role, first_name, last_name, staff_id</td></tr>
+          <tr><td><code>teachers</code></td><td>Teacher records (legacy)</td><td>user_id, first_name, last_name</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>📝 Assessment & Scoring Tables</h3>
+      <table>
+        <thead>
+          <tr><th>Table</th><th>Purpose</th><th>Key Fields</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>assessment_types</code></td><td>CA1, CA2, Exam definitions</td><td>name, max_score</td></tr>
+          <tr><td><code>assessments</code></td><td>Specific assessment instance</td><td>session_id, term_id, class_id, subject_id, assessment_type_id</td></tr>
+          <tr><td><code>student_scores</code></td><td>Individual student score</td><td>assessment_id, student_id, score, grade, remarks</td></tr>
+          <tr><td><code>student_results</code></td><td>Aggregated term result</td><td>student_id, session_id, term_id, total_score, average_score, position</td></tr>
+          <tr><td><code>grading_schemes</code></td><td>Grade boundaries</td><td>min_score, max_score, grade, remark</td></tr>
+          <tr><td><code>student_skills</code></td><td>Affective &amp; psychomotor ratings</td><td>student_id, term_id, skill_category, skill_name, rating</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>🔗 Teacher Assignment Tables</h3>
+      <table>
+        <thead>
+          <tr><th>Table</th><th>Purpose</th><th>Unique Constraint</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>teacher_class_assignments</code></td>
+            <td>Teacher → Class (class teacher role)</td>
+            <td>(teacher_id, class_id, session_id)</td>
+          </tr>
+          <tr>
+            <td><code>teacher_subject_assignments</code></td>
+            <td>Teacher → Subject in Class (teaching role)</td>
+            <td>(teacher_id, class_id, subject_id, session_id)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>🗄️ Pending Schema Changes</h3>
+      <table>
+        <thead>
+          <tr><th>Change</th><th>Table</th><th>Column</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Add school type to subjects</td>
+            <td><code>subjects</code></td>
+            <td><code>school_type TEXT CHECK IN ('tahfeez','islamiyya')</code></td>
+            <td><span class="status planned">Planned</span></td>
+          </tr>
+          <tr>
+            <td>Add class type for template selection</td>
+            <td><code>classes</code></td>
+            <td><code>class_type TEXT CHECK IN ('nursery','primary')</code></td>
+            <td><span class="status planned">Planned</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ========================================== -->
+  <!-- FLOW 1: ACADEMIC SETUP -->
+  <!-- ========================================== -->
+  <div class="section" id="flow-setup">
+    <p class="section-label">Section 03</p>
+    <h2>Flow 1 — Academic Setup</h2>
+    <p class="section-desc">One-time setup per academic year by the administrator. Must be done before anything else.</p>
+
+    <div class="flow">
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">1</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Create Academic Session <span class="status done">Done</span></div>
+          <div class="step-detail">
+            Navigate to <strong>Settings → Sessions</strong>. Create session (e.g., "2025/2026") with start/end dates. Mark as active.
+            <ul>
+              <li>UI: <code>/settings</code> → Sessions tab</li>
+              <li>Table: <code>sessions</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">2</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Create Terms <span class="status done">Done</span></div>
+          <div class="step-detail">
+            Under the session, create 3 terms (1st, 2nd, 3rd) with their date ranges. Mark the current term as active.
+            <ul>
+              <li>UI: <code>/settings</code> → Terms tab</li>
+              <li>Table: <code>terms</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">3</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Create Sections <span class="status done">Done</span></div>
+          <div class="step-detail">
+            Create sections: Tahfeez, Islamiyya, Combined. These are the organizational groupings, not the class level.
+            <ul>
+              <li>UI: <code>/classes</code> → Add Section</li>
+              <li>Table: <code>sections</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">4</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Create Classes <span class="status done">Done</span></div>
+          <div class="step-detail">
+            Create classes under each section (Raudah 1, Class 1, Halqa 1, etc.). Set class_type (nursery/primary) and optionally assign a class teacher.
+            <ul>
+              <li>UI: <code>/classes</code> → Add Class</li>
+              <li>Table: <code>classes</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">5</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Create Subjects <span class="status done">Done</span></div>
+          <div class="step-detail">
+            Create all subjects with their <code>school_type</code> tag (tahfeez or islamiyya).
+            <ul>
+              <li>UI: <code>/settings</code> → Subjects (or via class detail page)</li>
+              <li>Table: <code>subjects</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">6</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Assign Subjects to Classes <span class="status done">Done</span></div>
+          <div class="step-detail">
+            For each class, select which subjects it offers. Combined classes get subjects from both school types.
+            <ul>
+              <li>UI: <code>/classes/[id]</code> → Subjects tab</li>
+              <li>Table: <code>class_subjects</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">7</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Set Up Grading Scheme <span class="status done">Done</span></div>
+          <div class="step-detail">
+            Define grade boundaries: A+ (≥90), A (80-89), B+ (70-79), B (60-69), C (50-59), D (40-49), F (&lt;40).
+            <ul>
+              <li>UI: <code>/settings</code> → Grading tab</li>
+              <li>Table: <code>grading_schemes</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ========================================== -->
+  <!-- FLOW 2: STAFF MANAGEMENT -->
+  <!-- ========================================== -->
+  <div class="section" id="flow-staff">
+    <p class="section-label">Section 04</p>
+    <h2>Flow 2 — Staff & Teacher Management</h2>
+    <p class="section-desc">Register staff, create login accounts, and assign teaching duties.</p>
+
+    <div class="flow">
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">1</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Register Staff <span class="status done">Done</span></div>
+          <div class="step-detail">
+            Add new staff member with personal details, role (teacher/admin/accountant), and login credentials.
+            <ul>
+              <li>UI: <code>/users</code> → Add Staff</li>
+              <li>Tables: <code>user_profiles</code>, <code>auth.users</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">2</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Assign Teacher to Class <span class="status done">Done</span></div>
+          <div class="step-detail">
+            Assign teacher as class teacher (administrative head of a class). One teacher can be class teacher of multiple classes.
+            <ul>
+              <li>UI: <code>/classes/[id]</code> → Assign Class Teacher</li>
+              <li>Table: <code>teacher_class_assignments</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">3</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Assign Teacher to Subject in Class <span class="status partial">Partial</span></div>
+          <div class="step-detail">
+            Assign which subjects a teacher teaches in which class. This is the key for cross-school teachers.
+            <ul>
+              <li>Example: Teacher A teaches <em>Qur'an</em> in Class 1 (Tahfeez) AND <em>Arabic</em> in Class 1 (Islamiyya)</li>
+              <li>UI: <code>/classes/[id]</code> → Assign Subject Teachers</li>
+              <li>Table: <code>teacher_subject_assignments</code></li>
+            </ul>
+            <div class="callout warning">
+              <strong>Note:</strong> The UI for managing subject-level teacher assignments exists on the class detail page but may need refinement for bulk assignment workflows.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ========================================== -->
+  <!-- FLOW 3: STUDENT REGISTRATION -->
+  <!-- ========================================== -->
+  <div class="section" id="flow-student">
+    <p class="section-label">Section 05</p>
+    <h2>Flow 3 — Student Registration & Enrollment</h2>
+    <p class="section-desc">From initial registration to class placement.</p>
+
+    <div class="flow">
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">1</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Register New Student <span class="status done">Done</span></div>
+          <div class="step-detail">
+            Enter student personal information: name, date of birth, gender, photo, medical info.
+            <ul>
+              <li>UI: <code>/students</code> → Add Student</li>
+              <li>Table: <code>students</code></li>
+              <li>Auto-generates unique Student ID (e.g., STU/2025/001)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">2</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Enroll in Class <span class="status done">Done</span></div>
+          <div class="step-detail">
+            Assign student to a specific class for the active session. This is the single enrollment — even Combined students get one enrollment in their Combined class.
+            <ul>
+              <li>UI: During registration or via <code>/classes/[id]</code> → Add Student</li>
+              <li>Table: <code>student_enrollments</code></li>
+              <li>Students flow automatically across all 3 terms within the same session</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">3</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Register Guardian <span class="status done">Done</span></div>
+          <div class="step-detail">
+            Link a parent/guardian to the student with contact details for communication and report card access.
+            <ul>
+              <li>UI: <code>/guardians</code> → Add Guardian, or during student registration</li>
+              <li>Tables: <code>guardians</code>, <code>student_guardians</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">4</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Bulk Import (Optional) <span class="status not-started">Not Started</span></div>
+          <div class="step-detail">
+            Import multiple students from Excel/CSV file with automatic class assignment.
+            <ul>
+              <li>UI: <code>/students</code> → Import Students</li>
+              <li>Planned feature</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ========================================== -->
+  <!-- FLOW 4: SCORE ENTRY -->
+  <!-- ========================================== -->
+  <div class="section" id="flow-scores">
+    <p class="section-label">Section 06</p>
+    <h2>Flow 4 — Score Entry & Draft Management</h2>
+    <p class="section-desc">How teachers and admins enter assessment scores with offline draft support.</p>
+
+    <div class="flow">
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">1</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Navigate to Score Entry <span class="status done">Done</span></div>
+          <div class="step-detail">
+            <ul>
+              <li><strong>Admin:</strong> <code>/assessments/results/finalize</code> → Select class</li>
+              <li><strong>Teacher:</strong> <code>/teacher/results</code> → Auto-selects their assigned class</li>
+              <li>Session and term auto-selected from active period</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">2</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Select Subject (Subject View) <span class="status done">Done</span></div>
+          <div class="step-detail">
+            Choose a subject from the class's assigned subjects. The system loads all enrolled students and their existing scores in an editable spreadsheet.
+            <ul>
+              <li>Columns: Student Name, CA1 (20), CA2 (20), Exam (60), Total (100), Grade, Remarks</li>
+              <li>Total, Grade, and Remarks auto-calculate as scores are entered</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">3</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Enter Scores <span class="status done">Done</span></div>
+          <div class="step-detail">
+            Click "Edit Scores" to enter edit mode. Type CA1, CA2, and Exam scores for each student. Tab between fields.
+            <ul>
+              <li>Score validation: CA1/CA2 max 20, Exam max 60</li>
+              <li>Total = CA1 + CA2 + Exam (auto-calculated)</li>
+              <li>Grade and Remarks auto-populate based on grading scheme</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">4</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Draft Management <span class="status done">Done</span></div>
+          <div class="step-detail">
+            Unsaved changes are automatically cached in localStorage as drafts.
+            <ul>
+              <li><strong>Auto-save:</strong> Changes are cached every few seconds</li>
+              <li><strong>Draft detection:</strong> On page load, if a draft exists, user is prompted to restore or discard</li>
+              <li><strong>Draft preview:</strong> Shows a diff table of all changed scores (old → new)</li>
+              <li><strong>Save as Draft:</strong> Intentionally save to continue later</li>
+              <li><strong>Multi-subject drafts:</strong> Each subject's draft has its own restore/save buttons</li>
+              <li>Saving scores to the database always clears the draft with confirmation</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">5</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Save Scores <span class="status done">Done</span></div>
+          <div class="step-detail">
+            Click "Save Scores" to persist all changes to the database.
+            <ul>
+              <li>Creates/updates <code>assessments</code> rows (one per assessment type per subject per class per term)</li>
+              <li>Creates/updates <code>student_scores</code> rows (one per student per assessment)</li>
+              <li>Clears the local draft on successful save</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ========================================== -->
+  <!-- FLOW 5: RESULT PROCESSING -->
+  <!-- ========================================== -->
+  <div class="section" id="flow-results">
+    <p class="section-label">Section 07</p>
+    <h2>Flow 5 — Result Processing & Finalization</h2>
+    <p class="section-desc">After all scores are entered, results are generated, positions calculated, and remarks added.</p>
+
+    <div class="flow">
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">1</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Generate Class Results <span class="status done">Done</span></div>
+          <div class="step-detail">
+            Admin clicks "Generate Results" which aggregates all subject scores into student totals and calculates class positions.
+            <ul>
+              <li>Sums all subject totals per student</li>
+              <li>Calculates average score</li>
+              <li>Ranks students by average (position 1, 2, 3...)</li>
+              <li>Preserves existing teacher/principal remarks and attendance data</li>
+              <li>Uses upsert to avoid data loss on re-generation</li>
+              <li>Table: <code>student_results</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">2</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Enter Attendance Data <span class="status done">Done</span></div>
+          <div class="step-detail">
+            Enter total school days in term and days present for each student.
+            <ul>
+              <li>Fields: <code>total_school_days</code>, <code>attendance_present</code></li>
+              <li>Days absent = total_school_days - attendance_present (auto-calculated)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">3</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Enter Teacher Remarks <span class="status done">Done</span></div>
+          <div class="step-detail">
+            Class teacher writes personalized remarks for each student.
+            <ul>
+              <li>Field: <code>teacher_remark</code> on <code>student_results</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">4</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Enter Principal Remarks <span class="status done">Done</span></div>
+          <div class="step-detail">
+            Head teacher / principal writes remarks for each student.
+            <ul>
+              <li>Field: <code>principal_remark</code> on <code>student_results</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">5</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Rate Affective & Psychomotor Skills <span class="status done">Done</span></div>
+          <div class="step-detail">
+            Rate each student on behavioral and motor skills (1-5 scale).
+            <ul>
+              <li>Affective: Punctuality, Politeness, Neatness, Honesty, Leadership, Cooperation, Attentiveness, Perseverance, Attitude to work</li>
+              <li>Psychomotor: Handwriting, Verbal fluency, Sports, Handling tools, Drawing & painting</li>
+              <li>Table: <code>student_skills</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ========================================== -->
+  <!-- FLOW 6: REPORT CARD PRINTING -->
+  <!-- ========================================== -->
+  <div class="section" id="flow-reports">
+    <p class="section-label">Section 08</p>
+    <h2>Flow 6 — Report Card Printing</h2>
+    <p class="section-desc">Generate and print A4 report cards for individual students or entire classes.</p>
+
+    <div class="flow">
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">1</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Individual Report Card <span class="status done">Done</span></div>
+          <div class="step-detail">
+            From student view, click a student to preview and print their report card.
+            <ul>
+              <li>UI: <code>/assessments/results/finalize</code> → Student View → Click student</li>
+              <li>Shows full A4 preview with school header, student info, scores table, skills, summary, remarks</li>
+              <li>Browser print dialog → Save as PDF or print directly</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">2</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Bulk Class Report Cards <span class="status done">Done</span></div>
+          <div class="step-detail">
+            Print all report cards for an entire class at once.
+            <ul>
+              <li>UI: <code>/assessments/results</code> → Select class card → "Print All"</li>
+              <li>Generates one A4 page per student, all in a single print job</li>
+              <li>Each page has proper page-break-after for clean pagination</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">3</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Template Selection (By Class Type) <span class="status planned">Planned</span></div>
+          <div class="step-detail">
+            Automatically select the correct report card template based on the class's <code>class_type</code> field.
+            <ul>
+              <li><code>class_type = 'primary'</code> → Standard template with CA1, CA2, Exam, Total, Grade columns</li>
+              <li><code>class_type = 'nursery'</code> → Simplified template with descriptive developmental ratings</li>
+              <li>Combined students get subjects grouped by school_type (Tahfeez section + Islamiyya section)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📄 Combined Student Report Card Layout</h3>
+      <p class="card-desc">For students in Combined classes, the report card groups subjects by school type:</p>
+      <div class="tree">┌─────────────────────────────────────────────────────────────┐
+│              AMMAR BIN YASIR INSTITUTE                       │
+│          STUDENTS ACADEMIC REPORT CARD                       │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  <strong class="tag-tahfeez">TAHFEEZ SUBJECTS</strong>                                        │
+│  ┌──────────────┬─────┬─────┬──────┬───────┬───────┐        │
+│  │ Subject      │ CA1 │ CA2 │ Exam │ Total │ Grade │        │
+│  ├──────────────┼─────┼─────┼──────┼───────┼───────┤        │
+│  │ Qur'an Hifz  │  18 │  17 │  52  │   87  │  A+   │        │
+│  │ Tajweed      │  16 │  15 │  47  │   78  │  B+   │        │
+│  │ Revision     │  19 │  18 │  53  │   90  │  A+   │        │
+│  └──────────────┴─────┴─────┴──────┴───────┴───────┘        │
+│                                                             │
+│  <strong class="tag-islamiyya">ISLAMIYYA SUBJECTS</strong>                                      │
+│  ┌──────────────┬─────┬─────┬──────┬───────┬───────┐        │
+│  │ Subject      │ CA1 │ CA2 │ Exam │ Total │ Grade │        │
+│  ├──────────────┼─────┼─────┼──────┼───────┼───────┤        │
+│  │ Arabic       │  14 │  16 │  42  │   72  │  B+   │        │
+│  │ Fiqh         │  12 │  14 │  42  │   68  │  B    │        │
+│  │ Mathematics  │  17 │  16 │  48  │   81  │  A    │        │
+│  │ English      │  15 │  14 │  46  │   75  │  B+   │        │
+│  └──────────────┴─────┴─────┴──────┴───────┴───────┘        │
+│                                                             │
+│  SUMMARY                                                    │
+│  Tahfeez Average: 85.0%  │  Islamiyya Average: 74.0%        │
+│  Combined Average: 78.7%                                    │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘</div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ========================================== -->
+  <!-- FLOW 7: CUMULATIVE RESULTS -->
+  <!-- ========================================== -->
+  <div class="section" id="flow-cumulative">
+    <p class="section-label">Section 09</p>
+    <h2>Flow 7 — Cumulative (Combined Term) Results</h2>
+    <p class="section-desc">How 2nd and 3rd term report cards show previous term scores alongside current scores.</p>
+
+    <div class="card">
+      <h3>🧮 How Cumulative Scores Work</h3>
+      <p class="card-desc">No new database tables needed. Data is queried from existing <code>student_scores</code> at render time.</p>
+
+      <div class="callout info">
+        <strong>Key Principle:</strong> Previous term scores are fetched on-the-fly when generating the report card. If a teacher corrects a 1st term score, the cumulative averages automatically update — no sync issues.
+      </div>
+
+      <table>
+        <thead>
+          <tr><th>Term Being Printed</th><th>Columns Shown</th><th>Cumulative Calculation</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>1st Term</strong></td>
+            <td>CA1, CA2, Exam, Total, Grade</td>
+            <td>No cumulative — just the current term</td>
+          </tr>
+          <tr>
+            <td><strong>2nd Term</strong></td>
+            <td><em>1st Term Total</em>, CA1, CA2, Exam, Total, Grade, <em>Cum. Avg</em></td>
+            <td>(1st + 2nd) ÷ 2</td>
+          </tr>
+          <tr>
+            <td><strong>3rd Term</strong></td>
+            <td><em>1st Term Total</em>, <em>2nd Term Total</em>, CA1, CA2, Exam, Total, Grade, <em>Cum. Avg</em></td>
+            <td>(1st + 2nd + 3rd) ÷ 3</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>📊 3rd Term Report Card Example</h3>
+      <div class="tree">┌────────────┬──────────┬──────────┬─────┬─────┬──────┬───────┬───────┬──────────┐
+│ SUBJECT    │ 1st Term │ 2nd Term │ CA1 │ CA2 │ Exam │ Total │ Grade │ Cum. Avg │
+├────────────┼──────────┼──────────┼─────┼─────┼──────┼───────┼───────┼──────────┤
+│ Mathematics│    78    │    82    │  17 │  18 │  50  │   85  │  A+   │   81.7   │
+│ English    │    65    │    70    │  14 │  14 │  44  │   72  │  B+   │   69.0   │
+│ Arabic     │    72    │    75    │  15 │  16 │  48  │   79  │  B+   │   75.3   │
+│ Fiqh       │    68    │    66    │  13 │  14 │  43  │   70  │  B    │   68.0   │
+└────────────┴──────────┴──────────┴─────┴─────┴──────┴───────┴───────┴──────────┘</div>
+
+      <p><strong>The query:</strong></p>
+<pre>SELECT a.term_id, a.subject_id, s.name, SUM(ss.score) as term_total
+FROM student_scores ss
+JOIN assessments a ON ss.assessment_id = a.id
+JOIN subjects s ON a.subject_id = s.id
+WHERE ss.student_id = &lt;student_id&gt;
+  AND a.session_id = &lt;session_id&gt;
+  AND a.class_id = &lt;class_id&gt;
+  AND a.term_id IN (&lt;term1_id&gt;, &lt;term2_id&gt;, &lt;term3_id&gt;)
+GROUP BY a.term_id, a.subject_id, s.name;</pre>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ========================================== -->
+  <!-- FLOW 8: PROMOTION -->
+  <!-- ========================================== -->
+  <div class="section" id="flow-promotion">
+    <p class="section-label">Section 10</p>
+    <h2>Flow 8 — End of Year: Student Promotion</h2>
+    <p class="section-desc">At the end of 3rd term, promote students to the next class for the new academic session.</p>
+
+    <div class="flow">
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">1</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Create New Session <span class="status done">Done</span></div>
+          <div class="step-detail">
+            Create the next academic session (e.g., "2026/2027") and its 3 terms.
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">2</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Bulk Promotion UI <span class="status not-started">Not Started</span></div>
+          <div class="step-detail">
+            A dedicated UI where admin can:
+            <ul>
+              <li>See all students grouped by current class</li>
+              <li>Select target class for promotion (e.g., Raudah 1 → Raudah 2)</li>
+              <li>Mark individual students for: <strong>Promote</strong>, <strong>Repeat</strong>, or <strong>Graduate</strong></li>
+              <li>Bulk promote all selected students to the new session</li>
+              <li>Creates new <code>student_enrollments</code> rows for the new session</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-step">
+        <div class="step-marker"><div class="step-num">3</div><div class="step-line"></div></div>
+        <div class="step-content">
+          <div class="step-title">Handle Edge Cases <span class="status not-started">Not Started</span></div>
+          <div class="step-detail">
+            <ul>
+              <li><strong>Repeaters:</strong> Re-enroll in the same class for the new session</li>
+              <li><strong>Transfers:</strong> Students leaving the school — mark enrollment as inactive</li>
+              <li><strong>New admissions:</strong> Students joining mid-session — register normally</li>
+              <li><strong>Cross-section moves:</strong> Student moving from Combined to Tahfeez-only</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ========================================== -->
+  <!-- SECTION 11: TEMPLATES -->
+  <!-- ========================================== -->
+  <div class="section" id="templates">
+    <p class="section-label">Section 11</p>
+    <h2>Report Card Templates</h2>
+    <p class="section-desc">Two report card layouts based on the class_type field on each class.</p>
+
+    <div class="card">
+      <h3>📋 Primary Template <span class="status done">Done</span></h3>
+      <p class="card-desc">Standard Nigerian school report card for Class 1+, Halqa 1+, etc.</p>
+      <table>
+        <thead>
+          <tr><th>Section</th><th>Contents</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Header</td><td>School logo, name, address, phone, "STUDENTS ACADEMIC REPORT CARD"</td></tr>
+          <tr><td>Student Info</td><td>Full name, gender, admission number, age, photo</td></tr>
+          <tr><td>Info Strip</td><td>Term, Session, Resumption date | Class, Students in class, Class teacher | Attendance</td></tr>
+          <tr><td>Scores Table</td><td>Subjects × CA1 (20), CA2 (20), Exam (60), Total (100), Grade, Class Average, Remarks</td></tr>
+          <tr><td>Sidebar</td><td>Affective Skills (9 items) + Psychomotor Skills (5 items) + Grading System + Principal Signature</td></tr>
+          <tr><td>Summary</td><td>Total Score, Average Score %, Overall Grade</td></tr>
+          <tr><td>Remarks</td><td>Class Teacher Remarks + School Head Remarks</td></tr>
+          <tr><td>Footer</td><td>Info to Parents</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>🧒 Nursery Template <span class="status planned">Planned</span></h3>
+      <p class="card-desc">Simplified developmental assessment for Raudah classes and nursery-level students.</p>
+      <table>
+        <thead>
+          <tr><th>Section</th><th>Differences from Primary</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Scores Table</td><td>No CA1/CA2/Exam breakdown. Shows: Learning Area, Rating (descriptive), Teacher's Observation</td></tr>
+          <tr><td>Rating Scale</td><td>Exceeded Expectations / Met Expectations / Developing / Needs Support (instead of A-F grades)</td></tr>
+          <tr><td>Skills</td><td>Same affective & psychomotor skills sidebar</td></tr>
+          <tr><td>Summary</td><td>Overall developmental summary instead of numeric average</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout warning">
+        <strong>Open Question:</strong> Does the nursery at Ammar Bin Yasir use a specific rating scale? (e.g., 1-5 stars, letter ratings, or descriptive text). Please confirm the exact format so the template can match your needs.
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ========================================== -->
+  <!-- SECTION 12: ROLES -->
+  <!-- ========================================== -->
+  <div class="section" id="roles">
+    <p class="section-label">Section 12</p>
+    <h2>User Roles & Permissions</h2>
+    <p class="section-desc">Who can do what in the system.</p>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr><th>Role</th><th>Dashboard</th><th>Can Do</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Super Admin</strong></td>
+            <td><code>/dashboard</code></td>
+            <td>Everything: manage sessions, classes, students, staff, scores, finance, settings, bulk operations</td>
+          </tr>
+          <tr>
+            <td><strong>Admin</strong></td>
+            <td><code>/dashboard</code></td>
+            <td>Same as Super Admin (may have restrictions on certain settings)</td>
+          </tr>
+          <tr>
+            <td><strong>Teacher</strong></td>
+            <td><code>/teacher-dashboard</code></td>
+            <td>View assigned classes, enter scores for assigned subjects, mark attendance, view student list</td>
+          </tr>
+          <tr>
+            <td><strong>Accountant</strong></td>
+            <td><code>/cashier-dashboard</code></td>
+            <td>Manage invoices, collect payments, reconciliation, view student fee status</td>
+          </tr>
+          <tr>
+            <td><strong>Cashier</strong></td>
+            <td><code>/cashier-dashboard</code></td>
+            <td>Collect payments, issue receipts, daily cash count</td>
+          </tr>
+          <tr>
+            <td><strong>Parent</strong></td>
+            <td><code>/parent</code></td>
+            <td>View child's report card, attendance, fee status, message class teacher</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- FOOTER -->
+  <div style="text-align: center; padding: 40px 0; color: var(--text-dim); font-size: 12px;">
+    <p><strong>Ammar Bin Yasir Institute</strong> — School Management System</p>
+    <p>Internal Architecture Document · Not for external distribution</p>
+  </div>
+
+</div>
+
+</body>
+</html>

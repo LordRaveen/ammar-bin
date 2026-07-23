@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
-export async function GET(request: Request, { params }: { params: { classId: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ classId: string }> }) {
   try {
-    const { classId } = params
+    const { classId } = await params
     const { searchParams } = new URL(request.url)
     const date = searchParams.get("date")
     const sessionId = searchParams.get("sessionId")
