@@ -91,7 +91,8 @@ export default async function ReportCardPage({
           name,
           code
         ),
-        assessment_types(name, max_score)
+        assessment_types(name, max_score),
+        subject_component:subject_components(id, name)
       )
     `)
     .eq('student_id', studentId)
@@ -118,6 +119,58 @@ export default async function ReportCardPage({
     console.error("Failed to write query debug log:", e)
   }
 
+  // Fetch class-wide subject statistics (min, max, average)
+  const classId = activeEnrollment?.class_id
+  const classStats: Record<string, { min: number; max: number; average: number }> = {}
+
+  if (classId) {
+    const { data: assessments } = await supabase
+      .from('assessments')
+      .select('id, subject:subjects(name)')
+      .eq('class_id', classId)
+      .eq('session_id', sessionId)
+      .eq('term_id', termId)
+
+    if (assessments && assessments.length > 0) {
+      const assSubjMap = new Map(assessments.map((a: any) => [a.id, a.subject?.name]))
+      const assessmentIds = assessments.map((a: any) => a.id)
+
+      const { data: classScores } = await supabase
+        .from('student_scores')
+        .select('student_id, score, assessment_id')
+        .in('assessment_id', assessmentIds)
+
+      const subjectStudentTotals: Record<string, Record<string, number>> = {}
+
+      classScores?.forEach((item: any) => {
+        const subjName = assSubjMap.get(item.assessment_id)
+        const stId = item.student_id
+        if (!subjName || !stId) return
+
+        if (!subjectStudentTotals[subjName]) {
+          subjectStudentTotals[subjName] = {}
+        }
+        if (!subjectStudentTotals[subjName][stId]) {
+          subjectStudentTotals[subjName][stId] = 0
+        }
+        subjectStudentTotals[subjName][stId] += item.score || 0
+      })
+
+      Object.entries(subjectStudentTotals).forEach(([subjName, stTotals]) => {
+        const studentCount = Object.keys(stTotals).length
+        if (studentCount > 0) {
+          const totalScores = Object.values(stTotals)
+          const totalSum = totalScores.reduce((sum, val) => sum + val, 0)
+          classStats[subjName] = {
+            min: Math.min(...totalScores),
+            max: Math.max(...totalScores),
+            average: Math.round((totalSum / studentCount) * 100) / 100
+          }
+        }
+      })
+    }
+  }
+
   // Fetch school details
   const { data: school } = await supabase
     .from('school_settings')
@@ -135,8 +188,12 @@ export default async function ReportCardPage({
   // Group scores by subject
   const subjectScores: Record<string, any> = {}
   scores?.forEach((score: any) => {
-    const subjectName = score.assessments?.subjects?.name
+    const subjectNameRaw = score.assessments?.subjects?.name
     const subjectCode = score.assessments?.subjects?.code
+    const subjectComponent = score.assessments?.subject_component
+    const subjectName = subjectComponent
+      ? `${subjectNameRaw}: ${subjectComponent.name}`
+      : subjectNameRaw
     const assessmentType = score.assessments?.assessment_types?.name
 
     if (!subjectName) return
@@ -150,6 +207,9 @@ export default async function ReportCardPage({
         total: 0,
         grade: '',
         remark: '',
+        classMin: classStats[subjectNameRaw]?.min ?? null,
+        classMax: classStats[subjectNameRaw]?.max ?? null,
+        classAvg: classStats[subjectNameRaw]?.average ?? null,
       }
     }
 

@@ -60,3 +60,53 @@ export async function linkStudentToGuardian(formData: FormData) {
 
   revalidatePath(`/guardians/${linkData.guardian_id}`)
 }
+
+export interface BulkGuardianRow {
+  first_name: string
+  middle_name?: string | null
+  last_name: string
+  email?: string | null
+  phone: string
+  whatsapp_number?: string | null
+  alternate_phone?: string | null
+  address: string
+  occupation?: string | null
+  relationship_type: string
+}
+
+export async function bulkImportGuardians(guardiansList: BulkGuardianRow[]) {
+  const supabase = await createServerClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return { success: false, error: 'Unauthorized: Please sign in again' }
+  }
+
+  // Insert guardians
+  const { data, error } = await supabase
+    .from('guardians')
+    .insert(
+      guardiansList.map((g) => ({
+        first_name: g.first_name,
+        middle_name: g.middle_name || null,
+        last_name: g.last_name,
+        email: g.email || null,
+        phone: g.phone,
+        whatsapp_number: g.whatsapp_number || null,
+        alternate_phone: g.alternate_phone || null,
+        address: g.address,
+        occupation: g.occupation || null,
+        relationship_type: g.relationship_type || 'Father',
+        is_emergency_contact: false,
+      }))
+    )
+    .select()
+
+  if (error) {
+    console.error('Error inserting bulk guardians:', error)
+    return { success: false, error: `Failed to import guardians: ${error.message}` }
+  }
+
+  revalidatePath('/guardians')
+  return { success: true, count: data?.length || 0 }
+}

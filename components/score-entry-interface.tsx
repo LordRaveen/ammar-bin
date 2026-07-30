@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { IconSearch, IconCheck, IconAlertCircle, IconCircle, IconChevronRight, IconChartBar, IconTrendingUp, IconTrendingDown, IconTable, IconLayoutList, IconUser } from "@tabler/icons-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -33,6 +33,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { BookOpen } from "lucide-react"
 
 interface ScoreEntryInterfaceProps {
   classId: string
@@ -52,6 +53,13 @@ interface ScoreEntryInterfaceProps {
     code: string
     max_score: number
     pass_mark: number
+  }>
+  classComponents?: Array<{
+    subject_id: string
+    component_id: string
+    name: string
+    max_ca?: number
+    max_exam?: number
   }>
 }
 
@@ -82,8 +90,10 @@ export function ScoreEntryInterface({
   termId,
   students,
   subjects,
+  classComponents = [],
 }: ScoreEntryInterfaceProps) {
   const [selectedSubject, setSelectedSubject] = useState<string>("")
+  const [selectedComponentId, setSelectedComponentId] = useState<string>("")
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [scores, setScores] = useState<Map<string, StudentScore>>(new Map())
@@ -93,6 +103,21 @@ export function ScoreEntryInterface({
   const [viewMode, setViewMode] = useState<ViewMode>("subject")
   const [isSaving, setIsSaving] = useState(false)
   const supabase = createBrowserClient()
+
+  // Calculate components active for the selected subject
+  const currentComponents = useMemo(() => {
+    if (!selectedSubject || !classComponents) return []
+    return classComponents.filter((cc) => cc.subject_id === selectedSubject)
+  }, [selectedSubject, classComponents])
+
+  // Automatically select first component if active components exist
+  useEffect(() => {
+    if (currentComponents.length > 0) {
+      setSelectedComponentId(currentComponents[0].component_id)
+    } else {
+      setSelectedComponentId("")
+    }
+  }, [selectedSubject, currentComponents])
 
   useEffect(() => {
     const savedView = localStorage.getItem(`scoreView-${classId}`)
@@ -147,12 +172,12 @@ export function ScoreEntryInterface({
     fetchAssessmentTypes()
   }, [])
 
-  // Fetch existing scores when subject changes
+  // Fetch existing scores when subject or component changes
   useEffect(() => {
     if (selectedSubject && sessionId && termId && assessmentTypes.length > 0) {
       fetchScoresForSubject()
     }
-  }, [selectedSubject, sessionId, termId, assessmentTypes])
+  }, [selectedSubject, selectedComponentId, sessionId, termId, assessmentTypes])
 
   useEffect(() => {
     if (selectedSubject && scores.size > 0) {
@@ -226,13 +251,21 @@ export function ScoreEntryInterface({
       console.log("[v0] Fetching scores for subject:", selectedSubject)
       
       // Fetch assessments for this subject, class, session, term
-      const { data: assessments } = await supabase
+      let assessmentQuery = supabase
         .from("assessments")
         .select("id, assessment_type_id, total_marks")
         .eq("class_id", classId)
         .eq("subject_id", selectedSubject)
         .eq("session_id", sessionId)
         .eq("term_id", termId)
+
+      if (selectedComponentId) {
+        assessmentQuery = assessmentQuery.eq("subject_component_id", selectedComponentId)
+      } else {
+        assessmentQuery = assessmentQuery.is("subject_component_id", null)
+      }
+
+      const { data: assessments } = await assessmentQuery
 
       console.log("[v0] Fetched assessments:", assessments)
 
@@ -350,6 +383,15 @@ export function ScoreEntryInterface({
 
   const currentSubject = subjects.find(s => s.id === selectedSubject)
 
+  const compLimits = useMemo(() => {
+    if (!selectedComponentId || !classComponents) return null
+    return classComponents.find((c: any) => c.component_id === selectedComponentId)
+  }, [selectedComponentId, classComponents])
+
+  const caCount = selectedComponentId 
+    ? (compLimits?.ca_count ?? 2) 
+    : (currentSubject?.ca_count ?? 2)
+
   function getStudentProgress(studentId: string) {
     const score = scores.get(studentId)
     if (!score) return "empty"
@@ -358,7 +400,9 @@ export function ScoreEntryInterface({
     const hasCA2 = score.ca2 !== ""
     const hasExam = score.exam !== ""
     
-    if (hasCA1 && hasCA2 && hasExam) return "complete"
+    const isCAComplete = caCount === 1 ? hasCA1 : (hasCA1 && hasCA2)
+    
+    if (isCAComplete && hasExam) return "complete"
     if (hasCA1 || hasCA2 || hasExam) return "partial"
     return "empty"
   }
@@ -381,9 +425,13 @@ export function ScoreEntryInterface({
     
     if (subjectScores.length === 0) return { completed: 0, total: students.length }
     
-    const completed = subjectScores.filter(score => 
-      score.ca1 !== "" && score.ca2 !== "" && score.exam !== ""
-    ).length
+    const completed = subjectScores.filter(score => {
+      const hasCA1 = score.ca1 !== ""
+      const hasCA2 = score.ca2 !== ""
+      const hasExam = score.exam !== ""
+      const isCAComplete = caCount === 1 ? hasCA1 : (hasCA1 && hasCA2)
+      return isCAComplete && hasExam
+    }).length
     
     return { completed, total: students.length }
   }
@@ -425,6 +473,32 @@ export function ScoreEntryInterface({
               )
             })}
           </div>
+          
+          {/* Component Chips selector if active components exist for the selected subject */}
+          {currentComponents.length > 0 && (
+            <div className="mt-3 bg-zinc-500/[0.02] border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl p-3.5 space-y-2 animate-in fade-in slide-in-from-top-1 duration-250">
+              <Label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Select Component</Label>
+              <div className="flex flex-wrap gap-2">
+                {currentComponents.map(comp => {
+                  const isSelected = selectedComponentId === comp.component_id
+                  return (
+                    <button
+                      key={comp.component_id}
+                      onClick={() => setSelectedComponentId(comp.component_id)}
+                      className={cn(
+                        "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all hover:shadow-sm",
+                        isSelected
+                          ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                          : "bg-white dark:bg-zinc-950 hover:bg-zinc-50/50 dark:hover:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300"
+                      )}
+                    >
+                      {comp.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* View Selector with Tooltips */}
@@ -519,7 +593,19 @@ export function ScoreEntryInterface({
       )}
 
       {/* Render different views based on viewMode */}
-      {selectedSubject && viewMode === "subject" && (
+      {selectedSubject && !selectedComponentId && currentComponents.length > 0 && (
+        <Card className="border border-dashed border-zinc-200 dark:border-zinc-800">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <BookOpen className="mb-4 h-12 w-12 text-emerald-600 animate-pulse" />
+            <CardTitle className="text-base font-bold mb-1.5">Select a Sub-component</CardTitle>
+            <CardDescription className="max-w-md text-xs">
+              {subjects.find(s => s.id === selectedSubject)?.name} is split into sub-components. Please select a sub-component from the checklist above to enter scores.
+            </CardDescription>
+          </CardContent>
+        </Card>
+      )}
+
+      {selectedSubject && viewMode === "subject" && (!currentComponents.length || selectedComponentId) && (
         <SubjectBySubjectView
           students={filteredStudents}
           selectedStudent={selectedStudent}
@@ -533,14 +619,17 @@ export function ScoreEntryInterface({
           classId={classId}
           sessionId={sessionId}
           termId={termId}
-          onScoreSave={(studentId, updatedScore) => {
+          onScoreSave={(studentId: string, updatedScore: StudentScore) => {
             setScores(new Map(scores.set(studentId, updatedScore)))
           }}
           setIsSaving={setIsSaving}
+          selectedComponentId={selectedComponentId}
+          classComponents={classComponents}
+          caCount={caCount}
         />
       )}
 
-      {selectedSubject && viewMode === "table" && (
+      {selectedSubject && viewMode === "table" && (!currentComponents.length || selectedComponentId) && (
         <TableView
           students={students}
           scores={scores}
@@ -548,10 +637,13 @@ export function ScoreEntryInterface({
           classId={classId}
           sessionId={sessionId}
           termId={termId}
-          onScoreSave={(studentId, updatedScore) => {
+          onScoreSave={(studentId: string, updatedScore: StudentScore) => {
             setScores(new Map(scores.set(studentId, updatedScore)))
           }}
           setIsSaving={setIsSaving}
+          selectedComponentId={selectedComponentId}
+          classComponents={classComponents}
+          caCount={caCount}
         />
       )}
 
@@ -590,6 +682,9 @@ function SubjectBySubjectView({
   termId,
   onScoreSave,
   setIsSaving, // Added prop
+  selectedComponentId,
+  classComponents,
+  caCount,
 }: any) {
   return (
     <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
@@ -703,6 +798,9 @@ function SubjectBySubjectView({
               passmark={currentSubject?.pass_mark || 40}
               onSave={(updatedScore) => onScoreSave(selectedStudent, updatedScore)}
               setIsSaving={setIsSaving}
+              selectedComponentId={selectedComponentId}
+              classComponents={classComponents}
+              caCount={caCount}
             />
           ) : (
             <div className="text-muted-foreground flex flex-col items-center justify-center py-12 text-center">
@@ -725,11 +823,26 @@ function TableView({
   termId,
   onScoreSave,
   setIsSaving, // Added prop
+  selectedComponentId,
+  classComponents,
+  caCount = 2,
 }: any) {
   const [editingCell, setEditingCell] = useState<{ studentId: string; field: string; rowIndex: number; colIndex: number } | null>(null)
   const [editValue, setEditValue] = useState("")
   const [saveStatus, setSaveStatus] = useState<{ [key: string]: 'idle' | 'saving' | 'success' | 'error' }>({})
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const compLimits = useMemo(() => {
+    if (!selectedComponentId || !classComponents) return null
+    return classComponents.find((c: any) => c.component_id === selectedComponentId)
+  }, [selectedComponentId, classComponents])
+
+  const maxCa = compLimits?.max_ca ?? 40
+  const maxExam = compLimits?.max_exam ?? 60
+
+  const ca1Max = caCount === 1 ? maxCa : (maxCa / 2)
+  const ca2Max = caCount === 1 ? 0 : (maxCa / 2)
+  const examMax = maxExam
 
   useEffect(() => {
     if (inputRef.current) {
@@ -750,8 +863,8 @@ function TableView({
 
     // Check max score based on field
     let maxScore = 0
-    if (field === 'ca1' || field === 'ca2') maxScore = 20
-    if (field === 'exam') maxScore = 60
+    if (field === 'ca1' || field === 'ca2') maxScore = ca1Max
+    if (field === 'exam') maxScore = examMax
 
     const numValue = parseFloat(value)
     if (value && numValue > maxScore) {
@@ -818,7 +931,8 @@ function TableView({
           ca2: ca2Val,
           exam: examVal
         },
-        updatedScore.remark
+        updatedScore.remark,
+        selectedComponentId || null
       )
       
       if (result && !result.success) {
@@ -868,10 +982,10 @@ function TableView({
     
     const numValue = parseFloat(value)
     if (field === 'ca1' || field === 'ca2') {
-      if (numValue < 0 || numValue > 20) return 'border-red-500 border-2'
+      if (numValue < 0 || numValue > ca1Max) return 'border-red-500 border-2'
     }
     if (field === 'exam') {
-      if (numValue < 0 || numValue > 60) return 'border-red-500 border-2'
+      if (numValue < 0 || numValue > examMax) return 'border-red-500 border-2'
     }
     
     return ''
@@ -910,9 +1024,9 @@ function TableView({
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[250px]">Student</TableHead>
-                <TableHead className="w-[80px]">CA 1</TableHead>
-                <TableHead className="w-[80px]">CA 2</TableHead>
-                <TableHead className="w-[80px]">Exam</TableHead>
+                <TableHead className="w-[80px]">CA 1 (Max: {ca1Max})</TableHead>
+                {caCount === 2 && <TableHead className="w-[80px]">CA 2 (Max: {ca2Max})</TableHead>}
+                <TableHead className="w-[80px]">Exam (Max: {examMax})</TableHead>
                 <TableHead className="w-[80px]">Total</TableHead>
                 <TableHead className="w-[80px]">Grade</TableHead>
                 <TableHead className="w-[100px]">Status</TableHead>
@@ -979,33 +1093,35 @@ function TableView({
                         </button>
                       )}
                     </TableCell>
-                    <TableCell>
-                      {editingCell?.studentId === student.id && editingCell?.field === "ca2" ? (
-                        <Input
-                          ref={inputRef}
-                          type="text"
-                          inputMode="decimal"
-                          value={editValue}
-                          onChange={(e) => handleInputChange(e.target.value, 'ca2')}
-                          onFocus={(e) => e.target.select()}
-                          onBlur={() => handleCellBlur(student.id)}
-                          onKeyDown={(e) => handleKeyDown(e, student.id, rowIndex, 1)}
-                          className={cn("h-8 w-16", getCellBorderColor(student.id, 'ca2', editValue))}
-                          autoFocus
-                        />
-                      ) : (
-                        <button
-                          onClick={() => handleCellClick(student.id, "ca2", score.ca2, rowIndex, 1)}
-                          onDoubleClick={() => handleCellClick(student.id, "ca2", score.ca2, rowIndex, 1)}
-                          className={cn(
-                            "h-8 w-16 rounded border bg-background px-2 text-left hover:bg-accent transition-colors",
-                            getCellBorderColor(student.id, 'ca2', score.ca2)
-                          )}
-                        >
-                          {score.ca2 || "-"}
-                        </button>
-                      )}
-                    </TableCell>
+                    {caCount === 2 && (
+                      <TableCell>
+                        {editingCell?.studentId === student.id && editingCell?.field === "ca2" ? (
+                          <Input
+                            ref={inputRef}
+                            type="text"
+                            inputMode="decimal"
+                            value={editValue}
+                            onChange={(e) => handleInputChange(e.target.value, 'ca2')}
+                            onFocus={(e) => e.target.select()}
+                            onBlur={() => handleCellBlur(student.id)}
+                            onKeyDown={(e) => handleKeyDown(e, student.id, rowIndex, 1)}
+                            className={cn("h-8 w-16", getCellBorderColor(student.id, 'ca2', editValue))}
+                            autoFocus
+                          />
+                        ) : (
+                          <button
+                            onClick={() => handleCellClick(student.id, "ca2", score.ca2, rowIndex, 1)}
+                            onDoubleClick={() => handleCellClick(student.id, "ca2", score.ca2, rowIndex, 1)}
+                            className={cn(
+                              "h-8 w-16 rounded border bg-background px-2 text-left hover:bg-accent transition-colors",
+                              getCellBorderColor(student.id, 'ca2', score.ca2)
+                            )}
+                          >
+                            {score.ca2 || "-"}
+                          </button>
+                        )}
+                      </TableCell>
+                    )}
                     <TableCell>
                       {editingCell?.studentId === student.id && editingCell?.field === "exam" ? (
                         <Input
@@ -1101,6 +1217,9 @@ interface ScoreEntryFormProps {
   passmark: number
   onSave: (score: StudentScore) => void
   setIsSaving: (saving: boolean) => void // Added prop
+  selectedComponentId?: string | null
+  classComponents?: any[]
+  caCount?: number
 }
 
 function ScoreEntryForm({
@@ -1114,6 +1233,9 @@ function ScoreEntryForm({
   passmark,
   onSave,
   setIsSaving, // Added prop
+  selectedComponentId,
+  classComponents = [],
+  caCount = 2,
 }: ScoreEntryFormProps) {
   const [ca1, setCA1] = useState(currentScore?.ca1 || "")
   const [ca2, setCA2] = useState(currentScore?.ca2 || "")
@@ -1136,14 +1258,26 @@ function ScoreEntryForm({
     }, 100)
   }, [currentScore, student.id])
 
+  const compLimits = useMemo(() => {
+    if (!selectedComponentId || !classComponents) return null
+    return classComponents.find((c: any) => c.component_id === selectedComponentId)
+  }, [selectedComponentId, classComponents])
+
+  const maxCa = compLimits?.max_ca ?? 40
+  const maxExam = compLimits?.max_exam ?? 60
+
+  const ca1Max = caCount === 1 ? maxCa : (maxCa / 2)
+  const ca2Max = caCount === 1 ? 0 : (maxCa / 2)
+  const examMax = maxExam
+
   const ca1Val = parseFloat(ca1) || 0
-  const ca2Val = parseFloat(ca2) || 0
+  const ca2Val = caCount === 1 ? 0 : (parseFloat(ca2) || 0)
   const examVal = parseFloat(exam) || 0
   const total = ca1Val + ca2Val + examVal
 
-  const isCA1Valid = ca1Val >= 0 && ca1Val <= 20
-  const isCA2Valid = ca2Val >= 0 && ca2Val <= 20
-  const isExamValid = examVal >= 0 && examVal <= 60
+  const isCA1Valid = ca1Val >= 0 && ca1Val <= ca1Max
+  const isCA2Valid = caCount === 1 ? true : (ca2Val >= 0 && ca2Val <= ca2Max)
+  const isExamValid = examVal >= 0 && examVal <= examMax
   const isFormValid = isCA1Valid && isCA2Valid && isExamValid
 
   const grade = getGrade(total)
@@ -1204,7 +1338,8 @@ function ScoreEntryForm({
           ca2: ca2Val,
           exam: examVal
         },
-        remarks || remarkAuto
+        remarks || remarkAuto,
+        selectedComponentId || null
       )
       
       if (result && !result.success) {
@@ -1268,15 +1403,15 @@ function ScoreEntryForm({
       </div>
 
       {/* Score Input Fields */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className={cn("grid gap-4", caCount === 1 ? "md:grid-cols-2" : "md:grid-cols-3")}>
         <div className="space-y-2">
-          <Label htmlFor="ca1">CA Test 1 (Max: 20)</Label>
+          <Label htmlFor="ca1">CA Test 1 (Max: {ca1Max})</Label>
           <Input
             ref={ca1InputRef}
             id="ca1"
             type="number"
             min="0"
-            max="20"
+            max={ca1Max}
             step="0.5"
             value={ca1}
             onChange={(e) => setCA1(e.target.value)}
@@ -1284,35 +1419,37 @@ function ScoreEntryForm({
             className={!isCA1Valid && ca1 ? "border-destructive" : ""}
           />
           {!isCA1Valid && ca1 && (
-            <p className="text-destructive text-xs">Score must be between 0 and 20</p>
+            <p className="text-destructive text-xs">Score must be between 0 and {ca1Max}</p>
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="ca2">CA Test 2 (Max: 20)</Label>
-          <Input
-            id="ca2"
-            type="number"
-            min="0"
-            max="20"
-            step="0.5"
-            value={ca2}
-            onChange={(e) => setCA2(e.target.value)}
-            placeholder="0"
-            className={!isCA2Valid && ca2 ? "border-destructive" : ""}
-          />
-          {!isCA2Valid && ca2 && (
-            <p className="text-destructive text-xs">Score must be between 0 and 20</p>
-          )}
-        </div>
+        {caCount === 2 && (
+          <div className="space-y-2">
+            <Label htmlFor="ca2">CA Test 2 (Max: {ca2Max})</Label>
+            <Input
+              id="ca2"
+              type="number"
+              min="0"
+              max={ca2Max}
+              step="0.5"
+              value={ca2}
+              onChange={(e) => setCA2(e.target.value)}
+              placeholder="0"
+              className={!isCA2Valid && ca2 ? "border-destructive" : ""}
+            />
+            {!isCA2Valid && ca2 && (
+              <p className="text-destructive text-xs">Score must be between 0 and {ca2Max}</p>
+            )}
+          </div>
+        )}
 
         <div className="space-y-2">
-          <Label htmlFor="exam">Exam (Max: 60)</Label>
+          <Label htmlFor="exam">Exam (Max: {examMax})</Label>
           <Input
             id="exam"
             type="number"
             min="0"
-            max="60"
+            max={examMax}
             step="0.5"
             value={exam}
             onChange={(e) => setExam(e.target.value)}
@@ -1320,7 +1457,7 @@ function ScoreEntryForm({
             className={!isExamValid && exam ? "border-destructive" : ""}
           />
           {!isExamValid && exam && (
-            <p className="text-destructive text-xs">Score must be between 0 and 60</p>
+            <p className="text-destructive text-xs">Score must be between 0 and {examMax}</p>
           )}
         </div>
       </div>

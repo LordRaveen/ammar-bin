@@ -66,6 +66,7 @@ import {
 export const dynamic = "force-dynamic"
 
 interface ClassDetails {
+  is_active: any
   id: string
   name: string
   capacity: number
@@ -95,6 +96,7 @@ interface EnrolledStudent {
   gender: string
   status: string
   photo_url: string | null
+  date_of_birth?: string | null
 }
 
 interface ClassSubject {
@@ -116,7 +118,7 @@ interface ClassSubject {
 export default function ClassDetailsPage() {
   const params = useParams()
   const router = useRouter()
-  const classId = params?.id as string | undefined
+  const classId = params?.id as string
   const supabase = createBrowserClient()
 
   const [classDetails, setClassDetails] = useState<ClassDetails | null>(null)
@@ -124,6 +126,7 @@ export default function ClassDetailsPage() {
   const [unenrolledStudents, setUnenrolledStudents] = useState<any[]>([])
   const [classSubjects, setClassSubjects] = useState<ClassSubject[]>([])
   const [availableSubjects, setAvailableSubjects] = useState<any[]>([])
+  const [activeComponents, setActiveComponents] = useState<any[]>([])
   const [subjectTeachers, setSubjectTeachers] = useState<any[]>([])
   const [allTeachers, setAllTeachers] = useState<any[]>([])
   const [sessions, setSessions] = useState<any[]>([])
@@ -317,6 +320,22 @@ export default function ClassDetailsPage() {
         }))
 
         setClassSubjects(enrichedSubjects)
+      }
+
+      const { data: compData } = await supabase
+        .from("class_subject_components")
+        .select(`
+          subject_id,
+          subject_component_id,
+          max_ca,
+          max_exam,
+          ca_count,
+          component:subject_components(id, name)
+        `)
+        .eq("class_id", classId)
+
+      if (compData) {
+        setActiveComponents(compData)
       }
 
       const { data: allSubjects } = await supabase.from("subjects").select("*").eq("is_active", true)
@@ -965,6 +984,15 @@ export default function ClassDetailsPage() {
               code: cs.subject.code,
               max_score: cs.max_score,
               pass_mark: cs.pass_mark,
+              ca_count: cs.ca_count ?? 2,
+            }))}
+            classComponents={activeComponents.map((c) => ({
+              subject_id: c.subject_id,
+              component_id: c.subject_component_id,
+              name: c.component?.name || "",
+              max_ca: c.max_ca,
+              max_exam: c.max_exam,
+              ca_count: c.ca_count ?? 2,
             }))}
           />
         </TabsContent>

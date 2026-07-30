@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Terminal Report Sheet - Zarah Usman</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blue:#2563eb;
+    --ink:#111827;
+    --sub:#6b7280;
+    --line:#e2e4e9;
+    --outer-border:#6b7280;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: #f3f4f6;
+    margin: 0;
+    padding: 0;
+    color: var(--ink);
+  }
+  body {
+    display: flex;
+    justify-content: center;
+    padding: 15px 0;
+  }
+  .sheet {
+    width: 297mm;
+    height: 210mm;
+    margin: 0 auto;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 8mm 12mm;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+
+  /* ===== Header row ===== */
+  .header-row {
+    display: grid;
+    grid-template-columns: 190px 1fr 190px;
+    align-items: center;
+    gap: 14px;
+    flex-shrink: 0;
+  }
+  .header-left { display:flex; align-items:center; justify-content: flex-start; }
+  .logo {
+    width: 58px;
+    height: 58px;
+    border: 2px solid #333;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: #333;
+    flex-shrink: 0;
+  }
+  .header-text-block { text-align: center; width: 100%; }
+  .arabic-name {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--ink);
+    text-align: center;
+  }
+  .school-name {
+    font-size: 21px;
+    font-weight: 800;
+    color: var(--blue);
+    margin: 2px 0;
+    letter-spacing: 0.2px;
+    text-align: center;
+  }
+  .tagline {
+    font-weight: 500;
+    font-size: 10.5px;
+    margin: 1px 0;
+    color: var(--sub);
+    text-align: center;
+  }
+  .address, .contact {
+    font-size: 9px;
+    margin: 1px 0;
+    color: var(--sub);
+    text-align: center;
+  }
+
+  /* Single Term Dates Card */
+  .term-dates-card {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    width: 100%;
+    background: #fff;
+  }
+  .term-date-item {
+    padding: 6px 12px;
+  }
+  .term-date-item + .term-date-item {
+    border-top: 1px solid var(--line);
+  }
+  .term-date-item .t-label {
+    font-size: 9px;
+    color: var(--sub);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 2px;
+  }
+  .term-date-item .t-val {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink);
+    display: block;
+  }
+
+  /* ===== Info bar ===== */
+  .info-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    margin-top: 10px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .info-col {
+    padding: 8px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .info-col + .info-col { 
+    border-left: 1px solid var(--line); 
+  }
+  
+  /* 3-Row Student Info Layout */
+  .info-left { 
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+  }
+  .student-name-row {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: var(--ink);
+    letter-spacing: 0.2px;
+    line-height: 1.2;
+  }
+  .student-meta-row {
+    font-size: 9.5px;
+    color: var(--ink);
+    line-height: 1.3;
+  }
+  .student-meta-row b {
+    color: var(--sub);
+    font-weight: 600;
+  }
+
+  .info-center { 
+    text-align: center; 
+  }
+  .report-title {
+    color: var(--ink);
+    font-size: 15.5px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    margin: 0 0 3px 0;
+  }
+  .session-line { font-size: 11px; font-weight: 600; color: var(--sub); }
+  .session-line span { color: var(--ink); }
+
+  /* Center-aligned Score Section */
+  .info-right {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px !important;
+  }
+  .score-block { 
+    flex: 1; 
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 0 10px; 
+  }
+  .score-block + .score-block::before { 
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 15%;
+    height: 70%;
+    width: 1px;
+    background-color: var(--line);
+  }
+  .score-block .s-label { 
+    font-size: 8.5px; 
+    color: var(--sub); 
+    font-weight: 700; 
+    text-transform: uppercase; 
+    letter-spacing: 0.4px; 
+    margin-bottom: 2px;
+    white-space: nowrap;
+  }
+  .score-block .s-val { 
+    font-size: 20px; 
+    font-weight: 800; 
+    color: var(--ink); 
+    line-height: 1;
+  }
+  .score-block .s-val.grade { 
+    color: #16a34a;
+  }
+
+  /* ===== Main table ===== */
+  table.main-table {
+    width: 100%;
+    flex: 1;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 16px 0;
+    font-size: 10px;
+    border: 2px solid var(--outer-border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  table.main-table tr {
+    height: 1%;
+  }
+  table.main-table th, table.main-table td {
+    border-bottom: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+    padding: 4px 8px;
+    text-align: center;
+    color: var(--ink);
+    vertical-align: middle;
+  }
+  table.main-table th:last-child, table.main-table td:last-child {
+    border-right: none;
+  }
+  table.main-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  table.main-table th {
+    background: #fafafa;
+    font-weight: 800;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--ink);
+    text-align: center;
+    padding: 8px;
+    white-space: nowrap;
+    height: 32px;
+  }
+
+  table.main-table th.th-left {
+    text-align: left !important;
+  }
+
+  .subject-name {
+    text-align: left !important;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .sub-row-label {
+    text-align: left !important;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .single-row td.subject-name {
+    font-weight: 700;
+  }
+
+  .grade-text {
+    font-weight: 700;
+    font-size: 10.5px;
+    color: var(--ink);
+  }
+  
+  .comment-cell { 
+    color: var(--ink); 
+    font-weight: 600; 
+    text-align: left !important; 
+    padding-left: 10px !important;
+  }
+
+  /* ===== Domains Section ===== */
+  .domains {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .psychomotor-block {
+    flex: 1.2;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 12px;
+  }
+
+  .affective-block {
+    flex: 2.2;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 12px;
+  }
+  .domain-title {
+    color: var(--blue);
+    font-weight: 700;
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 6px;
+  }
+  .affective-grid {
+    display: flex;
+    gap: 12px;
+  }
+  .affective-col {
+    flex: 1;
+  }
+  .affective-col + .affective-col {
+    border-left: 1px solid var(--line);
+    padding-left: 12px;
+  }
+
+  .domain-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    padding: 3px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .domain-row:last-child { border-bottom: none; }
+  .domain-row .d-label { color: var(--ink); }
+  .domain-row .d-val { color: var(--ink); font-weight: 700; }
+
+  .scale-box {
+    flex: 0.9;
+    font-size: 9px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 12px;
+  }
+  .scale-title {
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--sub);
+    text-transform: uppercase;
+    font-size: 8.5px;
+    letter-spacing: 0.3px;
+  }
+  .scale-box div { margin: 2px 0; color: var(--ink); }
+
+  /* ===== Comments ===== */
+  .comments {
+    margin-top: 10px;
+    font-size: 10.5px;
+    line-height: 1.5;
+    border-radius: 10px;
+    padding: 9px 12px;
+    background: #f5f6f8;
+    color: var(--ink);
+    flex-shrink: 0;
+  }
+  .comments strong { font-weight: 700; color: var(--ink); }
+  .comments div + div { margin-top: 3px; }
+
+  @media print {
+    @page {
+      size: A4 landscape;
+      margin: 0;
+    }
+    html, body {
+      background: #fff;
+      padding: 0;
+    }
+    .sheet {
+      border: none;
+      box-shadow: none;
+      border-radius: 0;
+      width: 297mm;
+      height: 210mm;
+      margin: 0;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <div class="header-row">
+    <div class="header-left">
+      <div class="logo">LOGO</div>
+    </div>
+    <div class="header-text-block">
+      <p class="arabic-name">مدرسةالأمة الإبداعية الدولية</p>
+      <p class="school-name">CREATIVE UMMAH INTERNATIONAL SCHOOLS</p>
+      <p class="tagline">...Learning, Attitude and Creativity</p>
+      <p class="address">No. 10 Mai Unguwa Wada Road, off Kuriga Road, keke-A Millenium City Kaduna.</p>
+      <p class="contact">Tel: 08135582113, 08037676094, 09071267068</p>
+    </div>
+    <div class="term-dates-card">
+      <div class="term-date-item">
+        <span class="t-label">Term Ends</span>
+        <span class="t-val">28th March, 2024</span>
+      </div>
+      <div class="term-date-item">
+        <span class="t-label">Next Term Begins</span>
+        <span class="t-val">22nd April, 2024</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-bar">
+    <div class="info-col info-left">
+      <div class="student-name-row">ZARAH USMAN</div>
+      <div class="student-meta-row"><b>ADM. NO:</b> CUIS/22/182</div>
+      <div class="student-meta-row"><b>CLASS:</b> NURSERY I &nbsp;&nbsp;·&nbsp;&nbsp; <b>Class Size:</b> 25</div>
+    </div>
+    <div class="info-col info-center">
+      <p class="report-title">TERMINAL REPORT SHEET</p>
+      <div class="session-line"><span>2023/2024</span> &nbsp;&nbsp; <span>SECOND TERM</span></div>
+    </div>
+    <div class="info-col info-right">
+      <div class="score-block">
+        <div class="s-label">Total Score</div>
+        <div class="s-val">619</div>
+      </div>
+      <div class="score-block">
+        <div class="s-label">Average Score</div>
+        <div class="s-val">68.78%</div>
+      </div>
+      <div class="score-block">
+        <div class="s-label">Grade</div>
+        <div class="s-val grade">B+</div>
+      </div>
+    </div>
+  </div>
+
+  <table class="main-table">
+    <thead>
+      <tr>
+        <th style="width:22%; padding-left:8px;" class="th-left" colspan="2">Core Subjects</th>
+        <th>C. A test</th>
+        <th>Exams</th>
+        <th>Total</th>
+        <th>Grade</th>
+        <th>Class Min</th>
+        <th>Class Max</th>
+        <th>Class Avg</th>
+        <th style="width:18%;" class="th-left">Comment</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="subject-name" rowspan="3">NUMERACY</td>
+        <td class="sub-row-label">Counting</td><td>13</td><td>14</td>
+        <td rowspan="3">86</td>
+        <td rowspan="3"><span class="grade-text">A+</span></td>
+        <td rowspan="3">60</td>
+        <td rowspan="3">131</td>
+        <td rowspan="3">86.32</td>
+        <td rowspan="3" class="comment-cell">Outstanding</td>
+      </tr>
+      <tr><td class="sub-row-label">Writing</td><td>12</td><td>18</td></tr>
+      <tr><td class="sub-row-label">Identification</td><td>12</td><td>17</td></tr>
+
+      <tr>
+        <td class="subject-name" rowspan="3">LITERACY</td>
+        <td class="sub-row-label">Reading</td><td>14</td><td>17</td>
+        <td rowspan="3">77</td>
+        <td rowspan="3"><span class="grade-text">A</span></td>
+        <td rowspan="3">57</td>
+        <td rowspan="3">97</td>
+        <td rowspan="3">82.28</td>
+        <td rowspan="3" class="comment-cell">Excellent</td>
+      </tr>
+      <tr><td class="sub-row-label">Writing</td><td>14</td><td>20</td></tr>
+      <tr><td class="sub-row-label">Identification</td><td>10</td><td>10</td></tr>
+
+      <tr class="single-row">
+        <td class="subject-name" colspan="2">Science and Health habits</td>
+        <td>16</td><td>57</td><td>67</td><td><span class="grade-text">B+</span></td><td>67</td><td>95</td><td>85.56</td><td class="comment-cell">Very Good</td>
+      </tr>
+      <tr class="single-row">
+        <td class="subject-name" colspan="2">Computer</td>
+        <td>40</td><td>42</td><td>82</td><td><span class="grade-text">E</span></td><td>60</td><td>91</td><td>81.12</td><td class="comment-cell">Excellent</td>
+      </tr>
+      <tr class="single-row">
+        <td class="subject-name" colspan="2">Phonics</td>
+        <td>28</td><td>46</td><td>74</td><td><span class="grade-text">B+</span></td><td>52</td><td>98</td><td>76</td><td class="comment-cell">Very Good</td>
+      </tr>
+      <tr class="single-row">
+        <td class="subject-name" colspan="2">Social Habits</td>
+        <td>30</td><td>58</td><td>88</td><td><span class="grade-text">A+</span></td><td>65</td><td>98</td><td>86.56</td><td class="comment-cell">Outstanding</td>
+      </tr>
+      <tr class="single-row">
+        <td class="subject-name" colspan="2">Drawing &amp; Coloring</td>
+        <td>28</td><td>58</td><td>85</td><td><span class="grade-text">A+</span></td><td>55</td><td>93</td><td>77.72</td><td class="comment-cell">Outstanding</td>
+      </tr>
+      <tr class="single-row">
+        <td class="subject-name" colspan="2">Penmanship</td>
+        <td>14</td><td>30</td><td>60</td><td><span class="grade-text">B</span></td><td>60</td><td>90</td><td>75.16</td><td class="comment-cell">Good</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="domains">
+    <div class="psychomotor-block">
+      <div class="domain-title">Psychomotor Domain</div>
+      <div class="domain-row"><span class="d-label">Ablution</span><span class="d-val">B</span></div>
+      <div class="domain-row"><span class="d-label">Prayer (Salat)</span><span class="d-val">C</span></div>
+      <div class="domain-row"><span class="d-label">Verbal Fluency</span><span class="d-val">B</span></div>
+      <div class="domain-row"><span class="d-label">Handwriting</span><span class="d-val">B</span></div>
+    </div>
+
+    <div class="affective-block">
+      <div class="domain-title">Affective Domain</div>
+      <div class="affective-grid">
+        <div class="affective-col">
+          <div class="domain-row"><span class="d-label">Punctuality</span><span class="d-val">B</span></div>
+          <div class="domain-row"><span class="d-label">Neatness</span><span class="d-val">B</span></div>
+          <div class="domain-row"><span class="d-label">Politeness</span><span class="d-val">B</span></div>
+          <div class="domain-row"><span class="d-label">Honesty</span><span class="d-val">B</span></div>
+          <div class="domain-row"><span class="d-label">Perseverance</span><span class="d-val">B</span></div>
+        </div>
+        <div class="affective-col">
+          <div class="domain-row"><span class="d-label">Relationship with others</span><span class="d-val">B</span></div>
+          <div class="domain-row"><span class="d-label">Response to Home Work</span><span class="d-val">B</span></div>
+          <div class="domain-row"><span class="d-label">Attentiveness</span><span class="d-val">A</span></div>
+          <div class="domain-row"><span class="d-label">Emotional stability</span><span class="d-val">B</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="scale-box">
+      <div class="scale-title">Scale</div>
+      <div>A+ = Outstanding</div>
+      <div>A = Excellent</div>
+      <div>B+ = Very good</div>
+      <div>B = Good</div>
+      <div>C = Average</div>
+      <div>D = Weak</div>
+      <div>F = Fail</div>
+    </div>
+  </div>
+
+  <div class="comments">
+    <div><strong>Class teacher's comment:</strong> A very good performance</div>
+    <div><strong>Head teacher's comment:</strong> A good performance, put in more effort next term for better grade.</div>
+  </div>
+
+</div>
+</body>
+</html>

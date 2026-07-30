@@ -92,11 +92,15 @@ export async function isAccountant(): Promise<boolean> {
 
 /**
  * Require authentication - redirect to signin if not authenticated
+ * Optionally checks if user has one of the allowed roles
  */
-export async function requireAuth(p0: string[]): Promise<AuthUser> {
+export async function requireAuth(allowedRoles?: UserRole[] | string[]): Promise<AuthUser> {
   const user = await getUser()
   if (!user) {
     redirect("/auth/signin")
+  }
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    redirect("/dashboard")
   }
   return user
 }

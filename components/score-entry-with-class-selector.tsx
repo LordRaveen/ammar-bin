@@ -51,6 +51,7 @@ export function ScoreEntryWithClassSelector({
   const [selectedClass, setSelectedClass] = useState<string>(initialClassId || "")
   const [students, setStudents] = useState<any[]>([])
   const [subjects, setSubjects] = useState<any[]>([])
+  const [classComponents, setClassComponents] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -99,8 +100,35 @@ export function ScoreEntryWithClassSelector({
           code: cs.subject.code,
           max_score: cs.max_score,
           pass_mark: cs.pass_mark,
+          ca_count: cs.ca_count ?? 2,
         }))
         setSubjects(subjectsList)
+      }
+
+      // Fetch class components
+      const { data: compData } = await supabase
+        .from("class_subject_components")
+        .select(`
+          subject_id,
+          subject_component_id,
+          max_ca,
+          max_exam,
+          ca_count,
+          component:subject_components(id, name)
+        `)
+        .eq("class_id", selectedClass)
+
+      if (compData) {
+        setClassComponents(compData.map(c => ({
+          subject_id: c.subject_id,
+          component_id: c.subject_component_id,
+          name: (c.component as any)?.name || "",
+          max_ca: c.max_ca,
+          max_exam: c.max_exam,
+          ca_count: c.ca_count ?? 2
+        })))
+      } else {
+        setClassComponents([])
       }
     } catch (error) {
       console.error("[v0] Error fetching class data:", error)
@@ -158,6 +186,7 @@ export function ScoreEntryWithClassSelector({
           termId={termId}
           students={students}
           subjects={subjects}
+          classComponents={classComponents}
         />
       )}
 

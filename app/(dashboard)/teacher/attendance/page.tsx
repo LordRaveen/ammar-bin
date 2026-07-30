@@ -32,7 +32,7 @@ export default async function TeacherAttendancePage() {
   const activeTerm = activeSession?.terms?.find((t: any) => t.is_active)
 
   // Get teacher's assigned classes
-  const { data: classAssignments } = await supabase
+  const { data: classAssignmentsData } = await supabase
     .from("teacher_class_assignments")
     .select(`
       id,
@@ -48,6 +48,7 @@ export default async function TeacherAttendancePage() {
     .eq("teacher_id", teacher.id)
     .eq("session_id", activeSession?.id)
 
+  const classAssignments = classAssignmentsData as any[] | null
   const assignedClasses = classAssignments?.map((a) => a.classes).filter(Boolean) || []
 
   // Get attendance statistics for today

@@ -157,6 +157,7 @@ export async function saveStudentScore(
     exam: number
   },
   remarks?: string,
+  subjectComponentId?: string | null,
 ) {
   try {
     await requireUser()
@@ -175,17 +176,54 @@ export async function saveStudentScore(
 
     const enteredById = user.id
 
+    let maxCa = 40
+    let maxExam = 60
+    let caCount = 2
+
+    if (subjectComponentId) {
+      const { data: compLimits } = await supabase
+        .from("class_subject_components")
+        .select("max_ca, max_exam, ca_count")
+        .eq("class_id", classId)
+        .eq("subject_id", subjectId)
+        .eq("subject_component_id", subjectComponentId)
+        .maybeSingle()
+
+      if (compLimits) {
+        if (compLimits.max_ca !== null && compLimits.max_ca !== undefined) maxCa = compLimits.max_ca
+        if (compLimits.max_exam !== null && compLimits.max_exam !== undefined) maxExam = compLimits.max_exam
+        if (compLimits.ca_count !== null && compLimits.ca_count !== undefined) caCount = compLimits.ca_count
+      }
+    } else {
+      const { data: subjLimits } = await supabase
+        .from("class_subjects")
+        .select("ca_count")
+        .eq("class_id", classId)
+        .eq("subject_id", subjectId)
+        .maybeSingle()
+
+      if (subjLimits) {
+        if (subjLimits.ca_count !== null && subjLimits.ca_count !== undefined) caCount = subjLimits.ca_count
+      }
+    }
+
     // Calculate total and grade
-    const total = scores.ca1 + scores.ca2 + scores.exam
+    const ca1Val = scores.ca1 || 0
+    const ca2Val = caCount === 1 ? 0 : (scores.ca2 || 0)
+    const examVal = scores.exam || 0
+    const total = ca1Val + ca2Val + examVal
     const grade = calculateGrade(total)
     const remark = remarks || generateRemark(total)
 
     // Assessment types we'll use (create if needed)
-    const assessmentConfigs = [
-      { name: "CA Test 1", maxMarks: 20, score: scores.ca1 },
-      { name: "CA Test 2", maxMarks: 20, score: scores.ca2 },
-      { name: "Exam", maxMarks: 60, score: scores.exam },
-    ]
+    const assessmentConfigs = []
+    if (caCount === 1) {
+      assessmentConfigs.push({ name: "CA Test 1", maxMarks: maxCa, score: scores.ca1 })
+    } else {
+      assessmentConfigs.push({ name: "CA Test 1", maxMarks: maxCa / 2, score: scores.ca1 })
+      assessmentConfigs.push({ name: "CA Test 2", maxMarks: maxCa / 2, score: scores.ca2 })
+    }
+    assessmentConfigs.push({ name: "Exam", maxMarks: maxExam, score: scores.exam })
 
     for (const config of assessmentConfigs) {
       // Get or create assessment type
@@ -224,7 +262,7 @@ export async function saveStudentScore(
       }
 
       // Get or create assessment
-      const { data: existingAssessment, error: assessmentQueryError } = await supabase
+      let query = supabase
         .from("assessments")
         .select("id")
         .eq("class_id", classId)
@@ -232,7 +270,14 @@ export async function saveStudentScore(
         .eq("session_id", sessionId)
         .eq("term_id", termId)
         .eq("assessment_type_id", assessmentTypeId)
-        .maybeSingle()
+
+      if (subjectComponentId) {
+        query = query.eq("subject_component_id", subjectComponentId)
+      } else {
+        query = query.is("subject_component_id", null)
+      }
+
+      const { data: existingAssessment, error: assessmentQueryError } = await query.maybeSingle()
 
       if (assessmentQueryError) {
         return { success: false, error: `Failed to query assessment: ${assessmentQueryError.message}` }
@@ -254,6 +299,7 @@ export async function saveStudentScore(
             assessment_type_id: assessmentTypeId,
             total_marks: config.maxMarks,
             date: new Date().toISOString().split("T")[0],
+            subject_component_id: subjectComponentId || null,
           })
           .select()
           .single()

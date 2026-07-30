@@ -44,20 +44,20 @@ export function AddGuardianModal() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Guardian
+        <Button className="h-9 gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all duration-200">
+          <Plus className="h-4 w-4 font-bold" />
+          Register Guardian
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Add Guardian</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="max-w-2xl p-0 overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-black shadow-2xl rounded-2xl">
+        <DialogHeader className="p-5 pb-3 border-b border-zinc-100 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-950">
+          <DialogTitle className="text-base font-bold">Register Guardian</DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground mt-0.5">
             Register a new parent or guardian. Fill in the required information below.
           </DialogDescription>
         </DialogHeader>
 
-        <form action={handleSubmit} className="space-y-6">
+        <form action={handleSubmit} className="p-6 space-y-5">
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <Label htmlFor="first_name">
@@ -180,16 +180,21 @@ export function AddGuardianModal() {
             </div>
           </div>
 
-          <div className="flex gap-4 justify-end">
+          <div className="flex gap-2 justify-end pt-4 border-t border-zinc-100 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-950/30 -mx-6 -mb-6 p-4">
             <Button
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
               disabled={isLoading}
+              className="h-9 text-xs"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="h-9 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
               {isLoading ? 'Creating...' : 'Register Guardian'}
             </Button>
           </div>

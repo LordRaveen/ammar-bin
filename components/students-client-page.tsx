@@ -68,6 +68,7 @@ interface Filters {
   dateRange: DateRange | undefined
   ageMin: string
   ageMax: string
+  enrollmentTypes: string[]
 }
 
 const DEFAULT_FILTERS: Filters = {
@@ -80,11 +81,13 @@ const DEFAULT_FILTERS: Filters = {
   dateRange: undefined,
   ageMin: "",
   ageMax: "",
+  enrollmentTypes: ["islamiyya", "tahfeez", "combined"],
 }
 
 function countActiveFilters(filters: Filters): number {
   return Object.entries(filters).filter(([k, v]) => {
     if (k === "dateRange") return v !== undefined
+    if (k === "enrollmentTypes") return (v as string[]).length < 3
     return v !== "all" && v !== ""
   }).length
 }
@@ -169,16 +172,15 @@ export function StudentsClientPage({
           !student.student_enrollments || !student.student_enrollments.some((e: any) => e.is_active)
       }
 
-      // Section filter — find active enrollment, check its class's section
-      const activeEnrollment = student.student_enrollments?.find((e: any) => e.is_active)
+      // Section filter — find if ANY active enrollment matches the section
       const matchesSection =
         filters.sectionId === "all" ||
-        (activeEnrollment?.class?.section_id === filters.sectionId)
+        (student.student_enrollments?.some((e: any) => e.is_active && e.class?.section_id === filters.sectionId) ?? false)
 
-      // Class filter
+      // Class filter — find if ANY active enrollment matches the class
       const matchesClass =
         filters.classId === "all" ||
-        (activeEnrollment?.class_id === filters.classId)
+        (student.student_enrollments?.some((e: any) => e.is_active && e.class_id === filters.classId) ?? false)
 
       // Guardian filter
       const hasGuardian =
@@ -215,6 +217,9 @@ export function StudentsClientPage({
         if (filters.ageMax && ageYears > Number(filters.ageMax)) matchesAge = false
       }
 
+      // Enrollment type match
+      const matchesEnrollmentType = filters.enrollmentTypes.includes(student.enrollment_type || "islamiyya")
+
       return (
         matchesSearch &&
         matchesTab &&
@@ -225,7 +230,8 @@ export function StudentsClientPage({
         matchesClass &&
         matchesGuardian &&
         matchesDateAdded &&
-        matchesAge
+        matchesAge &&
+        matchesEnrollmentType
       )
     })
   }, [students, searchTerm, filterTab, filters])
@@ -455,6 +461,39 @@ export function StudentsClientPage({
                               {g === "all" ? "All" : g}
                             </button>
                           ))}
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Shift / Student Type */}
+                      <div className="space-y-2">
+                        <Label className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Shift / Student Type</Label>
+                        <div className="flex flex-col gap-1.5 pl-0.5">
+                          {[
+                            { id: "islamiyya", label: "Islamiyya" },
+                            { id: "tahfeez", label: "Tahfeez" },
+                            { id: "combined", label: "Combined (Dual)" },
+                          ].map((t) => {
+                            const isChecked = filters.enrollmentTypes.includes(t.id)
+                            return (
+                              <label key={t.id} className="flex items-center gap-2 text-xs font-medium cursor-pointer select-none">
+                                <Checkbox
+                                  checked={isChecked}
+                                  onCheckedChange={(checked) => {
+                                    setFilters((prev) => {
+                                      const nextTypes = checked
+                                        ? [...prev.enrollmentTypes, t.id]
+                                        : prev.enrollmentTypes.filter((x) => x !== t.id)
+                                      return { ...prev, enrollmentTypes: nextTypes }
+                                    })
+                                  }}
+                                  className="h-3.5 w-3.5 data-[state=checked]:bg-emerald-650 data-[state=checked]:border-emerald-650"
+                                />
+                                {t.label}
+                              </label>
+                            )
+                          })}
                         </div>
                       </div>
 
@@ -750,10 +789,16 @@ export function StudentsClientPage({
                               </Badge>
                             </TableCell>
                             <TableCell className="px-2 py-1 font-medium">
-                              {activeEnrollment?.class?.name ? (
-                                <Badge variant="outline" className="text-[10px] h-5 py-0 font-normal">
-                                  {activeEnrollment.class.name}
-                                </Badge>
+                              {student.student_enrollments && student.student_enrollments.filter((e: any) => e.is_active).length > 0 ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {student.student_enrollments
+                                    .filter((e: any) => e.is_active)
+                                    .map((ae: any) => (
+                                      <Badge key={ae.id} variant="outline" className="text-[10px] h-5 py-0 font-normal">
+                                        {ae.class?.name} ({ae.class?.section?.name?.[0] || ""})
+                                      </Badge>
+                                    ))}
+                                </div>
                               ) : (
                                 <span className="text-muted-foreground text-[11px] italic">Not Enrolled</span>
                               )}

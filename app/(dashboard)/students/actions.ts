@@ -288,12 +288,14 @@ export async function enrollStudent(arg1: any, arg2?: any, arg3?: any, arg4?: an
 
     let studentId: string | null = null
     let classId: string | null = null
+    let tahfeezClassId: string | null = null
     let sessionId: string | null = null
     let termId: string | null = null
 
     if (arg1 instanceof FormData) {
       studentId = arg1.get("student_id") as string
       classId = arg1.get("class_id") as string
+      tahfeezClassId = arg1.get("tahfeez_class_id") as string
       sessionId = arg1.get("session_id") as string
       termId = arg1.get("term_id") as string
     } else {
@@ -303,7 +305,7 @@ export async function enrollStudent(arg1: any, arg2?: any, arg3?: any, arg4?: an
       termId = arg4
     }
 
-    if (!studentId || !classId) {
+    if (!studentId || (!classId && !tahfeezClassId)) {
       return { success: false, error: "Student ID and Class ID are required for enrollment." }
     }
 
@@ -317,17 +319,68 @@ export async function enrollStudent(arg1: any, arg2?: any, arg3?: any, arg4?: an
       sessionId = actSession?.id || null
     }
 
-    const { error } = await adminClient
-      .from("student_enrollments")
-      .upsert({
-        student_id: studentId,
-        class_id: classId,
-        session_id: sessionId,
-        term_id: termId || null,
-        is_active: true,
-      }, { onConflict: "student_id,session_id" })
+    if (!sessionId) {
+      return { success: false, error: "No active session found." }
+    }
 
-    if (error) throw error
+    // Fetch student profile to get enrollment_type
+    const { data: student } = await adminClient
+      .from("students")
+      .select("enrollment_type")
+      .eq("id", studentId)
+      .single()
+
+    const enrollmentType = student?.enrollment_type || "islamiyya"
+
+    // Set previous enrollments in this session to inactive
+    await adminClient
+      .from("student_enrollments")
+      .update({ is_active: false })
+      .eq("student_id", studentId)
+      .eq("session_id", sessionId)
+
+    const enrollmentsToUpsert = []
+
+    if (enrollmentType === "combined") {
+      if (classId) {
+        enrollmentsToUpsert.push({
+          student_id: studentId,
+          class_id: classId,
+          session_id: sessionId,
+          term_id: termId || null,
+          is_active: true,
+        })
+      }
+      if (tahfeezClassId) {
+        enrollmentsToUpsert.push({
+          student_id: studentId,
+          class_id: tahfeezClassId,
+          session_id: sessionId,
+          term_id: termId || null,
+          is_active: true,
+        })
+      }
+    } else {
+      const selectedClassId = classId || tahfeezClassId
+      if (selectedClassId) {
+        enrollmentsToUpsert.push({
+          student_id: studentId,
+          class_id: selectedClassId,
+          session_id: sessionId,
+          term_id: termId || null,
+          is_active: true,
+        })
+      }
+    }
+
+    if (enrollmentsToUpsert.length > 0) {
+      const { error } = await adminClient
+        .from("student_enrollments")
+        .upsert(enrollmentsToUpsert, { onConflict: "student_id,session_id,class_id" })
+
+      if (error) throw error
+    }
+
     revalidatePath("/students")
     return { success: true }
   } catch (error: any) {

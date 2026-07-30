@@ -6,7 +6,7 @@ import { AcademicSessionTab } from "@/components/settings/academic-session-tab"
 import { FeeManagementTab } from "@/components/settings/fee-management-tab"
 import { GradingSystemTab } from "@/components/settings/grading-system-tab"
 import { FeeTemplatesTab } from "@/components/settings/fee-templates-tab"
-import { SubjectManagementTab } from "@/components/settings/subject-management-tab"
+import { SubjectManagement } from "@/components/subject-management"
 import { SecurityTab } from "@/components/settings/security-tab"
 
 export const dynamic = "force-dynamic"
@@ -67,18 +67,11 @@ export default async function SettingsPage({
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 max-w-full overflow-hidden">
-      <div>
-        <h1 className="text-xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground text-sm">Manage school configuration, fees, academic settings, and security</p>
-      </div>
-
       <Tabs defaultValue={activeTab} className="space-y-4 max-w-full">
-        <TabsList className="grid w-full grid-cols-7 lg:w-auto">
+        <TabsList className="grid w-full grid-cols-5 lg:w-auto">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="session">Academic Session</TabsTrigger>
           <TabsTrigger value="fees">Fee Management</TabsTrigger>
-          <TabsTrigger value="templates">Fee Templates</TabsTrigger>
-          <TabsTrigger value="grading">Grading System</TabsTrigger>
           <TabsTrigger value="subjects">Subjects</TabsTrigger>
           <TabsTrigger value="security">Security & Audit</TabsTrigger>
         </TabsList>
@@ -101,16 +94,8 @@ export default async function SettingsPage({
           />
         </TabsContent>
 
-        <TabsContent value="templates" className="space-y-4 max-w-full">
-          <FeeTemplatesTab sessions={sessions || []} classes={classes || []} activeSession={activeSessions} />
-        </TabsContent>
-
-        <TabsContent value="grading" className="space-y-4 max-w-full">
-          <GradingSystemTab gradingSchemes={gradingSchemes || []} />
-        </TabsContent>
-
         <TabsContent value="subjects" className="space-y-4 max-w-full">
-          <SubjectManagementTab subjects={subjects || []} />
+          <SubjectManagement />
         </TabsContent>
 
         <TabsContent value="security" className="space-y-4 max-w-full">

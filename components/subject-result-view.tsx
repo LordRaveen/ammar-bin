@@ -17,9 +17,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Search, BookOpen, Save, Pencil, X, Loader2, AlertTriangle, History, RefreshCw, Bookmark, CheckCircle2 } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/client"
-import { saveBatchSubjectScores } from "@/app/(dashboard)/classes/[id]/actions"
+import { saveBatchSubjectScores, saveStudentScore } from "@/app/(dashboard)/classes/[id]/actions"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
@@ -78,14 +86,158 @@ export function SubjectResultView({
   const [searchQuery, setSearchQuery] = useState("")
   const [scoresData, setScoresData] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [hasComponents, setHasComponents] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [activeCell, setActiveCell] = useState<{ studentId: string; field: "ca1" | "ca2" | "exam" | "remark" } | null>(null)
+  const [classComponentsList, setClassComponentsList] = useState<any[]>([])
+  const [editingStudentForComponents, setEditingStudentForComponents] = useState<Student | null>(null)
+  const [componentScores, setComponentScores] = useState<Record<string, { ca1: string; ca2: string; exam: string; remark: string }>>({})
+  const [loadingComponentScores, setLoadingComponentScores] = useState(false)
+  const [savingComponentScores, setSavingComponentScores] = useState(false)
 
   const handleCellDoubleClick = (studentId: string, field: "ca1" | "ca2" | "exam" | "remark") => {
+    if (hasComponents) {
+      const student = students.find(s => s.id === studentId)
+      if (student) {
+        handleOpenComponentModal(student)
+      }
+      return
+    }
     setActiveCell({ studentId, field })
     if (!isEditing) {
       setIsEditing(true)
+    }
+  }
+
+  const handleOpenComponentModal = async (student: Student) => {
+    setEditingStudentForComponents(student)
+    setLoadingComponentScores(true)
+    try {
+      const { data } = await supabase
+        .from("student_scores")
+        .select(`
+          score,
+          grade,
+          remarks,
+          assessment:assessments!inner(
+            subject_component_id,
+            assessment_type:assessment_types(name)
+          )
+        `)
+        .eq("student_id", student.id)
+        .eq("assessment.class_id", classId)
+        .eq("assessment.session_id", sessionId)
+        .eq("assessment.term_id", termId)
+
+      const initialScores: Record<string, { ca1: string; ca2: string; exam: string; remark: string }> = {}
+      classComponentsList.forEach(comp => {
+        initialScores[comp.component_id] = { ca1: "", ca2: "", exam: "", remark: "" }
+      })
+
+      data?.forEach(item => {
+        const compId = item.assessment?.subject_component_id
+        const typeName = item.assessment?.assessment_type?.name || ""
+        if (!compId || !initialScores[compId]) return
+
+        const scoreStr = item.score !== null && item.score !== undefined ? String(item.score) : ""
+        if (typeName.includes("CA Test 1")) {
+          initialScores[compId].ca1 = scoreStr
+        } else if (typeName.includes("CA Test 2")) {
+          initialScores[compId].ca2 = scoreStr
+        } else if (typeName.includes("Exam")) {
+          initialScores[compId].exam = scoreStr
+          if (item.remarks) initialScores[compId].remark = item.remarks
+        }
+      })
+      setComponentScores(initialScores)
+    } catch (err) {
+      console.error("Error loading component scores:", err)
+      toast.error("Failed to load component scores")
+    } finally {
+      setLoadingComponentScores(false)
+    }
+  }
+
+  const handleComponentScoreChange = (componentId: string, field: "ca1" | "ca2" | "exam" | "remark", value: string) => {
+    // Input validation for scores
+    if (field !== "remark") {
+      if (value && !/^\d*\.?\d*$/.test(value)) return
+      
+      const comp = classComponentsList.find(c => c.component_id === componentId)
+      if (comp) {
+        const maxScore = field === "exam" ? comp.max_exam : comp.max_ca / 2
+        const numVal = parseFloat(value)
+        if (value && numVal > maxScore) {
+          toast.warning(`Maximum score for ${comp.name} ${field.toUpperCase()} is ${maxScore}`)
+          return
+        }
+      }
+    }
+
+    setComponentScores(prev => ({
+      ...prev,
+      [componentId]: {
+        ...prev[componentId],
+        [field]: value
+      }
+    }))
+  }
+
+  const handleSaveComponentScores = async () => {
+    if (!editingStudentForComponents) return
+    setSavingComponentScores(true)
+    try {
+      for (const comp of classComponentsList) {
+        const scoreObj = componentScores[comp.component_id] || { ca1: "", ca2: "", exam: "", remark: "" }
+        const caCount = comp.ca_count ?? 2
+        const ca1Max = caCount === 1 ? comp.max_ca : (comp.max_ca / 2)
+        const ca2Max = caCount === 1 ? 0 : (comp.max_ca / 2)
+        const examMax = comp.max_exam
+
+        const ca1Val = parseFloat(scoreObj.ca1)
+        const ca2Val = caCount === 1 ? 0 : parseFloat(scoreObj.ca2)
+        const examVal = parseFloat(scoreObj.exam)
+
+        if (!isNaN(ca1Val) && (ca1Val < 0 || ca1Val > ca1Max)) {
+          throw new Error(`CA 1 score for ${comp.name} must be between 0 and ${ca1Max}`)
+        }
+        if (caCount === 2 && !isNaN(ca2Val) && (ca2Val < 0 || ca2Val > ca2Max)) {
+          throw new Error(`CA 2 score for ${comp.name} must be between 0 and ${ca2Max}`)
+        }
+        if (!isNaN(examVal) && (examVal < 0 || examVal > examMax)) {
+          throw new Error(`Exam score for ${comp.name} must be between 0 and ${examMax}`)
+        }
+
+        const scorePayload = {
+          ca1: isNaN(ca1Val) ? null : ca1Val,
+          ca2: caCount === 1 ? null : (isNaN(ca2Val) ? null : ca2Val),
+          exam: isNaN(examVal) ? null : examVal
+        }
+
+        const res = await saveStudentScore(
+          editingStudentForComponents.id,
+          selectedSubjectId,
+          classId,
+          sessionId,
+          termId,
+          scorePayload,
+          scoreObj.remark || null,
+          comp.component_id
+        )
+
+        if (res && !res.success) {
+          throw new Error(res.error || `Failed to save score for component ${comp.name}`)
+        }
+      }
+      toast.success(`Sub-component scores saved successfully!`)
+      setEditingStudentForComponents(null)
+      fetchScores()
+    } catch (err: any) {
+      console.error("Error saving component scores:", err)
+      toast.error(err.message || "Failed to save sub-component scores")
+    } finally {
+      setSavingComponentScores(false)
     }
   }
 
@@ -136,23 +288,34 @@ export function SubjectResultView({
 
   // Map of original database scores per student for detecting actual changes
   const originalScoresMap = useMemo(() => {
-    const map: Record<string, { ca1: string; ca2: string; exam: string; remark: string }> = {}
+    const tempMap: Record<string, { ca1: number | null; ca2: number | null; exam: number | null; remark: string }> = {}
 
     scoresData.forEach((item: any) => {
       const stId = item.student_id
       const typeName = item.assessment?.assessment_type?.name || ""
+      const scoreVal = item.score !== null && item.score !== undefined ? Number(item.score) : 0
 
-      if (!map[stId]) {
-        map[stId] = { ca1: "", ca2: "", exam: "", remark: "" }
+      if (!tempMap[stId]) {
+        tempMap[stId] = { ca1: null, ca2: null, exam: null, remark: "" }
       }
 
       if (typeName.includes("CA Test 1")) {
-        map[stId].ca1 = item.score !== null && item.score !== undefined ? String(item.score) : ""
+        tempMap[stId].ca1 = (tempMap[stId].ca1 || 0) + scoreVal
       } else if (typeName.includes("CA Test 2")) {
-        map[stId].ca2 = item.score !== null && item.score !== undefined ? String(item.score) : ""
+        tempMap[stId].ca2 = (tempMap[stId].ca2 || 0) + scoreVal
       } else if (typeName.includes("Exam")) {
-        map[stId].exam = item.score !== null && item.score !== undefined ? String(item.score) : ""
-        if (item.remarks) map[stId].remark = item.remarks
+        tempMap[stId].exam = (tempMap[stId].exam || 0) + scoreVal
+        if (item.remarks) tempMap[stId].remark = item.remarks
+      }
+    })
+
+    const map: Record<string, { ca1: string; ca2: string; exam: string; remark: string }> = {}
+    Object.entries(tempMap).forEach(([stId, data]) => {
+      map[stId] = {
+        ca1: data.ca1 !== null ? String(data.ca1) : "",
+        ca2: data.ca2 !== null ? String(data.ca2) : "",
+        exam: data.exam !== null ? String(data.exam) : "",
+        remark: data.remark,
       }
     })
 
@@ -262,6 +425,40 @@ export function SubjectResultView({
       setIsEditing(false)
     }
   }, [classId, sessionId, termId, selectedSubjectId])
+
+  useEffect(() => {
+    async function checkComponents() {
+      if (!classId || !selectedSubjectId) return
+      const { data } = await supabase
+        .from("class_subject_components")
+        .select(`
+          id,
+          subject_component_id,
+          max_ca,
+          max_exam,
+          ca_count,
+          component:subject_components(id, name)
+        `)
+        .eq("class_id", classId)
+        .eq("subject_id", selectedSubjectId)
+      
+      if (data) {
+        setClassComponentsList(data.map((c: any) => ({
+          id: c.id,
+          component_id: c.subject_component_id,
+          name: c.component?.name || "",
+          max_ca: c.max_ca ?? 40,
+          max_exam: c.max_exam ?? 60,
+          ca_count: c.ca_count ?? 2
+        })))
+        setHasComponents(data.length > 0)
+      } else {
+        setClassComponentsList([])
+        setHasComponents(false)
+      }
+    }
+    checkComponents()
+  }, [classId, selectedSubjectId, supabase])
 
   // Initialize draft scores whenever scoresData or students change
   useEffect(() => {
@@ -1073,6 +1270,11 @@ export function SubjectResultView({
                         )}
                       </Button>
                     </>
+                  ) : hasComponents ? (
+                    <div className="text-xs text-muted-foreground bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1 font-semibold flex items-center gap-1.5 shadow-2xs">
+                      <BookOpen className="h-3.5 w-3.5 text-emerald-600" />
+                      Derived from Sub-components
+                    </div>
                   ) : (
                     <Button
                       variant="outline"
@@ -1139,10 +1341,21 @@ export function SubjectResultView({
                                 {row.student.last_name[0]}
                               </AvatarFallback>
                             </Avatar>
-                            <div className="truncate">
+                            <div className="flex-1 truncate">
                               <p className="font-bold text-[11px] text-foreground leading-tight truncate">{row.student.first_name} {row.student.last_name}</p>
                               <p className="text-[9px] text-muted-foreground font-mono leading-none">{row.student.student_id}</p>
                             </div>
+                            {hasComponents && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleOpenComponentModal(row.student)}
+                                className="h-5 w-5 ml-auto text-muted-foreground hover:text-emerald-600 transition-colors"
+                                title="Edit Sub-component Scores"
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
 
@@ -1507,6 +1720,131 @@ export function SubjectResultView({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Component Scores Editing Dialog */}
+      <Dialog open={editingStudentForComponents !== null} onOpenChange={(open) => !open && setEditingStudentForComponents(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-6 overflow-hidden">
+          <DialogHeader className="pb-4 border-b shrink-0">
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-emerald-600" />
+              <span>Edit Sub-component Scores</span>
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Configure component scores for <strong>{editingStudentForComponents?.first_name} {editingStudentForComponents?.last_name}</strong> ({editingStudentForComponents?.student_id}).
+            </DialogDescription>
+          </DialogHeader>
+
+          {loadingComponentScores ? (
+            <div className="flex-1 flex flex-col items-center justify-center py-16 gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+              <p className="text-xs text-muted-foreground">Fetching sub-component scores...</p>
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto my-4 pr-1 space-y-4 scrollbar-thin">
+              <div className="border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow>
+                      <TableHead className="font-semibold text-xs text-foreground px-4">Component</TableHead>
+                      <TableHead className="w-24 text-center font-semibold text-xs text-foreground px-2">CA 1</TableHead>
+                      <TableHead className="w-24 text-center font-semibold text-xs text-foreground px-2">CA 2</TableHead>
+                      <TableHead className="w-24 text-center font-semibold text-xs text-foreground px-2">Exam</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {classComponentsList.map((comp) => {
+                      const score = componentScores[comp.component_id] || { ca1: "", ca2: "", exam: "", remark: "" }
+                      const caCount = comp.ca_count ?? 2
+                      const ca1Max = caCount === 1 ? comp.max_ca : (comp.max_ca / 2)
+                      const ca2Max = caCount === 1 ? 0 : (comp.max_ca / 2)
+                      const examMax = comp.max_exam
+
+                      return (
+                        <TableRow key={comp.component_id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-900/30">
+                          <TableCell className="font-semibold text-xs text-zinc-700 dark:text-zinc-300 px-4">
+                            <div>{comp.name}</div>
+                            <div className="text-[10px] text-zinc-400 font-mono">Max CA: {comp.max_ca} ({caCount} CA{caCount > 1 ? 's' : ''}) • Max Exam: {comp.max_exam}</div>
+                          </TableCell>
+                          
+                          <TableCell className="p-2 text-center align-middle">
+                            <div className="space-y-1">
+                              <Input
+                                type="text"
+                                value={score.ca1}
+                                onChange={(e) => handleComponentScoreChange(comp.component_id, "ca1", e.target.value)}
+                                className="h-8 w-20 text-center font-mono text-xs mx-auto"
+                                placeholder={`max ${ca1Max}`}
+                              />
+                            </div>
+                          </TableCell>
+
+                          <TableCell className="p-2 text-center align-middle">
+                            <div className="space-y-1">
+                              {caCount === 2 ? (
+                                <Input
+                                  type="text"
+                                  value={score.ca2}
+                                  onChange={(e) => handleComponentScoreChange(comp.component_id, "ca2", e.target.value)}
+                                  className="h-8 w-20 text-center font-mono text-xs mx-auto"
+                                  placeholder={`max ${ca2Max}`}
+                                />
+                              ) : (
+                                <span className="text-[10px] text-zinc-400 font-bold">—</span>
+                              )}
+                            </div>
+                          </TableCell>
+
+                          <TableCell className="p-2 text-center align-middle">
+                            <div className="space-y-1">
+                              <Input
+                                type="text"
+                                value={score.exam}
+                                onChange={(e) => handleComponentScoreChange(comp.component_id, "exam", e.target.value)}
+                                className="h-8 w-20 text-center font-mono text-xs mx-auto"
+                                placeholder={`max ${examMax}`}
+                              />
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="pt-4 border-t flex flex-row items-center justify-between gap-3 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditingStudentForComponents(null)}
+              className="h-8 text-xs"
+              disabled={savingComponentScores}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSaveComponentScores}
+              disabled={savingComponentScores || loadingComponentScores}
+              className="h-8 px-4 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs gap-1.5"
+            >
+              {savingComponentScores ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Saving Scores...
+                </>
+              ) : (
+                <>
+                  <Save className="h-3.5 w-3.5" />
+                  Save Scores
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

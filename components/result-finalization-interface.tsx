@@ -18,11 +18,12 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle2, ChevronLeft, Save, SlidersHorizontal, ArrowLeft, Loader2, RotateCcw, Pencil, Printer, ChevronDown, Download, FileText, Image as ImageIcon, ChevronsUpDown, Check, Filter, ExternalLink, BookOpen, User, Users, Book, Award, TrendingUp, BarChart3 } from "lucide-react"
+import { CheckCircle2, ChevronLeft, Save, SlidersHorizontal, ArrowLeft, Loader2, RotateCcw, Pencil, Printer, ChevronDown, Download, FileText, Image as ImageIcon, ChevronsUpDown, Check, Filter, ExternalLink, BookOpen, User, Users, Book, Award, TrendingUp, BarChart3, Trash2 } from "lucide-react"
 import { PrintableReportCard } from "@/components/printable-report-card"
 import { SessionTermSelector } from "@/components/session-term-selector"
 import { SubjectResultView } from "@/components/subject-result-view"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu"
 import { exportReportCardsAsPDF, exportReportCardsAsImages } from "@/lib/export-report-card"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
@@ -40,6 +41,7 @@ type Student = {
 }
 
 type Score = {
+  subject_id?: string
   subject_name: string
   ca1: number | null
   ca2: number | null
@@ -250,7 +252,7 @@ export function ResultFinalizationInterface({
     return term?.end_date || null
   }
 
-  const getClassSubjectAverages = async (cId: string, sId: string, tId: string) => {
+  const getClassSubjectStats = async (cId: string, sId: string, tId: string) => {
     try {
       const { data: assessments } = await supabase
         .from("assessments")
@@ -285,18 +287,23 @@ export function ResultFinalizationInterface({
         subjectStudentTotals[subjName][stId] += item.score || 0
       })
 
-      const classAverages: Record<string, number> = {}
+      const classStats: Record<string, { min: number; max: number; average: number }> = {}
       Object.entries(subjectStudentTotals).forEach(([subjName, stTotals]) => {
         const studentCount = Object.keys(stTotals).length
         if (studentCount > 0) {
-          const totalSum = Object.values(stTotals).reduce((sum, val) => sum + val, 0)
-          classAverages[subjName] = Math.round((totalSum / studentCount) * 10) / 10
+          const totalScores = Object.values(stTotals)
+          const totalSum = totalScores.reduce((sum, val) => sum + val, 0)
+          classStats[subjName] = {
+            min: Math.min(...totalScores),
+            max: Math.max(...totalScores),
+            average: Math.round((totalSum / studentCount) * 100) / 100
+          }
         }
       })
 
-      return classAverages
+      return classStats
     } catch (err) {
-      console.error("Error computing class subject averages:", err)
+      console.error("Error computing class subject stats:", err)
       return {}
     }
   }
@@ -312,7 +319,7 @@ export function ResultFinalizationInterface({
       const computedResumption = getResumptionDate(rawTerm, currentSession)
       const currentTerm = rawTerm ? { ...rawTerm, resumption_date: computedResumption } : null
 
-      const classAverages = await getClassSubjectAverages(initialClassId, sessionId, termId)
+      const classStats = await getClassSubjectStats(initialClassId, sessionId, termId)
 
       for (const stId of studentIds) {
         const studentObj = students.find((s) => s.id === stId) || selectedStudent
@@ -330,7 +337,8 @@ export function ResultFinalizationInterface({
               session_id,
               term_id,
               subject:subjects(name, code),
-              assessment_type:assessment_types(name)
+              assessment_type:assessment_types(name),
+              subject_component:subject_components(id, name)
             )
           `)
           .eq("student_id", stId)
@@ -342,7 +350,11 @@ export function ResultFinalizationInterface({
           if (ass?.session_id && ass.session_id !== sessionId) return
           if (ass?.term_id && ass.term_id !== termId) return
 
-          const subjName = ass?.subject?.name
+          const subjNameRaw = ass?.subject?.name
+          const subjectComponent = ass?.subject_component
+          const subjName = subjectComponent
+            ? `${subjNameRaw}: ${subjectComponent.name}`
+            : subjNameRaw
           const assessmentType = ass?.assessment_type?.name
 
           if (!subjName) return
@@ -356,6 +368,9 @@ export function ResultFinalizationInterface({
               total: 0,
               grade: "",
               remark: "",
+              classMin: classStats[subjNameRaw]?.min ?? null,
+              classMax: classStats[subjNameRaw]?.max ?? null,
+              classAvg: classStats[subjNameRaw]?.average ?? null,
             }
           }
 
@@ -373,8 +388,6 @@ export function ResultFinalizationInterface({
             (subjectScoresMap[subjName].ca1 || 0) +
             (subjectScoresMap[subjName].ca2 || 0) +
             (subjectScoresMap[subjName].exam || 0)
-          
-          subjectScoresMap[subjName].subject_average = classAverages[subjName] ?? null
         })
 
         // Sort subjectScoresMap by class subjects order
@@ -398,7 +411,9 @@ export function ResultFinalizationInterface({
           .forEach((k) => {
             sortedSubjectScoresMap[k] = {
               ...subjectScoresMap[k],
-              subject_average: classAverages[k] ?? null
+              classMin: classStats[k]?.min ?? null,
+              classMax: classStats[k]?.max ?? null,
+              classAvg: classStats[k]?.average ?? null,
             }
           })
 
@@ -652,8 +667,9 @@ export function ResultFinalizationInterface({
                 class_id,
                 session_id,
                 term_id,
-                subject:subjects(name),
-                assessment_type:assessment_types(name)
+                subject:subjects(id, name),
+                assessment_type:assessment_types(name),
+                subject_component:subject_components(id, name)
               )
             `)
             .eq("student_id", selectedStudent.id)
@@ -684,14 +700,21 @@ export function ResultFinalizationInterface({
         // Organize scores by subject
         const scoresBySubject = new Map<string, any>()
         scoresData?.forEach((score: any) => {
-          const subjectName = score.assessment?.subject?.name
+          const subjectNameRaw = score.assessment?.subject?.name
+          const subjectId = score.assessment?.subject?.id
+          const subjectComponent = score.assessment?.subject_component
+          const subjectName = subjectComponent
+            ? `${subjectNameRaw}: ${subjectComponent.name}`
+            : subjectNameRaw
           const assessmentType = score.assessment?.assessment_type?.name
 
           if (!subjectName) return
 
           if (!scoresBySubject.has(subjectName)) {
             scoresBySubject.set(subjectName, {
+              subject_id: subjectId,
               subject_name: subjectName,
+              subject_name_raw: subjectNameRaw,
               ca1: null,
               ca2: null,
               exam: null,
@@ -720,14 +743,14 @@ export function ResultFinalizationInterface({
         const classSubjectOrder = classSubjs?.map((cs: any) => cs.subject?.name).filter(Boolean) || []
         const orderMap = new Map(classSubjectOrder.map((name: string, index: number) => [name.toLowerCase(), index]))
 
-        const classAverages = await getClassSubjectAverages(initialClassId || classData?.id, sessionId, termId)
+        const classStats = await getClassSubjectStats(initialClassId || classData?.id, sessionId, termId)
 
         // Calculate totals and sort by unified class subject order
         const scoresArray = Array.from(scoresBySubject.values())
           .map((s) => ({
             ...s,
             total: (s.ca1 || 0) + (s.ca2 || 0) + (s.exam || 0),
-            subject_average: classAverages[s.subject_name] ?? null,
+            subject_average: classStats[s.subject_name_raw || s.subject_name]?.average ?? null,
           }))
           .sort((a, b) => {
             const indexA = orderMap.has(a.subject_name.toLowerCase()) ? orderMap.get(a.subject_name.toLowerCase())! : 999
@@ -870,6 +893,59 @@ export function ResultFinalizationInterface({
       setAffectiveSkills((prev) => prev.map((s) => ({ ...s, rating })))
     } else {
       setPsychomotorSkills((prev) => prev.map((s) => ({ ...s, rating })))
+    }
+  }
+
+  const handleClearSubjectScores = async (subjectName: string, subjectId?: string) => {
+    if (!selectedStudent) return
+
+    try {
+      let targetSubjectId = subjectId
+      if (!targetSubjectId) {
+        const { data: sub } = await supabase
+          .from("subjects")
+          .select("id")
+          .eq("name", subjectName)
+          .single()
+        targetSubjectId = sub?.id
+      }
+
+      if (!targetSubjectId) {
+        toast.error("Could not locate subject ID")
+        return
+      }
+
+      const { data: assessments, error: assErr } = await supabase
+        .from("assessments")
+        .select("id")
+        .eq("class_id", initialClassId || classData?.id)
+        .eq("session_id", sessionId)
+        .eq("term_id", termId)
+        .eq("subject_id", targetSubjectId)
+
+      if (assErr) throw assErr
+
+      if (assessments && assessments.length > 0) {
+        const assIds = assessments.map((a: any) => a.id)
+        const { error: delErr } = await supabase
+          .from("student_scores")
+          .delete()
+          .eq("student_id", selectedStudent.id)
+          .in("assessment_id", assIds)
+
+        if (delErr) throw delErr
+      }
+
+      // Optimistically update local scores state
+      setScores(prev => prev.filter(s => s.subject_name !== subjectName))
+      setRefreshKey(prev => prev + 1)
+
+      toast.success(`Scores Cleared`, {
+        description: `Cleared scores for ${subjectName} (${selectedStudent.first_name} ${selectedStudent.last_name}).`,
+      })
+    } catch (err: any) {
+      console.error("Error clearing scores:", err)
+      toast.error("Clear Scores Failed", { description: err.message || "Failed to clear scores" })
     }
   }
 
@@ -1607,7 +1683,10 @@ export function ResultFinalizationInterface({
 
                 {/* Scores Table */}
                 <div>
-                  <h4 className="mb-2 text-xs font-black uppercase tracking-wider text-muted-foreground">Scores</h4>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground">Scores</h4>
+                    <span className="text-[10px] text-muted-foreground font-medium">Right-click subject to clear scores</span>
+                  </div>
                   <div className="overflow-x-auto rounded-lg border border-zinc-200/80 dark:border-zinc-800/80">
                     <table className="w-full border-collapse">
                       <thead>
@@ -1622,16 +1701,29 @@ export function ResultFinalizationInterface({
                       </thead>
                       <tbody>
                         {scores.map((score, index) => (
-                          <tr key={index} className="border-b last:border-0 hover:bg-muted/20 text-xs">
-                            <td className="border-r py-2 px-3 font-semibold">{score.subject_name}</td>
-                            <td className="border-r py-2 px-3 text-center text-muted-foreground">{score.ca1 ?? "-"}</td>
-                            <td className="border-r py-2 px-3 text-center text-muted-foreground">{score.ca2 ?? "-"}</td>
-                            <td className="border-r py-2 px-3 text-center text-muted-foreground">{score.exam ?? "-"}</td>
-                            <td className="border-r py-2 px-3 text-center font-bold">
-                              {score.total}
-                            </td>
-                            <td className="py-2 px-3 text-center font-bold">{score.grade}</td>
-                          </tr>
+                          <ContextMenu key={index}>
+                            <ContextMenuTrigger asChild>
+                              <tr className="border-b last:border-0 hover:bg-muted/20 text-xs cursor-context-menu select-none">
+                                <td className="border-r py-2 px-3 font-semibold">{score.subject_name}</td>
+                                <td className="border-r py-2 px-3 text-center text-muted-foreground">{score.ca1 ?? "-"}</td>
+                                <td className="border-r py-2 px-3 text-center text-muted-foreground">{score.ca2 ?? "-"}</td>
+                                <td className="border-r py-2 px-3 text-center text-muted-foreground">{score.exam ?? "-"}</td>
+                                <td className="border-r py-2 px-3 text-center font-bold">
+                                  {score.total}
+                                </td>
+                                <td className="py-2 px-3 text-center font-bold">{score.grade}</td>
+                              </tr>
+                            </ContextMenuTrigger>
+                            <ContextMenuContent className="w-52">
+                              <ContextMenuItem 
+                                onClick={() => handleClearSubjectScores(score.subject_name, score.subject_id)}
+                                className="text-rose-600 dark:text-rose-400 font-semibold focus:text-rose-600 focus:bg-rose-50 dark:focus:bg-rose-950/50 gap-2 cursor-pointer"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Clear {score.subject_name} Scores
+                              </ContextMenuItem>
+                            </ContextMenuContent>
+                          </ContextMenu>
                         ))}
                       </tbody>
                     </table>

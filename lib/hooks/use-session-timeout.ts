@@ -9,8 +9,8 @@ const WARNING_DURATION = 5 * 60 * 1000 // 5 minutes before timeout
 
 export function useSessionTimeout(onWarning?: () => void) {
   const router = useRouter()
-  const timeoutRef = useRef<NodeJS.Timeout>()
-  const warningRef = useRef<NodeJS.Timeout>()
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
+  const warningRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   const handleLogout = useCallback(async () => {
     const supabase = createClient()

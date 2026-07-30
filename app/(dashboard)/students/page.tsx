@@ -29,8 +29,6 @@ export default async function StudentsPage({
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
 
-  let countQuery = supabase.from("students").select("id", { count: "exact", head: true }).is("deleted_at", null)
-
   if (user.role === "teacher") {
     // Get teacher's assigned class IDs
     const { data: teacherData } = await supabase.from("teachers").select("id").eq("user_id", user.id).single()
@@ -61,12 +59,6 @@ export default async function StudentsPage({
           .is("deleted_at", null)
           .in("student_enrollments.class_id", classIds)
           .order("created_at", { ascending: false })
-
-        countQuery = supabase
-          .from("students")
-          .select("id, student_enrollments!inner(class_id)", { count: "exact", head: true })
-          .is("deleted_at", null)
-          .in("student_enrollments.class_id", classIds)
       } else {
         // Teacher has no assigned classes, return empty array
         studentsQuery = supabase.from("students").select("*").eq("id", "00000000-0000-0000-0000-000000000000")

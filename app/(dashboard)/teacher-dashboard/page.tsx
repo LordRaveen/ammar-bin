@@ -31,7 +31,7 @@ export default async function TeacherDashboardPage() {
   const activeTerm = activeSession?.terms?.find((t: any) => t.is_active)
 
   // Get teacher's assigned classes
-  const { data: classAssignments } = await supabase
+  const { data: classAssignmentsData } = await supabase
     .from("teacher_class_assignments")
     .select(`
       id,
@@ -47,6 +47,7 @@ export default async function TeacherDashboardPage() {
     .eq("teacher_id", teacher.id)
     .eq("session_id", activeSession?.id)
 
+  const classAssignments = classAssignmentsData as any[] | null
   const assignedClasses = classAssignments?.map((a) => a.classes).filter(Boolean) || []
 
   // Get total students count across all assigned classes
@@ -62,7 +63,7 @@ export default async function TeacherDashboardPage() {
   }
 
   // Get subject assignments
-  const { data: subjectAssignments } = await supabase
+  const { data: subjectAssignmentsData } = await supabase
     .from("teacher_subject_assignments")
     .select(`
       id,
@@ -77,6 +78,8 @@ export default async function TeacherDashboardPage() {
     `)
     .eq("teacher_id", teacher.id)
     .eq("session_id", activeSession?.id)
+
+  const subjectAssignments = subjectAssignmentsData as any[] | null
 
   // Calculate pending assessments (subjects where scores haven't been entered)
   let pendingAssessments = 0

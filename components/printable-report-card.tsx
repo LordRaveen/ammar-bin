@@ -14,23 +14,51 @@ export interface PrintableReportCardProps {
 
 const DEFAULT_AFFECTIVE_SKILLS = [
   "Punctuality",
-  "Politeness",
   "Neatness",
+  "Politeness",
   "Honesty",
-  "Leadership skill",
-  "Cooperation",
-  "Attentiveness",
   "Perseverance",
-  "Attitude to work",
+  "Relationship with others",
+  "Response to Home Work",
+  "Attentiveness",
+  "Emotional stability"
 ]
 
 const DEFAULT_PSYCHOMOTOR_SKILLS = [
-  "Handwriting",
+  "Ablution",
+  "Prayer (Salat)",
   "Verbal fluency",
-  "Sports",
-  "Handling tools",
-  "Drawing & painting",
+  "Handwriting"
 ]
+
+const mapRatingToLetter = (rating: any) => {
+  if (rating === 5 || rating === '5') return 'A'
+  if (rating === 4 || rating === '4') return 'B'
+  if (rating === 3 || rating === '3') return 'C'
+  if (rating === 2 || rating === '2') return 'D'
+  if (rating === 1 || rating === '1') return 'E'
+  return rating || '—'
+}
+
+const getGradeFromScore = (score: number) => {
+  if (score >= 85) return "A+"
+  if (score >= 75) return "A"
+  if (score >= 65) return "B+"
+  if (score >= 55) return "B"
+  if (score >= 45) return "C"
+  if (score >= 35) return "D"
+  return "F"
+}
+
+const getRemarkFromScore = (score: number) => {
+  if (score >= 85) return "Outstanding"
+  if (score >= 75) return "Excellent"
+  if (score >= 65) return "Very Good"
+  if (score >= 55) return "Good"
+  if (score >= 45) return "Average"
+  if (score >= 35) return "Weak"
+  return "Fail"
+}
 
 export function PrintableReportCard({
   student,
@@ -43,469 +71,766 @@ export function PrintableReportCard({
 }: PrintableReportCardProps) {
   const studentFullName = `${student?.first_name || ""} ${student?.middle_name ? student.middle_name + " " : ""}${student?.last_name || ""}`.trim().toUpperCase()
 
-  let studentAge = "—"
-  if (student?.date_of_birth) {
-    const dob = new Date(student.date_of_birth)
-    const diffMs = Date.now() - dob.getTime()
-    const ageDate = new Date(diffMs)
-    studentAge = `${Math.abs(ageDate.getUTCFullYear() - 1970)} Yrs`
+  // Format Term Ends & Next Term Begins
+  const termEndDate = term?.end_date
+    ? new Date(term.end_date).toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' })
+    : "—"
+
+  const nextTermBegins = term?.resumption_date || term?.next_term_resumption_date
+    ? new Date(term.resumption_date || term.next_term_resumption_date).toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' })
+    : "—"
+
+  // Process and group subjects if they contain a colon ':'
+  interface GroupedSubject {
+    subjName: string
+    isGrouped: boolean
+    subRows: {
+      subName: string
+      ca1: number | null
+      ca2: number | null
+      exam: number | null
+      total: number
+    }[]
+    total: number
+    grade: string
+    classMin: number | null
+    classMax: number | null
+    classAvg: number | null
+    remark: string
   }
 
-  const resumptionDate = term?.resumption_date || term?.next_term_resumption_date
-    ? new Date(term.resumption_date || term.next_term_resumption_date).toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' })
-    : term?.end_date
-      ? new Date(term.end_date).toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' })
-      : "—"
+  const groupedSubjects: Record<string, GroupedSubject> = {}
 
-  const totalDaysInTerm = result?.total_school_days || term?.total_school_days || 100
-  const daysPresent = result?.attendance_present !== undefined && result?.attendance_present !== null ? result.attendance_present : "—"
-  const daysAbsent = typeof daysPresent === 'number' && typeof totalDaysInTerm === 'number' ? Math.max(0, totalDaysInTerm - daysPresent) : "—"
+  Object.entries(subjectScores || {}).forEach(([fullSubjName, data]: [string, any]) => {
+    let parentName = fullSubjName
+    let subName = ""
+    let hasSeparator = false
 
-  const totalSubjects = Object.keys(subjectScores || {}).length
-  const totalPossibleScore = totalSubjects * 100
-  const totalScore = result?.total_score || Object.values(subjectScores || {}).reduce((sum: number, s: any) => sum + (s.total || 0), 0)
-  const averageScore = result?.average_score !== undefined && result?.average_score !== null 
-    ? result.average_score 
-    : (totalPossibleScore > 0 ? (totalScore / totalPossibleScore) * 100 : 0)
+    if (fullSubjName.includes(":")) {
+      const parts = fullSubjName.split(":")
+      parentName = parts[0].trim()
+      subName = parts[1].trim()
+      hasSeparator = true
+    }
 
-  const overallGrade = averageScore >= 80 ? 'A' : averageScore >= 60 ? 'B' : averageScore >= 55 ? 'C' : averageScore >= 45 ? 'D' : 'F'
+    const caVal = data?.ca1 !== undefined && data?.ca1 !== null ? data.ca1 : null
+    const ca2Val = data?.ca2 !== undefined && data?.ca2 !== null ? data.ca2 : null
+    const examVal = data?.exam !== undefined && data?.exam !== null ? data.exam : null
+    const totalVal = data?.total !== undefined ? data.total : ((caVal || 0) + (ca2Val || 0) + (examVal || 0))
 
-  const teacherRemarkText = result?.teacher_remark || result?.teacher_comment || "—"
-  const principalRemarkText = result?.principal_remark || result?.principal_comment || "—"
+    if (hasSeparator) {
+      if (!groupedSubjects[parentName]) {
+        groupedSubjects[parentName] = {
+          subjName: parentName,
+          isGrouped: true,
+          subRows: [],
+          total: 0,
+          grade: "",
+          classMin: 0,
+          classMax: 0,
+          classAvg: 0,
+          remark: ""
+        }
+      }
+      groupedSubjects[parentName].subRows.push({
+        subName,
+        ca1: caVal,
+        ca2: ca2Val,
+        exam: examVal,
+        total: totalVal
+      })
+      groupedSubjects[parentName].total += totalVal
+      groupedSubjects[parentName].classMin = (groupedSubjects[parentName].classMin || 0) + (data?.classMin || 0)
+      groupedSubjects[parentName].classMax = (groupedSubjects[parentName].classMax || 0) + (data?.classMax || 0)
+      groupedSubjects[parentName].classAvg = (groupedSubjects[parentName].classAvg || 0) + (data?.classAvg || 0)
+    } else {
+      groupedSubjects[fullSubjName] = {
+        subjName: fullSubjName,
+        isGrouped: false,
+        subRows: [
+          {
+            subName: "",
+            ca1: caVal,
+            ca2: ca2Val,
+            exam: examVal,
+            total: totalVal
+          }
+        ],
+        total: totalVal,
+        grade: data?.grade || "",
+        classMin: data?.classMin !== undefined ? data.classMin : null,
+        classMax: data?.classMax !== undefined ? data.classMax : null,
+        classAvg: data?.classAvg !== undefined ? data.classAvg : null,
+        remark: data?.remark || data?.remarks || ""
+      }
+    }
+  })
 
-  const schoolPhone = school?.phone_primary || school?.phone || school?.primary_phone || "—"
-  const schoolPhoneSecondary = school?.phone_secondary
+  // Finalize parent fields for grouped subjects
+  Object.values(groupedSubjects).forEach((subj) => {
+    if (subj.isGrouped) {
+      const avgPercentage = subj.total / subj.subRows.length
+      subj.grade = getGradeFromScore(avgPercentage)
+      subj.remark = getRemarkFromScore(avgPercentage)
+    } else {
+      if (!subj.grade) {
+        subj.grade = getGradeFromScore(subj.total)
+      }
+      if (!subj.remark) {
+        subj.remark = getRemarkFromScore(subj.total)
+      }
+    }
+  })
 
+  // Dynamic Skills Splitting
   const getSkillRating = (category: string, name: string) => {
     const found = skills?.find(
       (s) => s.skill_category === category && s.skill_name?.toLowerCase() === name.toLowerCase()
     )
-    return found && found.rating !== null && found.rating !== undefined ? found.rating : "—"
+    const val = found && found.rating !== null && found.rating !== undefined ? found.rating : "—"
+    return mapRatingToLetter(val)
   }
+
+  const affectiveFromData = skills
+    .filter((s) => s.skill_category === "Affective")
+    .map((s) => s.skill_name)
+  const affectiveUnique = Array.from(new Set(affectiveFromData))
+  const affectiveListToUse = affectiveUnique.length > 0 ? affectiveUnique : DEFAULT_AFFECTIVE_SKILLS
+
+  const midPoint = Math.ceil(affectiveListToUse.length / 2)
+  const affectiveCol1 = affectiveListToUse.slice(0, midPoint)
+  const affectiveCol2 = affectiveListToUse.slice(midPoint)
+
+  const psychomotorFromData = skills
+    .filter((s) => s.skill_category === "Psychomotor")
+    .map((s) => s.skill_name)
+  const psychomotorUnique = Array.from(new Set(psychomotorFromData))
+  const psychomotorListToUse = psychomotorUnique.length > 0 ? psychomotorUnique : DEFAULT_PSYCHOMOTOR_SKILLS
+
+  // Summary Metrics
+  const totalScore = result?.total_score || Object.values(groupedSubjects).reduce((sum, s) => sum + s.total, 0)
+  const totalSubjects = Object.keys(subjectScores || {}).length
+  const totalPossibleScore = totalSubjects * 100
+  const averageScore = result?.average_score !== undefined && result?.average_score !== null
+    ? result.average_score
+    : (totalPossibleScore > 0 ? (totalScore / totalPossibleScore) * 100 : 0)
+
+  const overallGrade = getGradeFromScore(averageScore)
+
+  const teacherRemarkText = result?.teacher_remark || result?.teacher_comment || "—"
+  const principalRemarkText = result?.principal_remark || result?.principal_comment || "—"
 
   return (
     <div className="report-card-wrapper">
       <style>{`
         .report-card-wrapper {
-          background: #e5e5e5;
-          font-family: 'Georgia', 'Times New Roman', serif;
-          color: #111;
+          background: #f3f4f6;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+          color: #111827;
           display: flex;
           justify-content: center;
+          padding: 15px 0;
         }
 
         .report-card-wrapper * { box-sizing: border-box; }
-        
+
         .report-card-page {
-          width: 210mm;
-          height: 297mm;
-          margin: 10mm auto;
-          padding: 8mm 9mm;
+          width: 297mm;
+          height: 210mm;
+          margin: 0 auto;
           background: #fff;
-          border: 3px solid #000;
+          border: 1px solid #e2e4e9;
+          border-radius: 14px;
+          padding: 8mm 12mm;
+          overflow: hidden;
           display: flex;
           flex-direction: column;
-          box-shadow: 0 0 10px rgba(0,0,0,0.1);
+          box-shadow: 0 1px 3px rgba(0,0,0,0.06);
         }
 
-        @page {
-          size: A4 portrait;
+        /* ===== Header row ===== */
+        .header-row {
+          display: grid;
+          grid-template-columns: 190px 1fr 190px;
+          align-items: center;
+          gap: 14px;
+          flex-shrink: 0;
+        }
+        .header-left { display:flex; align-items:center; justify-content: flex-start; }
+        .logo {
+          width: 58px;
+          height: 58px;
+          border: 2px solid #333;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 11px;
+          font-weight: 600;
+          color: #333;
+          flex-shrink: 0;
+        }
+        .header-text-block { text-align: center; width: 100%; }
+        .arabic-name {
+          font-size: 15px;
+          font-weight: 600;
           margin: 0;
+          color: #111827;
+          text-align: center;
+        }
+        .school-name {
+          font-size: 21px;
+          font-weight: 800;
+          color: #2563eb;
+          margin: 2px 0;
+          letter-spacing: 0.2px;
+          text-align: center;
+        }
+        .tagline {
+          font-weight: 500;
+          font-size: 10.5px;
+          margin: 1px 0;
+          color: #6b7280;
+          text-align: center;
+        }
+        .address, .contact {
+          font-size: 9px;
+          margin: 1px 0;
+          color: #6b7280;
+          text-align: center;
+        }
+
+        /* Single Term Dates Card */
+        .term-dates-card {
+          border: 1px solid #e2e4e9;
+          border-radius: 10px;
+          overflow: hidden;
+          width: 100%;
+          background: #fff;
+        }
+        .term-date-item {
+          padding: 6px 12px;
+        }
+        .term-date-item + .term-date-item {
+          border-top: 1px solid #e2e4e9;
+        }
+        .term-date-item .t-label {
+          font-size: 9px;
+          color: #6b7280;
+          font-weight: 500;
+          display: block;
+          margin-bottom: 2px;
+        }
+        .term-date-item .t-val {
+          font-size: 12px;
+          font-weight: 700;
+          color: #111827;
+          display: block;
+        }
+
+        /* ===== Info bar ===== */
+        .info-bar {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          border: 1px solid #e2e4e9;
+          border-radius: 10px;
+          margin-top: 10px;
+          overflow: hidden;
+          flex-shrink: 0;
+        }
+        .info-col {
+          padding: 8px 14px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+        .info-col + .info-col { 
+          border-left: 1px solid #e2e4e9; 
+        }
+        
+        /* 3-Row Student Info Layout */
+        .info-left { 
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          gap: 3px;
+        }
+        .student-name-row {
+          font-size: 13.5px;
+          font-weight: 800;
+          color: #111827;
+          letter-spacing: 0.2px;
+          line-height: 1.2;
+        }
+        .student-meta-row {
+          font-size: 9.5px;
+          color: #111827;
+          line-height: 1.3;
+        }
+        .student-meta-row b {
+          color: #6b7280;
+          font-weight: 600;
+        }
+
+        .info-center { 
+          text-align: center; 
+        }
+        .report-title {
+          color: #111827;
+          font-size: 15.5px;
+          font-weight: 800;
+          letter-spacing: 0.2px;
+          margin: 0 0 3px 0;
+        }
+        .session-line { font-size: 11px; font-weight: 600; color: #6b7280; }
+        .session-line span { color: #111827; }
+
+        /* Center-aligned Score Section */
+        .info-right {
+          display: flex !important;
+          flex-direction: row !important;
+          align-items: center;
+          justify-content: space-between;
+          padding: 8px 10px !important;
+        }
+        .score-block { 
+          flex: 1; 
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          text-align: center;
+          padding: 0 10px; 
+        }
+        .score-block + .score-block::before { 
+          content: "";
+          position: absolute;
+          left: 0;
+          top: 15%;
+          height: 70%;
+          width: 1px;
+          background-color: #e2e4e9;
+        }
+        .score-block .s-label { 
+          font-size: 8.5px; 
+          color: #6b7280; 
+          font-weight: 700; 
+          text-transform: uppercase; 
+          letter-spacing: 0.4px; 
+          margin-bottom: 2px;
+          white-space: nowrap;
+        }
+        .score-block .s-val { 
+          font-size: 20px; 
+          font-weight: 800; 
+          color: #111827; 
+          line-height: 1;
+        }
+        .score-block .s-val.grade { 
+          color: #16a34a;
+        }
+
+        /* ===== Main table ===== */
+        .main-table-wrapper {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          min-height: 0;
+          margin: 16px 0;
+        }
+        table.main-table {
+          width: 100%;
+          height: 100%;
+          border-collapse: separate;
+          border-spacing: 0;
+          font-size: 10px;
+          border: 2px solid #6b7280;
+          border-radius: 10px;
+          overflow: hidden;
+        }
+        table.main-table tr {
+          height: 1%;
+        }
+        table.main-table th, table.main-table td {
+          border-bottom: 1px solid #e2e4e9;
+          border-right: 1px solid #e2e4e9;
+          padding: 4px 8px;
+          text-align: center;
+          color: #111827;
+          vertical-align: middle;
+        }
+        table.main-table th:last-child, table.main-table td:last-child {
+          border-right: none;
+        }
+        table.main-table tr:last-child td {
+          border-bottom: none;
+        }
+
+        table.main-table th {
+          background: #fafafa;
+          font-weight: 800;
+          font-size: 10.5px;
+          text-transform: uppercase;
+          letter-spacing: 0.4px;
+          color: #111827;
+          text-align: center;
+          padding: 8px;
+          white-space: nowrap;
+          height: 32px;
+        }
+
+        table.main-table th.th-left {
+          text-align: left !important;
+        }
+
+        .subject-name {
+          text-align: left !important;
+          font-weight: 700;
+          color: #111827;
+        }
+        .sub-row-label {
+          text-align: left !important;
+          font-weight: 500;
+          color: #111827;
+        }
+        .single-row td.subject-name {
+          font-weight: 700;
+        }
+
+        .grade-text {
+          font-weight: 700;
+          font-size: 10.5px;
+          color: #111827;
+        }
+        
+        .comment-cell { 
+          color: #111827; 
+          font-weight: 600; 
+          text-align: left !important; 
+          padding-left: 10px !important;
+        }
+
+        /* ===== Domains Section ===== */
+        .domains {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 0;
+          gap: 12px;
+          flex-shrink: 0;
+        }
+        .psychomotor-block {
+          flex: 1.2;
+          border: 1px solid #e2e4e9;
+          border-radius: 10px;
+          padding: 8px 12px;
+        }
+
+        .affective-block {
+          flex: 2.2;
+          border: 1px solid #e2e4e9;
+          border-radius: 10px;
+          padding: 8px 12px;
+        }
+        .domain-title {
+          color: #2563eb;
+          font-weight: 700;
+          font-size: 9.5px;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
+          margin-bottom: 6px;
+        }
+        .affective-grid {
+          display: flex;
+          gap: 12px;
+        }
+        .affective-col {
+          flex: 1;
+        }
+        .affective-col + .affective-col {
+          border-left: 1px solid #e2e4e9;
+          padding-left: 12px;
+        }
+
+        .domain-row {
+          display: flex;
+          justify-content: space-between;
+          font-size: 10px;
+          padding: 3px 0;
+          border-bottom: 1px solid #e2e4e9;
+        }
+        .domain-row:last-child { border-bottom: none; }
+        .domain-row .d-label { color: #111827; }
+        .domain-row .d-val { color: #111827; font-weight: 700; }
+
+        .scale-box {
+          flex: 0.9;
+          font-size: 9px;
+          border: 1px solid #e2e4e9;
+          border-radius: 10px;
+          padding: 8px 12px;
+        }
+        .scale-title {
+          font-weight: 700;
+          margin-bottom: 4px;
+          color: #6b7280;
+          text-transform: uppercase;
+          font-size: 8.5px;
+          letter-spacing: 0.3px;
+        }
+        .scale-box div { margin: 2px 0; color: #111827; }
+
+        /* ===== Comments ===== */
+        .comments {
+          margin-top: 10px;
+          font-size: 10.5px;
+          line-height: 1.5;
+          border-radius: 10px;
+          padding: 9px 12px;
+          background: #f5f6f8;
+          color: #111827;
+          flex-shrink: 0;
+        }
+        .comments strong { font-weight: 700; color: #111827; }
+        .comments div + div { margin-top: 3px; }
+
+        @page {
+          size: A4 landscape;
+          margin: 6mm;
         }
 
         @media print {
-          html, html.dark, body, body.dark, [data-theme] {
-            background: #ffffff !important;
-            background-color: #ffffff !important;
-            color: #000000 !important;
-          }
-          .report-card-wrapper {
-            background: #ffffff !important;
-            background-color: #ffffff !important;
-            display: block !important;
+          html, body, .report-card-wrapper, [class*="print:block"] {
+            background: #fff !important;
+            padding: 0 !important;
+            margin: 0 !important;
             width: 100% !important;
+            height: 100% !important;
+            display: block !important;
           }
           .report-card-page {
-            margin: 0 auto !important;
-            border: 2px solid #000 !important;
+            border: none !important;
             box-shadow: none !important;
-            width: 210mm !important;
-            height: 297mm !important;
+            border-radius: 0 !important;
+            width: 100% !important;
+            height: 194mm !important;
+            margin: 0 !important;
+            padding: 2mm 2mm !important;
             page-break-after: always !important;
             break-after: page !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
-            background: #ffffff !important;
-            background-color: #ffffff !important;
+            display: flex !important;
+            flex-direction: column !important;
           }
           .report-card-page:last-child {
             page-break-after: auto !important;
             break-after: auto !important;
           }
         }
-
-        .rc-footer-block {
-          margin-top: auto;
-        }
-
-        .rc-header {
-          display: grid;
-          grid-template-columns: 90px 1fr 90px;
-          align-items: center;
-          gap: 10px;
-          border-bottom: 2px solid #000;
-          padding-bottom: 8px;
-        }
-        .rc-crest { width: 84px; height: 84px; }
-        .rc-school-name {
-          text-align: center;
-          font-size: 22px;
-          font-weight: 700;
-          letter-spacing: 0.5px;
-          margin: 0 0 2px;
-        }
-        .rc-school-line {
-          text-align: center;
-          font-size: 11px;
-          margin: 2px 0;
-        }
-        .rc-school-line.italic { font-style: italic; }
-        .rc-report-title {
-          text-align: center;
-          font-size: 12px;
-          font-weight: 700;
-          letter-spacing: 1px;
-          margin-top: 4px;
-        }
-        .rc-photo-block { text-align: center; }
-        .rc-photo {
-          width: 68px;
-          height: 78px;
-          border: 1px solid #000;
-          background: #eee;
-          display: flex;
-          align-items: flex-end;
-          justify-content: center;
-          overflow: hidden;
-          margin: 0 auto;
-        }
-        .rc-photo svg { width: 50px; height: 60px; fill: #111; }
-        .rc-term-badge {
-          text-align: center;
-          font-size: 13px;
-          font-weight: 700;
-          margin-top: 4px;
-        }
-
-        .rc-student-name {
-          text-align: center;
-          font-size: 20px;
-          font-weight: 700;
-          letter-spacing: 0.5px;
-          margin: 10px 0 2px;
-        }
-        .rc-student-meta {
-          text-align: center;
-          font-size: 12px;
-          margin-bottom: 10px;
-        }
-        .rc-student-meta span { margin: 0 6px; }
-
-        .rc-info-strip {
-          display: grid;
-          grid-template-columns: 1fr 1fr 1fr;
-          border-top: 1px solid #000;
-          border-bottom: 1px solid #000;
-          font-size: 11.5px;
-          padding: 6px 0;
-          margin-bottom: 10px;
-        }
-        .rc-info-strip .col {
-          padding: 0 10px;
-          border-left: 1px solid #000;
-          line-height: 1.7;
-        }
-        .rc-info-strip .col:first-child { border-left: none; }
-        .rc-info-strip b { font-weight: 700; }
-
-        .rc-main-grid {
-          display: grid;
-          grid-template-columns: 1fr 200px;
-          gap: 10px;
-        }
-
-        table.rc-subjects {
-          width: 100%;
-          border-collapse: collapse;
-          font-size: 11px;
-        }
-        table.rc-subjects th, table.rc-subjects td {
-          border: 1px solid #000;
-          padding: 4px 5px;
-          text-align: center;
-        }
-        table.rc-subjects thead th {
-          font-size: 10px;
-          font-weight: 700;
-          height: 92px;
-          vertical-align: bottom;
-          padding-bottom: 6px;
-        }
-        table.rc-subjects thead th.rot span {
-          writing-mode: vertical-rl;
-          transform: rotate(180deg);
-          white-space: nowrap;
-          display: inline-block;
-        }
-        table.rc-subjects thead th.subj-head { text-align: left; vertical-align: middle; font-size: 12px; }
-        table.rc-subjects tbody td.subj-name { text-align: left; }
-
-        .rc-sidebar-title {
-          font-size: 11px;
-          font-weight: 700;
-          margin: 0 0 3px;
-        }
-        table.rc-skills {
-          width: 100%;
-          border-collapse: collapse;
-          font-size: 10.5px;
-          margin-bottom: 10px;
-        }
-        table.rc-skills td {
-          border: 1px solid #000;
-          padding: 3px 5px;
-        }
-        table.rc-skills td.score { width: 26px; text-align: center; }
-
-        table.rc-grading {
-          width: 100%;
-          border-collapse: collapse;
-          font-size: 10.5px;
-          margin-bottom: 10px;
-        }
-        table.rc-grading td {
-          border: 1px solid #000;
-          padding: 3px 6px;
-        }
-        table.rc-grading td.grade { width: 24px; text-align: center; font-weight: 700; }
-
-        .rc-signature-box {
-          font-size: 10.5px;
-          font-weight: 700;
-          margin-top: 4px;
-        }
-        .rc-signature-line {
-          margin-top: 34px;
-          border-top: 1px solid #000;
-        }
-
-        .rc-summary-title {
-          font-size: 12px;
-          font-weight: 700;
-          margin: 12px 0 4px;
-        }
-        table.rc-summary {
-          width: 100%;
-          border-collapse: collapse;
-          font-size: 12px;
-          margin-bottom: 10px;
-        }
-        table.rc-summary td {
-          border: 1px solid #000;
-          padding: 6px 8px;
-        }
-        table.rc-summary td.label { font-weight: 700; width: 1%; white-space: nowrap; }
-        table.rc-summary td.value { width: 1%; white-space: nowrap; font-weight: 700; }
-
-        .rc-remarks { font-size: 12.5px; margin: 6px 0; }
-        .rc-remarks b { margin-right: 6px; }
-        .rc-remarks { font-size: 12.5px; margin: 6px 0; }
-        .rc-remarks b { margin-right: 6px; }
-        .rc-remark-text {
-          font-weight: 700;
-          border-bottom: 1px solid #000;
-          padding-bottom: 1px;
-        }
-
-        .rc-info-parents {
-          border-top: 1px solid #000;
-          margin-top: 10px;
-          padding-top: 8px;
-          text-align: center;
-          font-size: 11px;
-          line-height: 1.6;
-        }
-        .rc-info-parents b { font-weight: 700; }
       `}</style>
 
       <div className="report-card-page">
         {/* HEADER */}
-        <div className="rc-header">
-          {school?.logo_url ? (
-            <img src={school.logo_url} alt="Logo" className="rc-crest" style={{ objectFit: 'contain' }} />
-          ) : (
-            <svg className="rc-crest" viewBox="0 0 100 100">
-              <path d="M50 5 L90 15 V45 C90 70 72 90 50 98 C28 90 10 70 10 45 V15 Z" fill="#0a3b6b" stroke="#000" strokeWidth="1.5"/>
-              <path d="M50 5 L90 15 V45 C90 70 72 90 50 98 Z" fill="#153a86"/>
-              <path d="M50 5 L10 15 V45 C10 70 28 90 50 98 Z" fill="#8c1c1c" opacity="0.85"/>
-              <circle cx="50" cy="48" r="20" fill="#fff" opacity="0.9"/>
-              <text x="50" y="55" textAnchor="middle" fontSize="20" fontFamily="Georgia, serif" fill="#0a3b6b" fontWeight="700">S</text>
-            </svg>
-          )}
-
-          <div>
-            <p className="rc-school-name">{school?.school_name || "SCHOOL NAME"}</p>
-            <p className="rc-school-line italic">{school?.address || "School Address, City"}</p>
-            <p className="rc-school-line">TEL: {schoolPhone}{schoolPhoneSecondary ? ` / ${schoolPhoneSecondary}` : ""}, EMAIL: {school?.email || "info@school.ng"}</p>
-            <p className="rc-report-title">STUDENTS ACADEMIC REPORT CARD</p>
+        <div className="header-row">
+          <div className="header-left">
+            {school?.logo_url ? (
+              <img src={school.logo_url} alt="Logo" className="logo" style={{ objectFit: 'contain', border: 'none', borderRadius: '0' }} />
+            ) : (
+              <div className="logo">LOGO</div>
+            )}
           </div>
-
-          <div className="rc-photo-block">
-            <div className="rc-photo">
-              {student?.photo_url ? (
-                <img src={student.photo_url} alt="Student" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M4 22c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
-              )}
+          <div className="header-text-block">
+            <p className="arabic-name">{school?.school_name_arabic || "مدرسة الأمة الإبداعية الدولية"}</p>
+            <p className="school-name">{school?.school_name || "CREATIVE UMMAH INTERNATIONAL SCHOOLS"}</p>
+            <p className="tagline">{school?.tagline || "...Learning, Attitude and Creativity"}</p>
+            <p className="address">{school?.address || "No. 10 Mai Unguwa Wada Road, off Kuriga Road, keke-A Millenium City Kaduna."}</p>
+            <p className="contact">
+              Tel: {school?.phone_primary || "08135582113"}{school?.phone_secondary ? `, ${school.phone_secondary}` : ""}{school?.email ? ` | Email: ${school.email}` : ""}
+            </p>
+          </div>
+          <div className="term-dates-card">
+            <div className="term-date-item">
+              <span className="t-label">Term Ends</span>
+              <span className="t-val">{termEndDate}</span>
             </div>
-            <p className="rc-term-badge">{term?.name || "2nd Term"}</p>
+            <div className="term-date-item">
+              <span className="t-label">Next Term Begins</span>
+              <span className="t-val">{nextTermBegins}</span>
+            </div>
           </div>
         </div>
 
-        {/* STUDENT NAME */}
-        <p className="rc-student-name">{studentFullName}</p>
-        <p className="rc-student-meta">
-          <span>Gender: <b>{student?.gender || "—"}</b></span> | <span>Admission Number: <b>{student?.student_id || "—"}</b></span> | <span>Age: <b>{studentAge}</b></span>
-        </p>
-
-        {/* INFO STRIP */}
-        <div className="rc-info-strip">
-          <div className="col">
-            Term: <b>{term?.name || "—"}</b><br/>
-            Session: <b>{session?.name || "—"}</b><br/>
-            Resumption: <b>{resumptionDate}</b>
+        {/* INFO BAR */}
+        <div className="info-bar">
+          <div className="info-col info-left">
+            <div className="student-name-row">{studentFullName}</div>
+            <div className="student-meta-row"><b>ADM. NO:</b> {student?.student_id || "—"}</div>
+            <div className="student-meta-row">
+              <b>CLASS:</b> {student?.classes?.name || "—"} &nbsp;&nbsp;·&nbsp;&nbsp; <b>Class Size:</b> {result?.total_students || "—"}
+            </div>
           </div>
-          <div className="col">
-            Class: <b>{student?.classes?.name || "—"}</b><br/>
-            Students in Class: <b>{result?.total_students || "—"}</b><br/>
-            Class Teacher: <b>{student?.classes?.class_teacher || "—"}</b>
+          <div className="info-col info-center">
+            <p className="report-title">TERMINAL REPORT SHEET</p>
+            <div className="session-line"><span>{session?.name || "—"}</span> &nbsp;&nbsp; <span>{term?.name || "—"}</span></div>
           </div>
-          <div className="col">
-            Total Days In Term: <b>{totalDaysInTerm}</b><br/>
-            Total Days Present: <b>{daysPresent}</b><br/>
-            Total Days Absent: <b>{daysAbsent}</b>
+          <div className="info-col info-right">
+            <div className="score-block">
+              <div className="s-label">Total Score</div>
+              <div className="s-val">{totalScore.toFixed(0)}</div>
+            </div>
+            <div className="score-block">
+              <div className="s-label">Average Score</div>
+              <div className="s-val">{averageScore.toFixed(2)}%</div>
+            </div>
+            <div className="score-block">
+              <div className="s-label">Grade</div>
+              <div className="s-val grade">{overallGrade}</div>
+            </div>
           </div>
         </div>
 
-        {/* MAIN GRID */}
-        <div className="rc-main-grid">
-
-          {/* SUBJECTS TABLE */}
-          <table className="rc-subjects">
+        {/* MAIN SUBJECTS TABLE */}
+        <div className="main-table-wrapper">
+          <table className="main-table">
             <thead>
               <tr>
-                <th className="subj-head">SUBJECTS</th>
-                <th className="rot"><span>1st CA (20)</span></th>
-                <th className="rot"><span>2nd CA (20)</span></th>
-                <th className="rot"><span>EXAM (60)</span></th>
-                <th className="rot"><span>TOTAL (100)</span></th>
-                <th className="rot"><span>GRADE</span></th>
-                <th className="rot"><span>CLASS AVERAGE</span></th>
-                <th className="rot"><span>REMARKS</span></th>
+                <th style={{ width: '22%', paddingLeft: '8px' }} className="th-left" colSpan={2}>Core Subjects</th>
+                <th>C. A test</th>
+                <th>Exams</th>
+                <th>Total</th>
+                <th>Grade</th>
+                <th>Class Min</th>
+                <th>Class Max</th>
+                <th>Class Avg</th>
+                <th style={{ width: '18%' }} className="th-left">Comment</th>
               </tr>
             </thead>
             <tbody>
-              {Object.entries(subjectScores || {}).map(([subjName, data]: [string, any]) => {
-                const totalScore = data?.total || 0
-                const defaultRemark = data?.remark || (
-                  totalScore >= 80 ? "Excellent" :
-                  totalScore >= 60 ? "Very Good" :
-                  totalScore >= 55 ? "Good" :
-                  totalScore >= 45 ? "Fair" : "Needs Imp."
-                )
-                return (
-                  <tr key={subjName}>
-                    <td className="subj-name">{subjName}</td>
-                    <td>{data?.ca1 !== undefined && data?.ca1 !== null ? data.ca1 : "—"}</td>
-                    <td>{data?.ca2 !== undefined && data?.ca2 !== null ? data.ca2 : "—"}</td>
-                    <td>{data?.exam !== undefined && data?.exam !== null ? data.exam : "—"}</td>
-                    <td style={{ fontWeight: 700 }}>{data?.total !== undefined && data?.total !== null ? data.total : "—"}</td>
-                    <td style={{ fontWeight: 700 }}>{data?.grade || "—"}</td>
-                    <td>{data?.subject_average !== undefined && data?.subject_average !== null ? `${data.subject_average}%` : "—"}</td>
-                    <td style={{ fontSize: '10px', fontWeight: 600 }}>{defaultRemark}</td>
-                  </tr>
-                )
+              {Object.values(groupedSubjects).map((subj) => {
+                if (subj.isGrouped) {
+                  return (
+                    <React.Fragment key={subj.subjName}>
+                      {subj.subRows.map((sub, index) => {
+                        const caCombined = (sub.ca1 || 0) + (sub.ca2 || 0)
+                        if (index === 0) {
+                          return (
+                            <tr key={sub.subName}>
+                              <td className="subject-name" rowSpan={subj.subRows.length}>
+                                {subj.subjName}
+                              </td>
+                              <td className="sub-row-label">{sub.subName}</td>
+                              <td>{sub.ca1 !== null || sub.ca2 !== null ? caCombined : "—"}</td>
+                              <td>{sub.exam !== null ? sub.exam : "—"}</td>
+                              <td rowSpan={subj.subRows.length}>{subj.total}</td>
+                              <td rowSpan={subj.subRows.length}>
+                                <span className="grade-text">{subj.grade}</span>
+                              </td>
+                              <td rowSpan={subj.subRows.length}>
+                                {subj.classMin !== null ? subj.classMin : "—"}
+                              </td>
+                              <td rowSpan={subj.subRows.length}>
+                                {subj.classMax !== null ? subj.classMax : "—"}
+                              </td>
+                              <td rowSpan={subj.subRows.length}>
+                                {subj.classAvg !== null ? subj.classAvg.toFixed(1) : "—"}
+                              </td>
+                              <td rowSpan={subj.subRows.length} className="comment-cell">
+                                {subj.remark}
+                              </td>
+                            </tr>
+                          )
+                        } else {
+                          return (
+                            <tr key={sub.subName}>
+                              <td className="sub-row-label">{sub.subName}</td>
+                              <td>{sub.ca1 !== null || sub.ca2 !== null ? caCombined : "—"}</td>
+                              <td>{sub.exam !== null ? sub.exam : "—"}</td>
+                            </tr>
+                          )
+                        }
+                      })}
+                    </React.Fragment>
+                  )
+                } else {
+                  const sub = subj.subRows[0]
+                  const caCombined = (sub.ca1 || 0) + (sub.ca2 || 0)
+                  return (
+                    <tr key={subj.subjName} className="single-row">
+                      <td className="subject-name" colSpan={2}>
+                        {subj.subjName}
+                      </td>
+                      <td>{sub.ca1 !== null || sub.ca2 !== null ? caCombined : "—"}</td>
+                      <td>{sub.exam !== null ? sub.exam : "—"}</td>
+                      <td style={{ fontWeight: 700 }}>{subj.total}</td>
+                      <td>
+                        <span className="grade-text">{subj.grade}</span>
+                      </td>
+                      <td>{subj.classMin !== null ? subj.classMin : "—"}</td>
+                      <td>{subj.classMax !== null ? subj.classMax : "—"}</td>
+                      <td>{subj.classAvg !== null ? subj.classAvg.toFixed(1) : "—"}</td>
+                      <td className="comment-cell">{subj.remark}</td>
+                    </tr>
+                  )
+                }
               })}
             </tbody>
           </table>
+        </div>
 
-          {/* SIDEBAR */}
-          <div>
-            <p className="rc-sidebar-title">AFFECTIVE SKILLS</p>
-            <table className="rc-skills">
-              <tbody>
-                {DEFAULT_AFFECTIVE_SKILLS.map((skill) => (
-                  <tr key={skill}>
-                    <td>{skill}</td>
-                    <td className="score">{getSkillRating("Affective", skill)}</td>
-                  </tr>
+        {/* DOMAINS (SKILLS) & SCALE SECTION */}
+        <div className="domains">
+          {/* Psychomotor Domain */}
+          <div className="psychomotor-block">
+            <div className="domain-title">Psychomotor Domain</div>
+            {psychomotorListToUse.map((skill) => (
+              <div key={skill} className="domain-row">
+                <span className="d-label">{skill}</span>
+                <span className="d-val">{getSkillRating("Psychomotor", skill)}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Affective Domain */}
+          <div className="affective-block">
+            <div className="domain-title">Affective Domain</div>
+            <div className="affective-grid">
+              <div className="affective-col">
+                {affectiveCol1.map((skill) => (
+                  <div key={skill} className="domain-row">
+                    <span className="d-label">{skill}</span>
+                    <span className="d-val">{getSkillRating("Affective", skill)}</span>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-
-            <p className="rc-sidebar-title">PSYCHOMOTOR SKILLS</p>
-            <table className="rc-skills">
-              <tbody>
-                {DEFAULT_PSYCHOMOTOR_SKILLS.map((skill) => (
-                  <tr key={skill}>
-                    <td>{skill}</td>
-                    <td className="score">{getSkillRating("Psychomotor", skill)}</td>
-                  </tr>
+              </div>
+              <div className="affective-col">
+                {affectiveCol2.map((skill) => (
+                  <div key={skill} className="domain-row">
+                    <span className="d-label">{skill}</span>
+                    <span className="d-val">{getSkillRating("Affective", skill)}</span>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </div>
+          </div>
 
-            <p className="rc-sidebar-title">GRADING SYSTEM</p>
-            <table className="rc-grading">
-              <tbody>
-                <tr><td className="grade">A</td><td>80–100</td></tr>
-                <tr><td className="grade">B</td><td>60–79</td></tr>
-                <tr><td className="grade">C</td><td>55–59</td></tr>
-                <tr><td className="grade">D</td><td>45–54</td></tr>
-                <tr><td className="grade">F</td><td>0–44</td></tr>
-              </tbody>
-            </table>
-
-            <p className="rc-sidebar-title">SIGNATURE (Principal)</p>
-            <div className="rc-signature-line"></div>
-            <p style={{ fontSize: '10px', textTransform: 'uppercase', textAlign: 'center', marginTop: '4px', fontWeight: 700 }}>
-              {school?.principal_name || ""}
-            </p>
+          {/* Scale Box */}
+          <div className="scale-box">
+            <div className="scale-title">Scale</div>
+            <div>A+ = Outstanding</div>
+            <div>A = Excellent</div>
+            <div>B+ = Very good</div>
+            <div>B = Good</div>
+            <div>C = Average</div>
+            <div>D = Weak</div>
+            <div>F = Fail</div>
           </div>
         </div>
 
-        {/* FOOTER */}
-        <div className="rc-footer-block">
-          <p className="rc-summary-title">SUMMARY</p>
-          <table className="rc-summary">
-            <tbody>
-              <tr>
-                <td className="label">TOTAL SCORE:</td><td className="value">{totalScore.toFixed(0)} / {totalPossibleScore}</td>
-                <td className="label">AVG. SCORE:</td><td className="value">{averageScore.toFixed(1)} %</td>
-                <td className="label">GRADE:</td><td className="value">{overallGrade}</td>
-              </tr>
-            </tbody>
-          </table>
-
-          <p className="rc-remarks"><b>CLASS TEACHER REMARKS:</b> <span className="rc-remark-text">{teacherRemarkText}</span></p>
-          <p className="rc-remarks"><b>SCHOOL HEAD REMARKS:</b> <span className="rc-remark-text">{principalRemarkText}</span></p>
-          <p style={{ fontSize: '10.5px', marginTop: '2px', fontStyle: 'italic', fontWeight: 600 }}>
-            Head Teacher / Principal: <span style={{ fontStyle: 'normal' }}>{school?.principal_name || "Mallam Jaafar"}</span>
-          </p>
-
-          <div className="rc-info-parents">
-            <b>INFO TO PARENTS:</b> {school?.parent_info || "Please note resumption date and settle all school fees prior to resumption."}
-          </div>
+        {/* REMARKS AND COMMENTS */}
+        <div className="comments">
+          <div><strong>Class teacher's comment:</strong> {teacherRemarkText}</div>
+          <div><strong>Head teacher's comment:</strong> {principalRemarkText}</div>
         </div>
 
       </div>

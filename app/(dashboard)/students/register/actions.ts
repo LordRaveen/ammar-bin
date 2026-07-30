@@ -11,12 +11,6 @@ export async function registerStudent(formData: FormData) {
     await requireAdmin();
     const supabase = await createClient();
 
-    // Get school settings for student ID prefix
-    const { data: settings } = await supabase
-      .from("school_settings")
-      .select("student_id_prefix")
-      .single();
-
     // Get current year
     const year = new Date().getFullYear();
 
@@ -26,7 +20,20 @@ export async function registerStudent(formData: FormData) {
       .select("*", { count: "exact", head: true });
 
     const studentNumber = String((count || 0) + 1).padStart(3, '0');
-    const studentId = `${settings?.student_id_prefix || 'ISM'}/${year}/${studentNumber}`;
+    
+    // Get enrollment_type
+    const enrollmentType = (formData.get("enrollment_type") as string || "islamiyya").toLowerCase();
+    
+    // Choose prefix based on enrollment type
+    let prefix = "ABYI/ISL";
+    if (enrollmentType === "tahfeez") {
+      prefix = "ABYI/TAH";
+    } else if (enrollmentType === "combined") {
+      prefix = "ABYI/CMB";
+    }
+
+    const yearShort = String(year).slice(-2);
+    const studentId = `${prefix}/${yearShort}/${studentNumber}`;
 
     const studentData = {
       student_id: studentId,
@@ -40,6 +47,7 @@ export async function registerStudent(formData: FormData) {
       nationality: formData.get("nationality") as string || 'Nigerian',
       medical_info: formData.get("medical_info") as string || null,
       admission_date: formData.get("admission_date") as string || new Date().toISOString().split('T')[0],
+      enrollment_type: enrollmentType,
       status: 'Active',
     };
 
@@ -73,7 +81,77 @@ export async function registerStudent(formData: FormData) {
 
       if (linkError) {
         devLog.error("Failed to link guardian:", linkError);
-        // Don't throw - student is created, just log the error
+      }
+    }
+
+    // Auto-enroll if class information is provided
+    const classId = formData.get("class_id") as string; // Islamiyya class or main class
+    const tahfeezClassId = formData.get("tahfeez_class_id") as string; // Tahfeez class for combined
+
+    if (classId || (enrollmentType === "combined" && tahfeezClassId)) {
+      // Get active session
+      const { data: actSession } = await supabase
+        .from("sessions")
+        .select("id")
+        .eq("is_active", true)
+        .single();
+      
+      const sessionId = actSession?.id;
+
+      if (sessionId) {
+        // Get active term
+        const { data: actTerm } = await supabase
+          .from("terms")
+          .select("id")
+          .eq("is_active", true)
+          .eq("session_id", sessionId)
+          .single();
+        
+        const termId = actTerm?.id || null;
+
+        const enrollmentsToCreate = [];
+
+        if (enrollmentType === "combined") {
+          if (classId) {
+            enrollmentsToCreate.push({
+              student_id: student.id,
+              class_id: classId,
+              session_id: sessionId,
+              term_id: termId,
+              is_active: true,
+            });
+          }
+          if (tahfeezClassId) {
+            enrollmentsToCreate.push({
+              student_id: student.id,
+              class_id: tahfeezClassId,
+              session_id: sessionId,
+              term_id: termId,
+              is_active: true,
+            });
+          }
+        } else {
+          const selectedClassId = classId || tahfeezClassId;
+          if (selectedClassId) {
+            enrollmentsToCreate.push({
+              student_id: student.id,
+              class_id: selectedClassId,
+              session_id: sessionId,
+              term_id: termId,
+              is_active: true,
+            });
+          }
+        }
+
+        if (enrollmentsToCreate.length > 0) {
+          const { error: enrollError } = await supabase
+            .from("student_enrollments")
+            .insert(enrollmentsToCreate);
+
+          if (enrollError) {
+            devLog.error("Failed to create student enrollments:", enrollError);
+          }
+        }
       }
     }
 
