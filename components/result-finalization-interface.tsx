@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react"
 import { useRouter, usePathname } from 'next/navigation'
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -18,7 +18,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle2, ChevronLeft, Save, SlidersHorizontal, ArrowLeft, Loader2, RotateCcw, Pencil, Printer, ChevronDown, Download, FileText, Image as ImageIcon, ChevronsUpDown, Check, Filter, ExternalLink, BookOpen, User, Users, Book, Award, TrendingUp, BarChart3, Trash2 } from "lucide-react"
+import { CheckCircle2, ChevronLeft, Save, SlidersHorizontal, ArrowLeft, Loader2, RotateCcw, Pencil, Printer, ChevronDown, Download, FileText, Image as ImageIcon, ChevronsUpDown, Check, Filter, ExternalLink, BookOpen, User, Users, Book, Award, TrendingUp, BarChart3, Trash2, Layers, Plus, Settings, AlertTriangle, Archive, UserPlus, Phone, Mail, ArrowUpRight, ChevronRight, Shield } from "lucide-react"
 import { PrintableReportCard } from "@/components/printable-report-card"
 import { SessionTermSelector } from "@/components/session-term-selector"
 import { SubjectResultView } from "@/components/subject-result-view"
@@ -28,6 +28,26 @@ import { exportReportCardsAsPDF, exportReportCardsAsImages } from "@/lib/export-
 import { createBrowserClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+
+// New imports for Class Info consolidation
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { AddStudentToClassModal } from "@/components/add-student-to-class-modal"
+import { AddSubjectToClassModal } from "@/components/add-subject-to-class-modal"
+import { AssignTeacherModal } from "@/components/assign-teacher-modal"
+import { ReassignTeacherModal } from "@/components/reassign-teacher-modal"
+import { isAdmin } from "@/lib/auth/role-redirect"
+import {
+  addStudentToClass,
+  removeStudentFromClass,
+  addSubjectToClass,
+  removeSubjectFromClass,
+  assignClassTeacher,
+  assignSubjectTeacher,
+  removeSubjectTeacher,
+  updateClass,
+  deleteClass
+} from "@/app/(dashboard)/classes/[id]/actions"
 
 type Student = {
   id: string
@@ -46,12 +66,14 @@ type Score = {
   ca1: number | null
   ca2: number | null
   exam: number | null
-  total: number
+  total: number | null
   grade: string
   subject_position: number | null
   subject_highest: number | null
   subject_lowest: number | null
   subject_average: number | null
+  has_components?: boolean
+  components?: any[]
 }
 
 type Skill = {
@@ -61,24 +83,75 @@ type Skill = {
 }
 
 const DEFAULT_AFFECTIVE_SKILLS = [
-  "Punctuality",
-  "Politeness",
-  "Neatness",
-  "Honesty",
-  "Leadership skill",
-  "Cooperation",
   "Attentiveness",
+  "Emotional Stability",
+  "Honesty",
+  "Neatness",
   "Perseverance",
-  "Attitude to work",
+  "Politeness",
+  "Punctuality",
+  "Relationship with Peers",
+  "Response to Home Work",
 ]
 
 const DEFAULT_PSYCHOMOTOR_SKILLS = [
+  "Ablution",
   "Handwriting",
-  "Verbal fluency",
-  "Sports",
-  "Handling tools",
-  "Drawing & painting",
+  "Prayer (Salat)",
+  "Verbal Fluency",
 ]
+
+const AUTO_COMMENTS = [
+  "Exceptional performance! Keep up the excellent work.",
+  "Excellent result. Continue striving for excellence.",
+  "Very good effort. Keep aiming higher.",
+  "Good performance. With more dedication, you can do even better.",
+  "A commendable effort. Stay focused and keep improving.",
+  "Satisfactory performance. Greater effort will lead to better results.",
+  "Fair performance. You have potential—work harder and stay consistent.",
+  "You passed, but there is room for improvement. Study more diligently.",
+  "You need to put in more effort. Regular study and practice are essential.",
+  "Unsatisfactory performance. Please work harder and seek extra support to improve."
+]
+
+const AUTO_PRINCIPAL_COMMENTS = [
+  "Outstanding! A brilliant display of academic excellence.",
+  "Excellent performance. Keep maintaining this high standard.",
+  "Very good result. Keep up the high level of dedication.",
+  "Good work. Keep up the effort to reach your full potential.",
+  "A nice effort. With more consistency, you can achieve higher results.",
+  "Satisfactory work. Strive to show more improvement in the next term.",
+  "Fair outcome. Focus more on your studies to realize your potential.",
+  "Pass mark. Regular revision and effort will bring better grades.",
+  "Below average. You must focus and work harder next term.",
+  "Unsatisfactory result. Seek academic support and work harder."
+]
+
+const getTeacherCommentForAverage = (avg: number): string => {
+  if (avg >= 95) return "Exceptional performance! Keep up the excellent work."
+  if (avg >= 90) return "Excellent result. Continue striving for excellence."
+  if (avg >= 85) return "Very good effort. Keep aiming higher."
+  if (avg >= 80) return "Good performance. With more dedication, you can do even better."
+  if (avg >= 75) return "A commendable effort. Stay focused and keep improving."
+  if (avg >= 70) return "Satisfactory performance. Greater effort will lead to better results."
+  if (avg >= 65) return "Fair performance. You have potential—work harder and stay consistent."
+  if (avg >= 60) return "You passed, but there is room for improvement. Study more diligently."
+  if (avg >= 50) return "You need to put in more effort. Regular study and practice are essential."
+  return "Unsatisfactory performance. Please work harder and seek extra support to improve."
+}
+
+const getPrincipalCommentForAverage = (avg: number): string => {
+  if (avg >= 95) return "Outstanding! A brilliant display of academic excellence."
+  if (avg >= 90) return "Excellent performance. Keep maintaining this high standard."
+  if (avg >= 85) return "Very good result. Keep up the high level of dedication."
+  if (avg >= 80) return "Good work. Keep up the effort to reach your full potential."
+  if (avg >= 75) return "A nice effort. With more consistency, you can achieve higher results."
+  if (avg >= 70) return "Satisfactory work. Strive to show more improvement in the next term."
+  if (avg >= 65) return "Fair outcome. Focus more on your studies to realize your potential."
+  if (avg >= 60) return "Pass mark. Regular revision and effort will bring better grades."
+  if (avg >= 50) return "Below average. You must focus and work harder next term."
+  return "Unsatisfactory result. Seek academic support and work harder."
+}
 
 interface Props {
   sessions: any[]
@@ -128,8 +201,251 @@ export function ResultFinalizationInterface({
     initialStudents[0] || null
   )
   const [classDropdownOpen, setClassDropdownOpen] = useState(false)
-  const [viewMode, setViewMode] = useState<"student" | "subject">("student")
+  const [viewMode, setViewMode] = useState<"student" | "subject" | "class_info">("student")
   const [classSubjectsList, setClassSubjectsList] = useState<any[]>(subjects || [])
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  // Class Info States
+  const [classDetails, setClassDetails] = useState<any>(classData || null)
+  const [enrolledStudents, setEnrolledStudents] = useState<any[]>([])
+  const [unenrolledStudents, setUnenrolledStudents] = useState<any[]>([])
+  const [classSubjects, setClassSubjects] = useState<any[]>([])
+  const [availableSubjects, setAvailableSubjects] = useState<any[]>([])
+  const [allTeachers, setAllTeachers] = useState<any[]>([])
+  const [allSections, setAllSections] = useState<any[]>([])
+  const [userRole, setUserRole] = useState<string>("")
+  const [activeInfoTab, setActiveInfoTab] = useState<"students" | "subjects" | "teachers" | "settings">("students")
+
+  const [showAddStudentModal, setShowAddStudentModal] = useState(false)
+  const [showAddSubjectModal, setShowAddSubjectModal] = useState(false)
+  const [showAssignClassTeacherModal, setShowAssignClassTeacherModal] = useState(false)
+  const [showAssignSubjectTeacherModal, setShowAssignSubjectTeacherModal] = useState(false)
+  const [showReassignTeacherModal, setShowReassignTeacherModal] = useState(false)
+  const [tempSubjectForReassign, setTempSubjectForReassign] = useState<any>(null)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [isUpdatingSettings, setIsUpdatingSettings] = useState(false)
+  const [settingsForm, setSettingsForm] = useState({
+    name: classData?.name || "",
+    capacity: classData?.capacity || 0,
+    sectionId: classData?.section_id || "",
+  })
+
+  const hasAdminAccess = useMemo(() => isAdmin(userRole), [userRole])
+
+  // Fetch all database records related to Class Info
+  useEffect(() => {
+    async function fetchAllClassData() {
+      const currentClassId = initialClassId || classData?.id
+      if (!currentClassId) return
+
+      try {
+        // 1. Fetch Class details
+        const { data: cDetails } = await supabase
+          .from("classes")
+          .select("*, section:sections(name)")
+          .eq("id", currentClassId)
+          .single()
+
+        if (cDetails) {
+          let teacherData = null
+          if (cDetails.class_teacher_id) {
+            const { data: teacher } = await supabase
+              .from("teachers")
+              .select("id, first_name, last_name, email, phone, photo_url")
+              .eq("id", cDetails.class_teacher_id)
+              .single()
+            teacherData = teacher
+          }
+
+          const { count: studentCount } = await supabase
+            .from("student_enrollments")
+            .select("*", { count: "exact", head: true })
+            .eq("class_id", currentClassId)
+            .eq("session_id", sessionId)
+            .eq("term_id", termId)
+            .eq("is_active", true)
+
+          const { count: subjectCount } = await supabase
+            .from("class_subjects")
+            .select("*", { count: "exact", head: true })
+            .eq("class_id", currentClassId)
+
+          setClassDetails({
+            ...cDetails,
+            teacher: teacherData || undefined,
+            student_count: studentCount || 0,
+            subject_count: subjectCount || 0,
+          })
+
+          setSettingsForm({
+            name: cDetails.name,
+            capacity: cDetails.capacity,
+            sectionId: cDetails.section_id,
+          })
+        }
+
+        // 2. Fetch sections
+        const { data: sectionsData } = await supabase
+          .from("sections")
+          .select("*")
+          .eq("is_active", true)
+        setAllSections(sectionsData || [])
+
+        // 3. Fetch enrolled students
+        const { data: enrollments } = await supabase
+          .from("student_enrollments")
+          .select("id, students(*)")
+          .eq("class_id", currentClassId)
+          .eq("session_id", sessionId)
+          .eq("term_id", termId)
+          .eq("is_active", true)
+
+        let enrolled: any[] = []
+        if (enrollments) {
+          enrolled = enrollments.map((e) => ({
+            enrollment_id: e.id,
+            ...(e.students as any),
+          }))
+          setEnrolledStudents(enrolled)
+        }
+
+        // 4. Fetch unenrolled students
+        const { data: allStudents } = await supabase.from("students").select("*").eq("status", "Active")
+        const enrolledIds = new Set(enrolled.map((s) => s.id))
+        const unenrolled = (allStudents || []).filter((s) => !enrolledIds.has(s.id))
+        setUnenrolledStudents(unenrolled)
+
+        // 5. Fetch subjects & assignments
+        const { data: subjectsData } = await supabase
+          .from("class_subjects")
+          .select("*, subject:subjects(*)")
+          .eq("class_id", currentClassId)
+
+        if (subjectsData) {
+          const subjectIds = subjectsData.map((s) => s.subject_id)
+          const { data: assignments } = await supabase
+            .from("teacher_subject_assignments")
+            .select("subject_id, teacher:teachers(first_name, last_name, email, photo_url)")
+            .eq("class_id", currentClassId)
+            .eq("session_id", sessionId)
+            .in("subject_id", subjectIds)
+
+          const teacherMap = new Map((assignments || []).map((a) => [a.subject_id, a.teacher]))
+          const enrichedSubjects = subjectsData.map((s) => ({
+            ...s,
+            teacher: teacherMap.get(s.subject_id),
+          }))
+          setClassSubjects(enrichedSubjects)
+        }
+
+        // 6. Fetch available subjects
+        const { data: allSubjects } = await supabase.from("subjects").select("*").eq("is_active", true)
+        const assignedSubjectIds = new Set((subjectsData || []).map((s) => s.subject_id))
+        const available = (allSubjects || []).filter((s) => !assignedSubjectIds.has(s.id))
+        setAvailableSubjects(available)
+
+        // 7. Fetch all active teachers
+        const { data: teachers } = await supabase.from("teachers").select("*").eq("status", "Active")
+        setAllTeachers(teachers || [])
+
+      } catch (err) {
+        console.error("Error fetching class info details:", err)
+      }
+    }
+
+    fetchAllClassData()
+  }, [initialClassId, classData?.id, sessionId, termId, supabase, refreshKey])
+
+  // Realtime subscription for real-time reactive sync
+  useEffect(() => {
+    const classId = initialClassId || classData?.id
+    if (!classId) return
+
+    const enrollmentsChannel = supabase
+      .channel(`enrollments-interface-${classId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "student_enrollments", filter: `class_id=eq.${classId}` },
+        () => setRefreshKey((prev) => prev + 1)
+      )
+      .subscribe()
+
+    const subjectsChannel = supabase
+      .channel(`subjects-interface-${classId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "class_subjects", filter: `class_id=eq.${classId}` },
+        () => setRefreshKey((prev) => prev + 1)
+      )
+      .subscribe()
+
+    const teachersChannel = supabase
+      .channel(`teachers-interface-${classId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "teacher_subject_assignments", filter: `class_id=eq.${classId}` },
+        () => setRefreshKey((prev) => prev + 1)
+      )
+      .subscribe()
+
+    const classChannel = supabase
+      .channel(`class-interface-${classId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "classes", filter: `id=eq.${classId}` },
+        () => setRefreshKey((prev) => prev + 1)
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(enrollmentsChannel)
+      supabase.removeChannel(subjectsChannel)
+      supabase.removeChannel(teachersChannel)
+      supabase.removeChannel(classChannel)
+    }
+  }, [initialClassId, classData?.id, supabase])
+
+  // Fetch User Role for access controls
+  useEffect(() => {
+    async function fetchUserRole() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (user) {
+        const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id).single()
+        if (data) {
+          setUserRole(data.role)
+        }
+      }
+    }
+    fetchUserRole()
+  }, [supabase])
+
+  const handleRemoveStudent = async (enrollmentId: string) => {
+    if (confirm("Are you sure you want to remove this student from the class?")) {
+      try {
+        const classId = initialClassId || classData?.id
+        await removeStudentFromClass(enrollmentId, classId)
+        toast.success("Student removed successfully")
+        setRefreshKey((prev) => prev + 1)
+      } catch (error) {
+        toast.error("Failed to remove student")
+      }
+    }
+  }
+
+  const handleRemoveSubject = async (classSubjectId: string) => {
+    if (confirm("Are you sure you want to remove this subject from the class?")) {
+      try {
+        const classId = initialClassId || classData?.id
+        await removeSubjectFromClass(classSubjectId, classId)
+        toast.success("Subject removed successfully")
+        setRefreshKey((prev) => prev + 1)
+      } catch (error) {
+        toast.error("Failed to remove subject")
+      }
+    }
+  }
 
   useEffect(() => {
     if (subjects && subjects.length > 0) {
@@ -187,7 +503,6 @@ export function ResultFinalizationInterface({
   const [skillsCompletion, setSkillsCompletion] = useState({ completed: 0, total: 0 })
   const [attendanceCompletion, setAttendanceCompletion] = useState({ completed: 0, total: 0 })
   const [remarksCompletion, setRemarksCompletion] = useState({ completed: 0, total: 0 })
-  const [refreshKey, setRefreshKey] = useState(0)
 
   const [completedScoresSet, setCompletedScoresSet] = useState<Set<string>>(new Set())
   const [completedSkillsSet, setCompletedSkillsSet] = useState<Set<string>>(new Set())
@@ -318,8 +633,25 @@ export function ResultFinalizationInterface({
       const rawTerm = terms.find((t) => t.id === termId)
       const computedResumption = getResumptionDate(rawTerm, currentSession)
       const currentTerm = rawTerm ? { ...rawTerm, resumption_date: computedResumption } : null
+      const currentClassId = initialClassId || classData?.id
+      const classStats = await getClassSubjectStats(currentClassId, sessionId, termId)
 
-      const classStats = await getClassSubjectStats(initialClassId, sessionId, termId)
+      // Fetch all class subjects and class subject components once
+      const [classSubjsRes, classComponentsRes] = await Promise.all([
+        supabase
+          .from("class_subjects")
+          .select("subject_id, subject:subjects(id, name, code)")
+          .eq("class_id", currentClassId),
+        supabase
+          .from("class_subject_components")
+          .select("subject_id, component:subject_components(name)")
+          .eq("class_id", currentClassId)
+      ])
+
+      const classSubjs = classSubjsRes.data || []
+      const classComponents = classComponentsRes.data || []
+      const classSubjectOrder = classSubjs.map((cs: any) => cs.subject?.name).filter(Boolean) || []
+      const orderMap = new Map(classSubjectOrder.map((name: string, index: number) => [name.toLowerCase(), index]))
 
       for (const stId of studentIds) {
         const studentObj = students.find((s) => s.id === stId) || selectedStudent
@@ -344,9 +676,50 @@ export function ResultFinalizationInterface({
           .eq("student_id", stId)
 
         const subjectScoresMap: Record<string, any> = {}
+
+        // Pre-populate all subjects and subject components in the class
+        classSubjs.forEach((cs: any) => {
+          const parentName = cs.subject?.name
+          const parentId = cs.subject_id || cs.subject?.id
+          if (!parentName) return
+
+          const comps = classComponents.filter((c: any) => c.subject_id === parentId)
+          if (comps.length > 0) {
+            comps.forEach((c: any) => {
+              const compKey = `${parentName}: ${c.component?.name}`
+              subjectScoresMap[compKey] = {
+                code: cs.subject?.code || "",
+                ca1: null,
+                ca2: null,
+                exam: null,
+                total: null,
+                grade: "",
+                remark: "",
+                classMin: classStats[parentName]?.min ?? null,
+                classMax: classStats[parentName]?.max ?? null,
+                classAvg: classStats[parentName]?.average ?? null,
+              }
+            })
+          } else {
+            subjectScoresMap[parentName] = {
+              code: cs.subject?.code || "",
+              ca1: null,
+              ca2: null,
+              exam: null,
+              total: null,
+              grade: "",
+              remark: "",
+              classMin: classStats[parentName]?.min ?? null,
+              classMax: classStats[parentName]?.max ?? null,
+              classAvg: classStats[parentName]?.average ?? null,
+            }
+          }
+        })
+
+        // Fill in scores from database
         scoresData?.forEach((scoreItem: any) => {
           const ass = scoreItem.assessment
-          if (ass?.class_id && ass.class_id !== initialClassId) return
+          if (ass?.class_id && ass.class_id !== currentClassId) return
           if (ass?.session_id && ass.session_id !== sessionId) return
           if (ass?.term_id && ass.term_id !== termId) return
 
@@ -355,25 +728,10 @@ export function ResultFinalizationInterface({
           const subjName = subjectComponent
             ? `${subjNameRaw}: ${subjectComponent.name}`
             : subjNameRaw
+
+          if (!subjName || !subjectScoresMap[subjName]) return
+
           const assessmentType = ass?.assessment_type?.name
-
-          if (!subjName) return
-
-          if (!subjectScoresMap[subjName]) {
-            subjectScoresMap[subjName] = {
-              code: scoreItem.assessment?.subject?.code,
-              ca1: null,
-              ca2: null,
-              exam: null,
-              total: 0,
-              grade: "",
-              remark: "",
-              classMin: classStats[subjNameRaw]?.min ?? null,
-              classMax: classStats[subjNameRaw]?.max ?? null,
-              classAvg: classStats[subjNameRaw]?.average ?? null,
-            }
-          }
-
           if (assessmentType?.includes("CA Test 1")) {
             subjectScoresMap[subjName].ca1 = scoreItem.score
           } else if (assessmentType?.includes("CA Test 2")) {
@@ -383,24 +741,21 @@ export function ResultFinalizationInterface({
             subjectScoresMap[subjName].grade = scoreItem.grade
             subjectScoresMap[subjName].remark = scoreItem.remarks
           }
+        })
 
-          subjectScoresMap[subjName].total =
-            (subjectScoresMap[subjName].ca1 || 0) +
-            (subjectScoresMap[subjName].ca2 || 0) +
-            (subjectScoresMap[subjName].exam || 0)
+        // Compute total score for each subject/component if there's any score entered
+        Object.keys(subjectScoresMap).forEach((k) => {
+          const s = subjectScoresMap[k]
+          const hasCa1 = s.ca1 !== null
+          const hasCa2 = s.ca2 !== null
+          const hasExam = s.exam !== null
+          if (hasCa1 || hasCa2 || hasExam) {
+            s.total = (s.ca1 || 0) + (s.ca2 || 0) + (s.exam || 0)
+          }
         })
 
         // Sort subjectScoresMap by class subjects order
-        const { data: classSubjs } = await supabase
-          .from("class_subjects")
-          .select("subject:subjects(name)")
-          .eq("class_id", initialClassId || classData?.id)
-
-        const classSubjectOrder = classSubjs?.map((cs: any) => cs.subject?.name).filter(Boolean) || []
-        
         const sortedSubjectScoresMap: Record<string, any> = {}
-        const orderMap = new Map(classSubjectOrder.map((name: string, index: number) => [name.toLowerCase(), index]))
-        
         Object.keys(subjectScoresMap)
           .sort((a, b) => {
             const indexA = orderMap.has(a.toLowerCase()) ? orderMap.get(a.toLowerCase())! : 999
@@ -409,12 +764,7 @@ export function ResultFinalizationInterface({
             return a.localeCompare(b)
           })
           .forEach((k) => {
-            sortedSubjectScoresMap[k] = {
-              ...subjectScoresMap[k],
-              classMin: classStats[k]?.min ?? null,
-              classMax: classStats[k]?.max ?? null,
-              classAvg: classStats[k]?.average ?? null,
-            }
+            sortedSubjectScoresMap[k] = subjectScoresMap[k]
           })
 
         // Fetch skills
@@ -473,6 +823,9 @@ export function ResultFinalizationInterface({
     }
   }
 
+  // Utility to slugify strings for filenames (replace slashes, spaces, special chars)
+  const slugify = (str: string) => str.replace(/[\/\\]/g, "-").replace(/[^a-zA-Z0-9\-_\.]/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "")
+
   const handlePrintAction = async (studentIds: string[], action: "print" | "pdf" | "image") => {
     const success = await preparePrintDataForStudents(studentIds)
     if (!success) return
@@ -485,10 +838,30 @@ export function ResultFinalizationInterface({
       const nodes = Array.from(printContainerRef.current?.querySelectorAll('.report-card-page') || []) as HTMLElement[]
       
       if (nodes.length > 0) {
+        const currentSession = sessions.find((s) => s.id === sessionId)
+        const currentTerm = terms.find((t) => t.id === termId)
+        const sessionSlug = slugify(currentSession?.name || "Session")
+        const termSlug = slugify(currentTerm?.name || "Term")
+        const className = slugify((classData as any)?.name || "Class")
+
         if (action === "pdf") {
-          await exportReportCardsAsPDF(nodes, "Report_Cards.pdf")
+          if (studentIds.length === 1) {
+            const st = students.find((s) => s.id === studentIds[0]) || selectedStudent
+            const admNo = slugify(st?.student_id || "Unknown")
+            const studentName = slugify(`${st?.first_name || ""}_${st?.last_name || ""}`)
+            const filename = `${admNo}_${studentName}_${sessionSlug}_${termSlug}_Report_Card.pdf`
+            await exportReportCardsAsPDF(nodes, filename)
+          } else {
+            const filename = `${className}_${sessionSlug}_${termSlug}_Report_Cards.pdf`
+            await exportReportCardsAsPDF(nodes, filename)
+          }
         } else if (action === "image") {
-          const filenames = studentIds.map(id => `ReportCard_${id}.png`)
+          const filenames = studentIds.map(id => {
+            const st = students.find((s) => s.id === id)
+            const admNo = slugify(st?.student_id || "Unknown")
+            const studentName = slugify(`${st?.first_name || ""}_${st?.last_name || ""}`)
+            return `${admNo}_${studentName}_${sessionSlug}_${termSlug}_Report_Card.png`
+          })
           await exportReportCardsAsImages(nodes, filenames)
         }
       } else {
@@ -657,12 +1030,13 @@ export function ResultFinalizationInterface({
       setLoading(true)
 
       try {
-        const [scoresRes, skillsRes, resultRes] = await Promise.all([
+        const [scoresRes, skillsRes, resultRes, classSubjsRes] = await Promise.all([
           supabase
             .from("student_scores")
             .select(`
               score,
               grade,
+              remarks,
               assessment:assessments!inner(
                 class_id,
                 session_id,
@@ -690,23 +1064,73 @@ export function ResultFinalizationInterface({
             .eq("student_id", selectedStudent.id)
             .eq("session_id", sessionId)
             .eq("term_id", termId)
-            .maybeSingle()
+            .maybeSingle(),
+
+          supabase
+            .from("class_subjects")
+            .select("subject_id, subject:subjects(id, name, code)")
+            .eq("class_id", initialClassId || classData?.id)
         ])
 
         const scoresData = scoresRes.data
         const skillsData = skillsRes.data
         const resultData = resultRes.data
+        const classSubjsData = classSubjsRes.data
 
-        // Organize scores by subject
+        // Organize scores by subject, grouping components into their parent subject
+        const getGrade = (scoreVal: number): string => {
+          if (scoreVal >= 95) return "A+"
+          if (scoreVal >= 90) return "A"
+          if (scoreVal >= 85) return "B+"
+          if (scoreVal >= 80) return "B"
+          if (scoreVal >= 75) return "C+"
+          if (scoreVal >= 70) return "C"
+          if (scoreVal >= 65) return "D+"
+          if (scoreVal >= 60) return "D"
+          if (scoreVal >= 50) return "E"
+          return "F"
+        }
+
+        const getRemark = (scoreVal: number): string => {
+          if (scoreVal >= 95) return "Outstanding"
+          if (scoreVal >= 90) return "Excellent"
+          if (scoreVal >= 85) return "Very Good"
+          if (scoreVal >= 80) return "Good"
+          if (scoreVal >= 75) return "Above Average"
+          if (scoreVal >= 70) return "Average"
+          if (scoreVal >= 65) return "Fair"
+          if (scoreVal >= 60) return "Pass"
+          if (scoreVal >= 50) return "Below Average"
+          return "Fail"
+        }
+
         const scoresBySubject = new Map<string, any>()
+
+        // Pre-fill with all subjects assigned to the class
+        classSubjsData?.forEach((cs: any) => {
+          const sName = cs.subject?.name
+          if (sName) {
+            scoresBySubject.set(sName, {
+              subject_id: cs.subject_id || cs.subject?.id,
+              subject_name: sName,
+              subject_name_raw: sName,
+              ca1: null,
+              ca2: null,
+              exam: null,
+              total: null,
+              grade: "",
+              remark: "",
+              has_components: false,
+              components: [],
+            })
+          }
+        })
+
         scoresData?.forEach((score: any) => {
           const subjectNameRaw = score.assessment?.subject?.name
           const subjectId = score.assessment?.subject?.id
           const subjectComponent = score.assessment?.subject_component
-          const subjectName = subjectComponent
-            ? `${subjectNameRaw}: ${subjectComponent.name}`
-            : subjectNameRaw
-          const assessmentType = score.assessment?.assessment_type?.name
+          const subjectName = subjectNameRaw
 
           if (!subjectName) return
 
@@ -718,40 +1142,86 @@ export function ResultFinalizationInterface({
               ca1: null,
               ca2: null,
               exam: null,
-              total: 0,
+              total: null,
               grade: "",
+              remark: "",
+              has_components: false,
+              components: [],
             })
           }
 
           const subjectScore = scoresBySubject.get(subjectName)
+          const val = score.score !== null && score.score !== undefined ? score.score : null
+
+          const assessmentType = score.assessment?.assessment_type?.name
           if (assessmentType?.includes("CA Test 1")) {
-            subjectScore.ca1 = score.score
+            if (val !== null) {
+              subjectScore.ca1 = (subjectScore.ca1 || 0) + val
+            }
           } else if (assessmentType?.includes("CA Test 2")) {
-            subjectScore.ca2 = score.score
+            if (val !== null) {
+              subjectScore.ca2 = (subjectScore.ca2 || 0) + val
+            }
           } else if (assessmentType?.includes("Exam")) {
-            subjectScore.exam = score.score
-            subjectScore.grade = score.grade
+            if (val !== null) {
+              subjectScore.exam = (subjectScore.exam || 0) + val
+            }
+            if (!subjectComponent && score.remarks) {
+              subjectScore.remark = score.remarks
+            }
+          }
+
+          if (subjectComponent) {
+            subjectScore.has_components = true
+            let compObj = subjectScore.components.find((c: any) => c.name === subjectComponent.name)
+            if (!compObj) {
+              compObj = {
+                name: subjectComponent.name,
+                ca1: null,
+                ca2: null,
+                exam: null,
+                total: null,
+              }
+              subjectScore.components.push(compObj)
+            }
+            if (assessmentType?.includes("CA Test 1")) {
+              compObj.ca1 = val
+            } else if (assessmentType?.includes("CA Test 2")) {
+              compObj.ca2 = val
+            } else if (assessmentType?.includes("Exam")) {
+              compObj.exam = val
+            }
+            
+            const hasCompCa1 = compObj.ca1 !== null
+            const hasCompCa2 = compObj.ca2 !== null
+            const hasCompExam = compObj.exam !== null
+            const hasCompAny = hasCompCa1 || hasCompCa2 || hasCompExam
+            compObj.total = hasCompAny ? ((compObj.ca1 || 0) + (compObj.ca2 || 0) + (compObj.exam || 0)) : null
           }
         })
 
-        // Fetch class subjects ordering
-        const { data: classSubjs } = await supabase
-          .from("class_subjects")
-          .select("subject:subjects(name)")
-          .eq("class_id", initialClassId || classData?.id)
-
-        const classSubjectOrder = classSubjs?.map((cs: any) => cs.subject?.name).filter(Boolean) || []
+        const classSubjectOrder = classSubjsData?.map((cs: any) => cs.subject?.name).filter(Boolean) || []
         const orderMap = new Map(classSubjectOrder.map((name: string, index: number) => [name.toLowerCase(), index]))
 
         const classStats = await getClassSubjectStats(initialClassId || classData?.id, sessionId, termId)
 
         // Calculate totals and sort by unified class subject order
         const scoresArray = Array.from(scoresBySubject.values())
-          .map((s) => ({
-            ...s,
-            total: (s.ca1 || 0) + (s.ca2 || 0) + (s.exam || 0),
-            subject_average: classStats[s.subject_name_raw || s.subject_name]?.average ?? null,
-          }))
+          .map((s) => {
+            const hasCa1 = s.ca1 !== null
+            const hasCa2 = s.ca2 !== null
+            const hasExam = s.exam !== null
+            const hasAny = hasCa1 || hasCa2 || hasExam
+            const total = (s.ca1 || 0) + (s.ca2 || 0) + (s.exam || 0)
+            
+            return {
+              ...s,
+              total: hasAny ? total : null,
+              grade: hasAny ? getGrade(total) : "",
+              remark: s.remark || (hasAny ? getRemark(total) : ""),
+              subject_average: classStats[s.subject_name_raw || s.subject_name]?.average ?? null,
+            }
+          })
           .sort((a, b) => {
             const indexA = orderMap.has(a.subject_name.toLowerCase()) ? orderMap.get(a.subject_name.toLowerCase())! : 999
             const indexB = orderMap.has(b.subject_name.toLowerCase()) ? orderMap.get(b.subject_name.toLowerCase())! : 999
@@ -972,12 +1442,12 @@ export function ResultFinalizationInterface({
       }))
 
       // Prepare results payload
-      const totalScore = scores.reduce((sum, s) => sum + s.total, 0)
+      const totalScore = scores.reduce((sum, s) => sum + (s.total || 0), 0)
       const maxScore = scores.length * 100
       const averageScore = scores.length > 0 ? (totalScore / maxScore) * 100 : 0
       const totalSubjects = scores.length
-      const subjectsPassed = scores.filter((s) => s.total >= 50).length
-      const subjectsFailed = scores.filter((s) => s.total < 50).length
+      const subjectsPassed = scores.filter((s) => (s.total || 0) >= 50).length
+      const subjectsFailed = scores.filter((s) => s.total !== null && s.total < 50).length
       const presentNum = parseInt(attendancePresent, 10) || 0
       const totalNum = parseInt(attendanceTotal, 10) || 0
 
@@ -1041,10 +1511,488 @@ export function ResultFinalizationInterface({
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [viewMode, selectedStudent, loading, handleSave])
 
-  const totalScore = scores.reduce((sum, s) => sum + s.total, 0)
+  const totalScore = scores.reduce((sum, s) => sum + (s.total || 0), 0)
   const maxScore = scores.length * 100 // Assuming 100 per subject
   const averageScore = scores.length > 0 ? (totalScore / maxScore) * 100 : 0
-  const grade = averageScore >= 90 ? "A" : averageScore >= 80 ? "B" : averageScore >= 70 ? "C" : averageScore >= 60 ? "D" : "F"
+  const grade = averageScore >= 95 ? "A+" : averageScore >= 90 ? "A" : averageScore >= 85 ? "B+" : averageScore >= 80 ? "B" : averageScore >= 75 ? "C+" : averageScore >= 70 ? "C" : averageScore >= 65 ? "D+" : averageScore >= 60 ? "D" : averageScore >= 50 ? "E" : "F"
+
+  useEffect(() => {
+    const isTemplateTeacher = !teacherRemarks || AUTO_COMMENTS.includes(teacherRemarks.trim())
+    if (isTemplateTeacher && scores.length > 0) {
+      const computedComment = getTeacherCommentForAverage(averageScore)
+      if (teacherRemarks !== computedComment) {
+        setTeacherRemarks(computedComment)
+      }
+    }
+
+    const isTemplatePrincipal = !principalRemarks || AUTO_PRINCIPAL_COMMENTS.includes(principalRemarks.trim())
+    if (isTemplatePrincipal && scores.length > 0) {
+      const computedComment = getPrincipalCommentForAverage(averageScore)
+      if (principalRemarks !== computedComment) {
+        setPrincipalRemarks(computedComment)
+      }
+    }
+  }, [averageScore, scores.length, teacherRemarks, principalRemarks])
+
+
+  const renderStudentsTab = () => {
+    return (
+      <Card className="py-0 shadow-none border-zinc-200/80 dark:border-zinc-800/80">
+        <CardContent className="p-4 sm:p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold">Enrolled Students</h3>
+              <p className="text-xs text-muted-foreground">{enrolledStudents.length} student(s) enrolled</p>
+            </div>
+            {hasAdminAccess && (
+              <Button onClick={() => setShowAddStudentModal(true)} size="sm" className="h-8">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Student
+              </Button>
+            )}
+          </div>
+          
+          <div className="border rounded-xl overflow-hidden bg-background">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50/50 dark:bg-zinc-900/30">
+                  <TableHead className="w-[80px]">Photo</TableHead>
+                  <TableHead>Student ID</TableHead>
+                  <TableHead>Full Name</TableHead>
+                  <TableHead>Gender</TableHead>
+                  <TableHead>Status</TableHead>
+                  {hasAdminAccess && <TableHead className="w-[80px] text-right">Actions</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {enrolledStudents.length > 0 ? (
+                  enrolledStudents.map((student) => (
+                    <TableRow key={student.id} className="hover:bg-slate-50/30 dark:hover:bg-zinc-900/10">
+                      <TableCell className="py-2">
+                        <Avatar className="h-8 w-8">
+                          {student.photo_url && <AvatarImage src={student.photo_url} />}
+                          <AvatarFallback className="text-[10px] font-bold">
+                            {student.first_name?.[0]}
+                            {student.last_name?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                      </TableCell>
+                      <TableCell className="font-semibold text-xs py-2">{student.student_id}</TableCell>
+                      <TableCell className="text-xs font-medium py-2">
+                        {student.first_name} {student.middle_name} {student.last_name}
+                      </TableCell>
+                      <TableCell className="text-xs py-2">{student.gender}</TableCell>
+                      <TableCell className="py-2">
+                        <Badge variant={student.status === "Active" ? "default" : "secondary"} className="text-[9px] font-bold px-1.5 py-0.5">
+                          {student.status}
+                        </Badge>
+                      </TableCell>
+                      {hasAdminAccess && (
+                        <TableCell className="text-right py-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                            onClick={() => handleRemoveStudent(student.enrollment_id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={hasAdminAccess ? 6 : 5} className="text-center text-muted-foreground py-8 text-xs italic">
+                      No students enrolled in this class yet
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const renderSubjectsTab = () => {
+    return (
+      <Card className="py-0 shadow-none border-zinc-200/80 dark:border-zinc-800/80">
+        <CardContent className="p-4 sm:p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold">Class Subjects</h3>
+              <p className="text-xs text-muted-foreground">{classSubjects.length} subject(s) configured</p>
+            </div>
+            {hasAdminAccess && (
+              <Button onClick={() => setShowAddSubjectModal(true)} size="sm" className="h-8">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Subject
+              </Button>
+            )}
+          </div>
+
+          <div className="border rounded-xl overflow-hidden bg-background">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50/50 dark:bg-zinc-900/30">
+                  <TableHead>Subject Name</TableHead>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Max Score</TableHead>
+                  <TableHead>Pass Mark</TableHead>
+                  <TableHead>Teacher</TableHead>
+                  {hasAdminAccess && <TableHead className="w-[100px] text-right">Actions</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {classSubjects.length > 0 ? (
+                  classSubjects.map((cs) => (
+                    <TableRow key={cs.id} className="hover:bg-slate-50/30 dark:hover:bg-zinc-900/10">
+                      <TableCell className="font-semibold text-xs py-2">{cs.subject?.name}</TableCell>
+                      <TableCell className="text-xs py-2">{cs.subject?.code}</TableCell>
+                      <TableCell className="text-xs py-2">{cs.max_score}</TableCell>
+                      <TableCell className="text-xs py-2">{cs.pass_mark}</TableCell>
+                      <TableCell className="text-xs py-2">
+                        {cs.teacher ? (
+                          <span className="font-medium text-foreground">
+                            {cs.teacher.first_name} {cs.teacher.last_name}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground italic">Class teacher</span>
+                        )}
+                      </TableCell>
+                      {hasAdminAccess && (
+                        <TableCell className="text-right py-2">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                              onClick={() => {
+                                setTempSubjectForReassign({
+                                  id: cs.subject?.id,
+                                  name: cs.subject?.name,
+                                  teacher: cs.teacher,
+                                })
+                                setShowReassignTeacherModal(true)
+                              }}
+                              title="Assign Teacher"
+                            >
+                              <UserPlus className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              onClick={() => handleRemoveSubject(cs.id)}
+                              title="Remove Subject"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={hasAdminAccess ? 6 : 5} className="text-center text-muted-foreground py-8 text-xs italic">
+                      No subjects added to this class yet
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const renderTeachersTab = () => {
+    const classTeacherInitials = classDetails?.teacher
+      ? `${classDetails.teacher.first_name?.[0] || ""}${classDetails.teacher.last_name?.[0] || ""}`
+      : "??"
+
+    return (
+      <Card className="py-0 shadow-none border-zinc-200/80 dark:border-zinc-800/80 bg-transparent">
+        <CardContent className="p-0 space-y-6">
+          {/* Class Teacher Lead */}
+          <Card className="border shadow-none overflow-hidden bg-white dark:bg-zinc-950">
+            <CardHeader className="pb-3 border-b border-border/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xs font-bold uppercase tracking-wider text-primary">Class Teacher Lead</CardTitle>
+                  <CardDescription className="text-[11px]">Primary director of studies for this class</CardDescription>
+                </div>
+                {hasAdminAccess && (
+                  <Button
+                    onClick={() => setShowAssignClassTeacherModal(true)}
+                    size="sm"
+                    className="h-8 text-xs"
+                  >
+                    {classDetails?.teacher ? "Change Lead" : "Assign Lead"}
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 sm:p-6">
+              {classDetails?.teacher ? (
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-14 w-14 border-2 border-border shadow-xs">
+                    {classDetails.teacher.photo_url && <AvatarImage src={classDetails.teacher.photo_url} />}
+                    <AvatarFallback className="bg-primary/10 text-primary text-lg font-black">
+                      {classTeacherInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-sm text-foreground">
+                      {classDetails.teacher.first_name} {classDetails.teacher.last_name}
+                    </h4>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1"><Mail className="h-3 w-3" /> {classDetails.teacher.email}</span>
+                      {classDetails.teacher.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {classDetails.teacher.phone}</span>}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="h-16 flex items-center justify-center border-2 border-dashed rounded-xl border-border">
+                  <p className="text-xs text-muted-foreground italic">No primary lead assigned to this class</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Specialist Subject Teachers */}
+          <Card className="border shadow-none overflow-hidden bg-white dark:bg-zinc-950">
+            <CardHeader className="pb-3 border-b border-border/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xs font-bold uppercase tracking-wider text-primary">Specialist Subject Tracks</CardTitle>
+                  <CardDescription className="text-[11px]">Teachers assigned to individual subjects</CardDescription>
+                </div>
+                {hasAdminAccess && (
+                  <Button
+                    onClick={() => setShowAssignSubjectTeacherModal(true)}
+                    size="sm"
+                    className="h-8 text-xs"
+                  >
+                    Assign Specialist
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-border">
+                {classSubjects.filter(cs => cs.teacher).length > 0 ? (
+                  classSubjects.filter(cs => cs.teacher).map((cs) => (
+                    <div key={cs.id} className="p-3.5 flex items-center justify-between gap-4 hover:bg-slate-50/20">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          {cs.teacher.photo_url && <AvatarImage src={cs.teacher.photo_url} />}
+                          <AvatarFallback className="text-[10px] font-bold">
+                            {cs.teacher.first_name?.[0]}
+                            {cs.teacher.last_name?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-xs font-bold leading-none text-foreground">
+                            {cs.teacher.first_name} {cs.teacher.last_name}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground mt-1">{cs.teacher.email}</p>
+                        </div>
+                      </div>
+                      <Badge variant="secondary" className="text-[10px] font-bold px-2 py-0.5 border-none bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                        {cs.subject?.name}
+                      </Badge>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-8 text-center">
+                    <p className="text-xs text-muted-foreground italic">All curricula managed by class teacher lead</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const renderSettingsTab = () => {
+    return (
+      <Card className="py-0 shadow-none border-zinc-200/80 dark:border-zinc-800/80 bg-transparent">
+        <CardContent className="p-0 space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Identity Settings */}
+            <Card className={cn("border shadow-none overflow-hidden bg-white dark:bg-zinc-950", !hasAdminAccess && "opacity-60 pointer-events-none")}>
+              <CardHeader className="bg-slate-50/50 dark:bg-zinc-900/30 border-b border-border/50">
+                <CardTitle className="text-xs font-bold uppercase tracking-wider">Identity Zone</CardTitle>
+                <CardDescription className="text-[11px]">Manage class naming, section and placement</CardDescription>
+              </CardHeader>
+              <CardContent className="p-5 space-y-5">
+                <div className="space-y-4">
+                  <div className="grid gap-1.5">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">Class Label</label>
+                    <Input
+                      value={settingsForm.name}
+                      onChange={(e) => setSettingsForm({ ...settingsForm, name: e.target.value })}
+                      className="bg-slate-50/50 dark:bg-zinc-900 border-none font-bold"
+                      placeholder="e.g. Grade 1 Gold"
+                    />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">Section</label>
+                    <Select
+                      value={settingsForm.sectionId}
+                      onValueChange={(val) => setSettingsForm({ ...settingsForm, sectionId: val })}
+                    >
+                      <SelectTrigger className="bg-slate-50/50 dark:bg-zinc-900 border-none font-bold">
+                        <SelectValue placeholder="Select Section" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allSections.map((sec) => (
+                          <SelectItem key={sec.id} value={sec.id} className="font-bold">{sec.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-1.5">
+                    <label className="text-[10px] font-bold uppercase text-muted-foreground">Total Capacity</label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        value={settingsForm.capacity}
+                        onChange={(e) => setSettingsForm({ ...settingsForm, capacity: parseInt(e.target.value) })}
+                        className="bg-slate-50/50 dark:bg-zinc-900 border-none font-bold pl-10"
+                      />
+                      <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  className="w-full font-bold uppercase tracking-wider text-xs rounded-xl"
+                  onClick={async () => {
+                    setIsUpdatingSettings(true)
+                    try {
+                      const classId = initialClassId || classData?.id
+                      await updateClass(classId, {
+                        name: settingsForm.name,
+                        capacity: settingsForm.capacity,
+                        section_id: settingsForm.sectionId
+                      })
+                      toast.success("Identity updated successfully")
+                      setRefreshKey((prev) => prev + 1)
+                    } catch (err) {
+                      toast.error("Failed to update class")
+                    } finally {
+                      setIsUpdatingSettings(false)
+                    }
+                  }}
+                  disabled={isUpdatingSettings}
+                >
+                  Save Settings
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Danger zone / Guardrails */}
+            <div className="space-y-6">
+              <Card className="border shadow-none overflow-hidden bg-white dark:bg-zinc-950">
+                <CardHeader className="bg-slate-50/50 dark:bg-zinc-900/30 border-b border-border/50">
+                  <CardTitle className="text-xs font-bold uppercase tracking-wider">Academic Guardrails</CardTitle>
+                  <CardDescription className="text-[11px]">Global standards for this class</CardDescription>
+                </CardHeader>
+                <CardContent className="p-4 space-y-4">
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50/30 dark:bg-zinc-900/10 border">
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-bold uppercase">Global Pass Mark</p>
+                      <p className="text-[10px] text-muted-foreground italic">Apply default pass score to all subjects</p>
+                    </div>
+                    <span className="text-xs font-bold text-muted-foreground">40%</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50/30 dark:bg-zinc-900/10 border">
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-bold uppercase">Attendance Alert</p>
+                      <p className="text-[10px] text-muted-foreground italic">Flag students below 85% attendance</p>
+                    </div>
+                    <span className="text-xs font-bold text-muted-foreground">Inactive</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Danger Zone */}
+              <Card className={cn("border border-red-200/50 dark:border-red-900/30 shadow-none overflow-hidden bg-white dark:bg-zinc-950", !hasAdminAccess && "opacity-60 pointer-events-none")}>
+                <CardHeader className="bg-red-50/20 dark:bg-red-950/10 border-b border-red-200/20">
+                  <CardTitle className="text-xs font-bold uppercase tracking-wider text-destructive">Danger Zone</CardTitle>
+                  <CardDescription className="text-[11px] text-destructive/80">Destructive administrative actions</CardDescription>
+                </CardHeader>
+                <CardContent className="p-5 space-y-4">
+                  <div className="flex items-center justify-between group cursor-pointer" onClick={() => {
+                    const classId = initialClassId || classData?.id
+                    toast.promise(updateClass(classId, { is_active: !classDetails?.is_active }), {
+                      loading: 'Processing...',
+                      success: 'Class state toggled',
+                      error: 'Failed to archive'
+                    })
+                  }}>
+                    <div>
+                      <p className="text-xs font-bold uppercase">Archive Class</p>
+                      <p className="text-[10px] text-muted-foreground italic">Temporarily disable access for this period</p>
+                    </div>
+                    <Archive className="h-4 w-4 text-muted-foreground group-hover:text-amber-500 transition-colors" />
+                  </div>
+                  <div className="h-px bg-border" />
+                  <div className="flex items-center justify-between group cursor-pointer" onClick={() => setShowDeleteDialog(true)}>
+                    <div>
+                      <p className="text-xs font-bold uppercase text-destructive">Permanently Delete</p>
+                      <p className="text-[10px] text-muted-foreground italic">Erase class and all associated records forever</p>
+                    </div>
+                    <Trash2 className="h-4 w-4 text-destructive/60 group-hover:text-destructive transition-colors" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Delete Dialog */}
+          <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+            <AlertDialogContent className="border-none dark:bg-zinc-950 rounded-3xl p-8 shadow-2xl">
+              <AlertDialogHeader>
+                <div className="h-12 w-12 bg-red-50 dark:bg-red-900/20 rounded-2xl flex items-center justify-center mb-4">
+                  <AlertTriangle className="h-6 w-6 text-destructive" />
+                </div>
+                <AlertDialogTitle className="text-lg font-bold uppercase">Critical Action</AlertDialogTitle>
+                <AlertDialogDescription className="text-xs font-medium">
+                  This will PERMANENTLY erase <span className="text-destructive font-bold">{classDetails?.name}</span>. This action is irreversible and all student results linked to this class will be lost.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="mt-6 gap-3">
+                <AlertDialogCancel className="h-10 border-none bg-slate-100 dark:bg-zinc-900 text-xs font-bold uppercase rounded-xl">Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={async () => {
+                    try {
+                      const classId = initialClassId || classData?.id
+                      await deleteClass(classId)
+                      toast.success("Class terminated")
+                      router.push("/classes")
+                    } catch (err) {
+                      toast.error("An error occurred during termination")
+                    }
+                  }}
+                  className="h-10 bg-destructive text-destructive-foreground text-xs font-bold uppercase rounded-xl px-6 hover:bg-destructive/90"
+                >
+                  Confirm Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </CardContent>
+      </Card>
+    )
+  }
 
   const activeClassObj = classes.find((c) => c.id === initialClassId) || classData
 
@@ -1056,12 +2004,6 @@ export function ResultFinalizationInterface({
         <div className="flex flex-wrap items-center justify-between gap-3">
           {showTitle && (
             <div className="flex items-center gap-3">
-              {showBackButton && (
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => router.back()}>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-              )}
-              
               {/* Vercel-style Class Switcher */}
               <div className="flex items-center gap-1.5">
                 <Popover open={classDropdownOpen} onOpenChange={setClassDropdownOpen}>
@@ -1113,21 +2055,7 @@ export function ResultFinalizationInterface({
                     </Command>
                   </PopoverContent>
                 </Popover>
-
-                {showClassScoresButton && (initialClassId || classData?.id) && (
-                  <a
-                    href={`/classes/${initialClassId || classData?.id}?tab=scores`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Open class scores tab in new tab"
-                  >
-                    <Button variant="outline" size="sm" className="h-7 px-2.5 text-xs font-semibold gap-1.5 text-muted-foreground hover:text-foreground">
-                      <span>Class Scores</span>
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </Button>
-                  </a>
-                )}
-
+ 
                 {/* View Mode Switcher */}
                 <div className="flex h-7 items-center rounded-lg border bg-muted/40 p-0.5 gap-0.5">
                   <button
@@ -1155,6 +2083,19 @@ export function ResultFinalizationInterface({
                   >
                     <BookOpen className="h-3 w-3" />
                     <span>Subject View</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("class_info")}
+                    className={cn(
+                      "h-6 px-2 text-[11px] font-bold flex items-center gap-1 rounded-md transition-all",
+                      viewMode === "class_info"
+                        ? "bg-background shadow-2xs text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <SlidersHorizontal className="h-3 w-3" />
+                    <span>Class Info</span>
                   </button>
                 </div>
               </div>
@@ -1696,7 +2637,8 @@ export function ResultFinalizationInterface({
                           <th className="border-r py-2 px-3 text-center">CA Test 2</th>
                           <th className="border-r py-2 px-3 text-center">Exam</th>
                           <th className="border-r py-2 px-3 text-center">Total</th>
-                          <th className="py-2 px-3 text-center">Grade</th>
+                          <th className="border-r py-2 px-3 text-center">Grade</th>
+                          <th className="py-2 px-3 text-left">Remark</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1704,14 +2646,76 @@ export function ResultFinalizationInterface({
                           <ContextMenu key={index}>
                             <ContextMenuTrigger asChild>
                               <tr className="border-b last:border-0 hover:bg-muted/20 text-xs cursor-context-menu select-none">
-                                <td className="border-r py-2 px-3 font-semibold">{score.subject_name}</td>
+                                <td className="border-r py-2 px-3 font-semibold">
+                                  <div className="flex items-center justify-between">
+                                    <span>{score.subject_name}</span>
+                                    {score.has_components && (
+                                      <Popover>
+                                        <PopoverTrigger asChild>
+                                          <button 
+                                            onClick={(e) => e.stopPropagation()} 
+                                            className="ml-2 p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded transition-colors text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-300"
+                                            title="View sub-components"
+                                          >
+                                            <Layers className="h-3.5 w-3.5" />
+                                          </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent 
+                                          className="w-[420px] p-0" 
+                                          align="start"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          <div className="p-3 border-b border-zinc-100 dark:border-zinc-800 bg-muted/30">
+                                            <h5 className="text-xs font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                                              <Layers className="h-3.5 w-3.5 text-indigo-500" />
+                                              {score.subject_name} - Sub-components Breakdown
+                                            </h5>
+                                          </div>
+                                          <div className="p-2 overflow-x-auto">
+                                            <table className="w-full border-collapse text-[11px]">
+                                              <thead>
+                                                <tr className="border-b bg-muted/40 font-bold text-muted-foreground">
+                                                  <th className="py-1.5 px-2 text-left">Sub-component</th>
+                                                  <th className="py-1.5 px-2 text-center">CA 1</th>
+                                                  <th className="py-1.5 px-2 text-center">CA 2</th>
+                                                  <th className="py-1.5 px-2 text-center">Exam</th>
+                                                  <th className="py-1.5 px-2 text-center font-black">Total</th>
+                                                </tr>
+                                              </thead>
+                                              <tbody>
+                                                {score.components && score.components.length > 0 ? (
+                                                  score.components.map((comp: any, idx: number) => (
+                                                    <tr key={idx} className="border-b last:border-0 hover:bg-muted/10">
+                                                      <td className="py-1.5 px-2 font-medium">{comp.name}</td>
+                                                      <td className="py-1.5 px-2 text-center text-muted-foreground">{comp.ca1 ?? "-"}</td>
+                                                      <td className="py-1.5 px-2 text-center text-muted-foreground">{comp.ca2 ?? "-"}</td>
+                                                      <td className="py-1.5 px-2 text-center text-muted-foreground">{comp.exam ?? "-"}</td>
+                                                      <td className="py-1.5 px-2 text-center font-bold text-zinc-800 dark:text-zinc-200">{comp.total ?? "-"}</td>
+                                                    </tr>
+                                                  ))
+                                                ) : (
+                                                  <tr>
+                                                    <td colSpan={5} className="py-3 text-center text-muted-foreground italic">
+                                                      No sub-component scores entered yet
+                                                    </td>
+                                                  </tr>
+                                                )}
+                                              </tbody>
+                                            </table>
+                                          </div>
+                                        </PopoverContent>
+                                      </Popover>
+                                    )}
+                                  </div>
+                                </td>
                                 <td className="border-r py-2 px-3 text-center text-muted-foreground">{score.ca1 ?? "-"}</td>
                                 <td className="border-r py-2 px-3 text-center text-muted-foreground">{score.ca2 ?? "-"}</td>
                                 <td className="border-r py-2 px-3 text-center text-muted-foreground">{score.exam ?? "-"}</td>
                                 <td className="border-r py-2 px-3 text-center font-bold">
-                                  {score.total}
+                                  {score.total !== null ? score.total : "-"}
                                 </td>
-                                <td className="py-2 px-3 text-center font-bold">{score.grade}</td>
+                                <td className="border-r py-2 px-3 text-center font-bold">{score.grade || "-"}</td>
+                                <td className="py-2 px-3 text-left text-muted-foreground font-medium">{score.remark || "-"}</td>
                               </tr>
                             </ContextMenuTrigger>
                             <ContextMenuContent className="w-52">
@@ -1906,7 +2910,126 @@ export function ResultFinalizationInterface({
         </Card>
       </div>
       </div>
+
+      {/* Class Info Container */}
+      <div className={cn("flex-1 overflow-hidden", viewMode === "class_info" ? "block" : "hidden")}>
+        <div className="flex h-full gap-4 overflow-hidden">
+          {/* Sidebar */}
+          <Card className="w-[200px] py-0 shadow-none border-zinc-200/80 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-900/30">
+            <CardContent className="flex flex-col gap-1 p-2">
+              <button
+                onClick={() => setActiveInfoTab("students")}
+                className={cn(
+                  "flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg transition-colors text-left w-full",
+                  activeInfoTab === "students"
+                    ? "bg-primary text-primary-foreground font-black"
+                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                )}
+              >
+                <Users className="h-4 w-4" />
+                Students
+              </button>
+              <button
+                onClick={() => setActiveInfoTab("subjects")}
+                className={cn(
+                  "flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg transition-colors text-left w-full",
+                  activeInfoTab === "subjects"
+                    ? "bg-primary text-primary-foreground font-black"
+                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                )}
+              >
+                <Book className="h-4 w-4" />
+                Subjects
+              </button>
+              <button
+                onClick={() => setActiveInfoTab("teachers")}
+                className={cn(
+                  "flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg transition-colors text-left w-full",
+                  activeInfoTab === "teachers"
+                    ? "bg-primary text-primary-foreground font-black"
+                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                )}
+              >
+                <Shield className="h-4 w-4" />
+                Teachers
+              </button>
+              <button
+                onClick={() => setActiveInfoTab("settings")}
+                className={cn(
+                  "flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg transition-colors text-left w-full",
+                  activeInfoTab === "settings"
+                    ? "bg-primary text-primary-foreground font-black"
+                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                )}
+              >
+                <Settings className="h-4 w-4" />
+                Settings
+              </button>
+            </CardContent>
+          </Card>
+
+          {/* Main Content Area */}
+          <div className="flex-1 overflow-y-auto pr-1">
+            {activeInfoTab === "students" && renderStudentsTab()}
+            {activeInfoTab === "subjects" && renderSubjectsTab()}
+            {activeInfoTab === "teachers" && renderTeachersTab()}
+            {activeInfoTab === "settings" && renderSettingsTab()}
+          </div>
+        </div>
       </div>
+      </div>
+
+      {hasAdminAccess && (
+        <>
+          <AddStudentToClassModal
+            open={showAddStudentModal}
+            onOpenChange={setShowAddStudentModal}
+            classId={initialClassId || classData?.id}
+            sessionId={sessionId}
+            termId={termId}
+            unenrolledStudents={unenrolledStudents}
+          />
+
+          <AddSubjectToClassModal
+            open={showAddSubjectModal}
+            onOpenChange={setShowAddSubjectModal}
+            classId={initialClassId || classData?.id}
+            availableSubjects={availableSubjects}
+          />
+
+          <AssignTeacherModal
+            open={showAssignClassTeacherModal}
+            onOpenChange={setShowAssignClassTeacherModal}
+            classId={initialClassId || classData?.id}
+            sessionId={sessionId}
+            teachers={allTeachers}
+            type="class"
+          />
+
+          <AssignTeacherModal
+            open={showAssignSubjectTeacherModal}
+            onOpenChange={setShowAssignSubjectTeacherModal}
+            classId={initialClassId || classData?.id}
+            sessionId={sessionId}
+            teachers={allTeachers}
+            type="subject"
+            subjects={classSubjects.map((cs) => ({ id: cs.subject?.id, name: cs.subject?.name }))}
+          />
+
+          {tempSubjectForReassign && (
+            <ReassignTeacherModal
+              open={showReassignTeacherModal}
+              onOpenChange={setShowReassignTeacherModal}
+              classId={initialClassId || classData?.id}
+              sessionId={sessionId}
+              subjectId={tempSubjectForReassign.id}
+              subjectName={tempSubjectForReassign.name}
+              currentTeacher={tempSubjectForReassign.teacher}
+              teachers={allTeachers}
+            />
+          )}
+        </>
+      )}
 
       {/* Global Print Styles to guarantee app headers & sidebars hide during print */}
       <style>{`
@@ -1929,7 +3052,7 @@ export function ResultFinalizationInterface({
             left: auto !important;
             top: auto !important;
             z-index: auto !important;
-            width: 210mm !important;
+            width: 297mm !important;
             margin: 0 auto !important;
           }
         }

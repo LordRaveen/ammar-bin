@@ -152,9 +152,9 @@ export async function saveStudentScore(
   sessionId: string,
   termId: string,
   scores: {
-    ca1: number
-    ca2: number
-    exam: number
+    ca1: number | null
+    ca2: number | null
+    exam: number | null
   },
   remarks?: string,
   subjectComponentId?: string | null,

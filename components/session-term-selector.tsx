@@ -123,7 +123,7 @@ export function SessionTermSelector({
       <div className="flex flex-col gap-1">
         {showLabels && <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Session</span>}
         <Select value={activeSessionId} onValueChange={handleSessionChange}>
-          <SelectTrigger className={cn("w-[140px] font-semibold bg-background border-input", triggerHeight)}>
+          <SelectTrigger className={cn("w-fit min-w-[100px] px-3 font-semibold bg-background border-input", triggerHeight)}>
             <SelectValue placeholder="Select Session" />
           </SelectTrigger>
           <SelectContent align="start" className="w-[180px]">
@@ -147,7 +147,7 @@ export function SessionTermSelector({
       <div className="flex flex-col gap-1">
         {showLabels && <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Term</span>}
         <Select value={activeTermId} onValueChange={handleTermChange} disabled={sessionTerms.length === 0}>
-          <SelectTrigger className={cn("w-[140px] font-semibold bg-background border-input", triggerHeight)}>
+          <SelectTrigger className={cn("w-fit min-w-[100px] px-3 font-semibold bg-background border-input", triggerHeight)}>
             <SelectValue placeholder="Select Term" />
           </SelectTrigger>
           <SelectContent align="start" className="w-[180px]">

@@ -13,22 +13,22 @@ export interface PrintableReportCardProps {
 }
 
 const DEFAULT_AFFECTIVE_SKILLS = [
-  "Punctuality",
-  "Neatness",
-  "Politeness",
-  "Honesty",
-  "Perseverance",
-  "Relationship with others",
-  "Response to Home Work",
   "Attentiveness",
-  "Emotional stability"
+  "Emotional Stability",
+  "Honesty",
+  "Neatness",
+  "Perseverance",
+  "Politeness",
+  "Punctuality",
+  "Relationship with Peers",
+  "Response to Home Work",
 ]
 
 const DEFAULT_PSYCHOMOTOR_SKILLS = [
   "Ablution",
+  "Handwriting",
   "Prayer (Salat)",
-  "Verbal fluency",
-  "Handwriting"
+  "Verbal Fluency",
 ]
 
 const mapRatingToLetter = (rating: any) => {
@@ -41,22 +41,28 @@ const mapRatingToLetter = (rating: any) => {
 }
 
 const getGradeFromScore = (score: number) => {
-  if (score >= 85) return "A+"
-  if (score >= 75) return "A"
-  if (score >= 65) return "B+"
-  if (score >= 55) return "B"
-  if (score >= 45) return "C"
-  if (score >= 35) return "D"
+  if (score >= 95) return "A+"
+  if (score >= 90) return "A"
+  if (score >= 85) return "B+"
+  if (score >= 80) return "B"
+  if (score >= 75) return "C+"
+  if (score >= 70) return "C"
+  if (score >= 65) return "D+"
+  if (score >= 60) return "D"
+  if (score >= 50) return "E"
   return "F"
 }
 
 const getRemarkFromScore = (score: number) => {
-  if (score >= 85) return "Outstanding"
-  if (score >= 75) return "Excellent"
-  if (score >= 65) return "Very Good"
-  if (score >= 55) return "Good"
-  if (score >= 45) return "Average"
-  if (score >= 35) return "Weak"
+  if (score >= 95) return "Outstanding"
+  if (score >= 90) return "Excellent"
+  if (score >= 85) return "Very Good"
+  if (score >= 80) return "Good"
+  if (score >= 75) return "Above Average"
+  if (score >= 70) return "Average"
+  if (score >= 65) return "Fair"
+  if (score >= 60) return "Pass"
+  if (score >= 50) return "Below Average"
   return "Fail"
 }
 
@@ -140,9 +146,9 @@ export function PrintableReportCard({
         total: totalVal
       })
       groupedSubjects[parentName].total += totalVal
-      groupedSubjects[parentName].classMin = (groupedSubjects[parentName].classMin || 0) + (data?.classMin || 0)
-      groupedSubjects[parentName].classMax = (groupedSubjects[parentName].classMax || 0) + (data?.classMax || 0)
-      groupedSubjects[parentName].classAvg = (groupedSubjects[parentName].classAvg || 0) + (data?.classAvg || 0)
+      groupedSubjects[parentName].classMin = data?.classMin !== undefined && data?.classMin !== null ? data.classMin : null
+      groupedSubjects[parentName].classMax = data?.classMax !== undefined && data?.classMax !== null ? data.classMax : null
+      groupedSubjects[parentName].classAvg = data?.classAvg !== undefined && data?.classAvg !== null ? data.classAvg : null
     } else {
       groupedSubjects[fullSubjName] = {
         subjName: fullSubjName,
@@ -169,9 +175,8 @@ export function PrintableReportCard({
   // Finalize parent fields for grouped subjects
   Object.values(groupedSubjects).forEach((subj) => {
     if (subj.isGrouped) {
-      const avgPercentage = subj.total / subj.subRows.length
-      subj.grade = getGradeFromScore(avgPercentage)
-      subj.remark = getRemarkFromScore(avgPercentage)
+      subj.grade = getGradeFromScore(subj.total)
+      subj.remark = getRemarkFromScore(subj.total)
     } else {
       if (!subj.grade) {
         subj.grade = getGradeFromScore(subj.total)
@@ -191,30 +196,16 @@ export function PrintableReportCard({
     return mapRatingToLetter(val)
   }
 
-  const affectiveFromData = skills
-    .filter((s) => s.skill_category === "Affective")
-    .map((s) => s.skill_name)
-  const affectiveUnique = Array.from(new Set(affectiveFromData))
-  const affectiveListToUse = affectiveUnique.length > 0 ? affectiveUnique : DEFAULT_AFFECTIVE_SKILLS
-
-  const midPoint = Math.ceil(affectiveListToUse.length / 2)
-  const affectiveCol1 = affectiveListToUse.slice(0, midPoint)
-  const affectiveCol2 = affectiveListToUse.slice(midPoint)
-
-  const psychomotorFromData = skills
-    .filter((s) => s.skill_category === "Psychomotor")
-    .map((s) => s.skill_name)
-  const psychomotorUnique = Array.from(new Set(psychomotorFromData))
-  const psychomotorListToUse = psychomotorUnique.length > 0 ? psychomotorUnique : DEFAULT_PSYCHOMOTOR_SKILLS
+  const affectiveCol1 = DEFAULT_AFFECTIVE_SKILLS.slice(0, 5)
+  const affectiveCol2 = DEFAULT_AFFECTIVE_SKILLS.slice(5)
+  const psychomotorListToUse = DEFAULT_PSYCHOMOTOR_SKILLS
 
   // Summary Metrics
-  const totalScore = result?.total_score || Object.values(groupedSubjects).reduce((sum, s) => sum + s.total, 0)
-  const totalSubjects = Object.keys(subjectScores || {}).length
+  const scoredSubjects = Object.values(groupedSubjects).filter((s) => s.total !== null)
+  const totalScore = scoredSubjects.reduce((sum, s) => sum + s.total, 0)
+  const totalSubjects = scoredSubjects.length
   const totalPossibleScore = totalSubjects * 100
-  const averageScore = result?.average_score !== undefined && result?.average_score !== null
-    ? result.average_score
-    : (totalPossibleScore > 0 ? (totalScore / totalPossibleScore) * 100 : 0)
-
+  const averageScore = totalPossibleScore > 0 ? (totalScore / totalPossibleScore) * 100 : 0
   const overallGrade = getGradeFromScore(averageScore)
 
   const teacherRemarkText = result?.teacher_remark || result?.teacher_comment || "—"
@@ -460,11 +451,14 @@ export function PrintableReportCard({
           color: #111827;
           vertical-align: middle;
         }
-        table.main-table th:last-child, table.main-table td:last-child {
+        table.main-table th:last-child, table.main-table td.comment-cell {
           border-right: none;
         }
         table.main-table tr:last-child td {
           border-bottom: none;
+        }
+        .sub-row-cell {
+          padding: 2px 8px !important;
         }
 
         table.main-table th {
@@ -564,21 +558,42 @@ export function PrintableReportCard({
         .domain-row .d-val { color: #111827; font-weight: 700; }
 
         .scale-box {
-          flex: 0.9;
-          font-size: 9px;
+          flex: 1.5;
           border: 1px solid #e2e4e9;
           border-radius: 10px;
           padding: 8px 12px;
+          display: flex;
+          flex-direction: column;
         }
         .scale-title {
+          color: #2563eb;
           font-weight: 700;
-          margin-bottom: 4px;
-          color: #6b7280;
+          font-size: 9.5px;
           text-transform: uppercase;
-          font-size: 8.5px;
           letter-spacing: 0.3px;
+          margin-bottom: 6px;
         }
-        .scale-box div { margin: 2px 0; color: #111827; }
+        .scale-grid {
+          display: flex;
+          gap: 12px;
+        }
+        .scale-col {
+          flex: 1;
+        }
+        .scale-col + .scale-col {
+          border-left: 1px solid #e2e4e9;
+          padding-left: 12px;
+        }
+        .scale-row {
+          display: flex;
+          justify-content: space-between;
+          font-size: 9px;
+          padding: 3.5px 0;
+          border-bottom: 1px solid #e2e4e9;
+        }
+        .scale-row:last-child { border-bottom: none; }
+        .scale-row .s-label { color: #111827; font-weight: 700; }
+        .scale-row .s-val { color: #6b7280; font-weight: 600; }
 
         /* ===== Comments ===== */
         .comments {
@@ -719,10 +734,10 @@ export function PrintableReportCard({
                               <td className="subject-name" rowSpan={subj.subRows.length}>
                                 {subj.subjName}
                               </td>
-                              <td className="sub-row-label">{sub.subName}</td>
-                              <td>{sub.ca1 !== null || sub.ca2 !== null ? caCombined : "—"}</td>
-                              <td>{sub.exam !== null ? sub.exam : "—"}</td>
-                              <td rowSpan={subj.subRows.length}>{subj.total}</td>
+                              <td className="sub-row-label sub-row-cell">{sub.subName}</td>
+                              <td className="sub-row-cell">{sub.ca1 !== null || sub.ca2 !== null ? caCombined : "—"}</td>
+                              <td className="sub-row-cell">{sub.exam !== null ? sub.exam : "—"}</td>
+                              <td rowSpan={subj.subRows.length}>{subj.total !== null ? subj.total : "—"}</td>
                               <td rowSpan={subj.subRows.length}>
                                 <span className="grade-text">{subj.grade}</span>
                               </td>
@@ -743,9 +758,9 @@ export function PrintableReportCard({
                         } else {
                           return (
                             <tr key={sub.subName}>
-                              <td className="sub-row-label">{sub.subName}</td>
-                              <td>{sub.ca1 !== null || sub.ca2 !== null ? caCombined : "—"}</td>
-                              <td>{sub.exam !== null ? sub.exam : "—"}</td>
+                              <td className="sub-row-label sub-row-cell">{sub.subName}</td>
+                              <td className="sub-row-cell">{sub.ca1 !== null || sub.ca2 !== null ? caCombined : "—"}</td>
+                              <td className="sub-row-cell">{sub.exam !== null ? sub.exam : "—"}</td>
                             </tr>
                           )
                         }
@@ -762,7 +777,7 @@ export function PrintableReportCard({
                       </td>
                       <td>{sub.ca1 !== null || sub.ca2 !== null ? caCombined : "—"}</td>
                       <td>{sub.exam !== null ? sub.exam : "—"}</td>
-                      <td style={{ fontWeight: 700 }}>{subj.total}</td>
+                      <td style={{ fontWeight: 700 }}>{subj.total !== null ? subj.total : "—"}</td>
                       <td>
                         <span className="grade-text">{subj.grade}</span>
                       </td>
@@ -817,13 +832,52 @@ export function PrintableReportCard({
           {/* Scale Box */}
           <div className="scale-box">
             <div className="scale-title">Scale</div>
-            <div>A+ = Outstanding</div>
-            <div>A = Excellent</div>
-            <div>B+ = Very good</div>
-            <div>B = Good</div>
-            <div>C = Average</div>
-            <div>D = Weak</div>
-            <div>F = Fail</div>
+            <div className="scale-grid">
+              <div className="scale-col">
+                <div className="scale-row">
+                  <span className="s-label">A+ (95–100)</span>
+                  <span className="s-val">Outstanding</span>
+                </div>
+                <div className="scale-row">
+                  <span className="s-grade s-label">A (90–94)</span>
+                  <span className="s-val">Excellent</span>
+                </div>
+                <div className="scale-row">
+                  <span className="s-grade s-label">B+ (85–89)</span>
+                  <span className="s-val">Very Good</span>
+                </div>
+                <div className="scale-row">
+                  <span className="s-grade s-label">B (80–84)</span>
+                  <span className="s-val">Good</span>
+                </div>
+                <div className="scale-row">
+                  <span className="s-grade s-label">C+ (75–79)</span>
+                  <span className="s-val">Above Average</span>
+                </div>
+              </div>
+              <div className="scale-col">
+                <div className="scale-row">
+                  <span className="s-grade s-label">C (70–74)</span>
+                  <span className="s-val">Average</span>
+                </div>
+                <div className="scale-row">
+                  <span className="s-grade s-label">D+ (65–69)</span>
+                  <span className="s-val">Fair</span>
+                </div>
+                <div className="scale-row">
+                  <span className="s-grade s-label">D (60–64)</span>
+                  <span className="s-val">Pass</span>
+                </div>
+                <div className="scale-row">
+                  <span className="s-grade s-label">E (50–59)</span>
+                  <span className="s-val">Below Average</span>
+                </div>
+                <div className="scale-row">
+                  <span className="s-grade s-label">F (0–49)</span>
+                  <span className="s-val">Fail</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

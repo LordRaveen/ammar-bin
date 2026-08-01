@@ -25,7 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Search, BookOpen, Save, Pencil, X, Loader2, AlertTriangle, History, RefreshCw, Bookmark, CheckCircle2 } from "lucide-react"
+import { Search, BookOpen, Save, Pencil, X, Loader2, AlertTriangle, History, RefreshCw, Bookmark, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { saveBatchSubjectScores, saveStudentScore } from "@/app/(dashboard)/classes/[id]/actions"
 import { toast } from "sonner"
@@ -92,6 +92,79 @@ export function SubjectResultView({
   const [activeCell, setActiveCell] = useState<{ studentId: string; field: "ca1" | "ca2" | "exam" | "remark" } | null>(null)
   const [classComponentsList, setClassComponentsList] = useState<any[]>([])
   const [editingStudentForComponents, setEditingStudentForComponents] = useState<Student | null>(null)
+  
+  const currentStudentIndex = useMemo(() => {
+    if (!editingStudentForComponents) return -1
+    return students.findIndex((s) => s.id === editingStudentForComponents.id)
+  }, [editingStudentForComponents, students])
+
+  const [subjectLimits, setSubjectLimits] = useState<{ max_score: number; pass_mark: number; ca_count: number } | null>(null)
+
+  useEffect(() => {
+    async function fetchSubjectLimits() {
+      if (!classId || !selectedSubjectId) return
+      try {
+        const { data } = await supabase
+          .from("class_subjects")
+          .select("max_score, pass_mark, ca_count")
+          .eq("class_id", classId)
+          .eq("subject_id", selectedSubjectId)
+          .maybeSingle()
+        
+        if (data) {
+          setSubjectLimits({
+            max_score: data.max_score ?? 100,
+            pass_mark: data.pass_mark ?? 40,
+            ca_count: data.ca_count ?? 2
+          })
+        }
+      } catch (err) {
+        console.error("Error fetching subject limits:", err)
+      }
+    }
+    fetchSubjectLimits()
+  }, [classId, selectedSubjectId, supabase])
+
+  const dynamicHeaderLimits = useMemo(() => {
+    if (hasComponents && classComponentsList.length > 0) {
+      let ca1MaxSum = 0
+      let ca2MaxSum = 0
+      let examMaxSum = 0
+
+      classComponentsList.forEach((comp) => {
+        const caCount = comp.ca_count ?? 2
+        const ca1Max = caCount === 1 ? comp.max_ca : (comp.max_ca / 2)
+        const ca2Max = caCount === 1 ? 0 : (comp.max_ca / 2)
+        
+        ca1MaxSum += ca1Max
+        ca2MaxSum += ca2Max
+        examMaxSum += comp.max_exam
+      })
+
+      return {
+        ca1: ca1MaxSum,
+        ca2: ca2MaxSum,
+        exam: examMaxSum,
+        showCa2: ca2MaxSum > 0
+      }
+    } else {
+      const caCount = subjectLimits?.ca_count ?? 2
+      const maxScore = subjectLimits?.max_score ?? 100
+      const maxExam = 60
+      const maxCa = maxScore - maxExam
+
+      const ca1Max = caCount === 1 ? maxCa : (maxCa / 2)
+      const ca2Max = caCount === 1 ? 0 : (maxCa / 2)
+
+      return {
+        ca1: ca1Max,
+        ca2: ca2Max,
+        exam: maxExam,
+        showCa2: caCount === 2
+      }
+    }
+  }, [hasComponents, classComponentsList, subjectLimits])
+
   const [componentScores, setComponentScores] = useState<Record<string, { ca1: string; ca2: string; exam: string; remark: string }>>({})
   const [loadingComponentScores, setLoadingComponentScores] = useState(false)
   const [savingComponentScores, setSavingComponentScores] = useState(false)
@@ -166,7 +239,13 @@ export function SubjectResultView({
       
       const comp = classComponentsList.find(c => c.component_id === componentId)
       if (comp) {
-        const maxScore = field === "exam" ? comp.max_exam : comp.max_ca / 2
+        const caCount = comp.ca_count ?? 2
+        let maxScore = comp.max_exam
+        if (field === "ca1") {
+          maxScore = caCount === 1 ? comp.max_ca : comp.max_ca / 2
+        } else if (field === "ca2") {
+          maxScore = caCount === 1 ? 0 : comp.max_ca / 2
+        }
         const numVal = parseFloat(value)
         if (value && numVal > maxScore) {
           toast.warning(`Maximum score for ${comp.name} ${field.toUpperCase()} is ${maxScore}`)
@@ -330,13 +409,19 @@ export function SubjectResultView({
       case "A":
         return "Excellent"
       case "B+":
-        return "Very good"
+        return "Very Good"
       case "B":
         return "Good"
+      case "C+":
+        return "Above Average"
       case "C":
         return "Average"
+      case "D+":
+        return "Fair"
       case "D":
-        return "Weak"
+        return "Pass"
+      case "E":
+        return "Below Average"
       case "F":
         return "Fail"
       default:
@@ -346,12 +431,15 @@ export function SubjectResultView({
 
   // Grade calculator
   const calculateGrade = (total: number): string => {
-    if (total >= 90) return "A+"
-    if (total >= 80) return "A"
-    if (total >= 70) return "B+"
-    if (total >= 60) return "B"
-    if (total >= 50) return "C"
-    if (total >= 40) return "D"
+    if (total >= 95) return "A+"
+    if (total >= 90) return "A"
+    if (total >= 85) return "B+"
+    if (total >= 80) return "B"
+    if (total >= 75) return "C+"
+    if (total >= 70) return "C"
+    if (total >= 65) return "D+"
+    if (total >= 60) return "D"
+    if (total >= 50) return "E"
     return "F"
   }
 
@@ -1300,13 +1388,13 @@ export function SubjectResultView({
                   
                   {/* Score Column Headers - Subtle background ONLY in Edit Mode */}
                   <TableHead className={cn("w-20 text-[11px] font-bold text-center border-r px-0 transition-colors", isEditing && "bg-blue-500/10 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400")}>
-                    CA 1 (20)
+                    CA 1 ({dynamicHeaderLimits.ca1})
                   </TableHead>
                   <TableHead className={cn("w-20 text-[11px] font-bold text-center border-r px-0 transition-colors", isEditing && "bg-blue-500/10 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400")}>
-                    CA 2 (20)
+                    CA 2 ({dynamicHeaderLimits.ca2})
                   </TableHead>
                   <TableHead className={cn("w-20 text-[11px] font-bold text-center border-r px-0 transition-colors", isEditing && "bg-emerald-500/10 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400")}>
-                    EXAM (60)
+                    EXAM ({dynamicHeaderLimits.exam})
                   </TableHead>
                   
                   {/* Total Column - Same color as default background */}
@@ -1725,9 +1813,43 @@ export function SubjectResultView({
       <Dialog open={editingStudentForComponents !== null} onOpenChange={(open) => !open && setEditingStudentForComponents(null)}>
         <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-6 overflow-hidden">
           <DialogHeader className="pb-4 border-b shrink-0">
-            <DialogTitle className="text-base font-bold flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-emerald-600" />
-              <span>Edit Sub-component Scores</span>
+            <DialogTitle className="text-base font-bold flex items-center justify-between w-full">
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-emerald-600" />
+                <span>Edit Sub-component Scores</span>
+              </div>
+              
+              {editingStudentForComponents && (
+                <div className="flex items-center gap-1.5 pr-8">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7 rounded-lg"
+                    disabled={currentStudentIndex <= 0}
+                    onClick={() => {
+                      const prevStudent = students[currentStudentIndex - 1]
+                      if (prevStudent) handleOpenComponentModal(prevStudent)
+                    }}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-xs text-muted-foreground font-semibold select-none min-w-[50px] text-center">
+                    {currentStudentIndex + 1} / {students.length}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7 rounded-lg"
+                    disabled={currentStudentIndex === -1 || currentStudentIndex >= students.length - 1}
+                    onClick={() => {
+                      const nextStudent = students[currentStudentIndex + 1]
+                      if (nextStudent) handleOpenComponentModal(nextStudent)
+                    }}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </DialogTitle>
             <DialogDescription className="text-xs">
               Configure component scores for <strong>{editingStudentForComponents?.first_name} {editingStudentForComponents?.last_name}</strong> ({editingStudentForComponents?.student_id}).
@@ -1761,9 +1883,8 @@ export function SubjectResultView({
 
                       return (
                         <TableRow key={comp.component_id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-900/30">
-                          <TableCell className="font-semibold text-xs text-zinc-700 dark:text-zinc-300 px-4">
-                            <div>{comp.name}</div>
-                            <div className="text-[10px] text-zinc-400 font-mono">Max CA: {comp.max_ca} ({caCount} CA{caCount > 1 ? 's' : ''}) • Max Exam: {comp.max_exam}</div>
+                          <TableCell className="font-semibold text-xs text-zinc-700 dark:text-zinc-300 px-4 py-2.5">
+                            <div className="font-bold text-sm text-zinc-800 dark:text-zinc-100">{comp.name}</div>
                           </TableCell>
                           
                           <TableCell className="p-2 text-center align-middle">

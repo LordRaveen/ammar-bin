@@ -53,6 +53,7 @@ interface ScoreEntryInterfaceProps {
     code: string
     max_score: number
     pass_mark: number
+    ca_count?: number
   }>
   classComponents?: Array<{
     subject_id: string
@@ -60,6 +61,7 @@ interface ScoreEntryInterfaceProps {
     name: string
     max_ca?: number
     max_exam?: number
+    ca_count?: number
   }>
 }
 
@@ -992,21 +994,28 @@ function TableView({
   }
 
   function getGrade(score: number): string {
-    if (score >= 90) return "A+"
-    if (score >= 80) return "A"
-    if (score >= 70) return "B+"
-    if (score >= 60) return "B"
-    if (score >= 50) return "C"
-    if (score >= 40) return "D"
+    if (score >= 95) return "A+"
+    if (score >= 90) return "A"
+    if (score >= 85) return "B+"
+    if (score >= 80) return "B"
+    if (score >= 75) return "C+"
+    if (score >= 70) return "C"
+    if (score >= 65) return "D+"
+    if (score >= 60) return "D"
+    if (score >= 50) return "E"
     return "F"
   }
 
-  function getRemarkFromScore(score: number, pass: number): string {
+  function getRemarkFromScore(score: number, pass?: number): string {
+    if (score >= 95) return "Outstanding"
     if (score >= 90) return "Excellent"
-    if (score >= 80) return "Very Good"
-    if (score >= 70) return "Good"
-    if (score >= 60) return "Credit"
-    if (score >= pass) return "Pass"
+    if (score >= 85) return "Very Good"
+    if (score >= 80) return "Good"
+    if (score >= 75) return "Above Average"
+    if (score >= 70) return "Average"
+    if (score >= 65) return "Fair"
+    if (score >= 60) return "Pass"
+    if (score >= 50) return "Below Average"
     return "Fail"
   }
 
@@ -1284,21 +1293,28 @@ function ScoreEntryForm({
   const remarkAuto = getRemarkFromScore(total, passmark)
 
   function getGrade(score: number): string {
-    if (score >= 90) return "A+"
-    if (score >= 80) return "A"
-    if (score >= 70) return "B+"
-    if (score >= 60) return "B"
-    if (score >= 50) return "C"
-    if (score >= 40) return "D"
+    if (score >= 95) return "A+"
+    if (score >= 90) return "A"
+    if (score >= 85) return "B+"
+    if (score >= 80) return "B"
+    if (score >= 75) return "C+"
+    if (score >= 70) return "C"
+    if (score >= 65) return "D+"
+    if (score >= 60) return "D"
+    if (score >= 50) return "E"
     return "F"
   }
 
-  function getRemarkFromScore(score: number, pass: number): string {
+  function getRemarkFromScore(score: number, pass?: number): string {
+    if (score >= 95) return "Outstanding"
     if (score >= 90) return "Excellent"
-    if (score >= 80) return "Very Good"
-    if (score >= 70) return "Good"
-    if (score >= 60) return "Credit"
-    if (score >= pass) return "Pass"
+    if (score >= 85) return "Very Good"
+    if (score >= 80) return "Good"
+    if (score >= 75) return "Above Average"
+    if (score >= 70) return "Average"
+    if (score >= 65) return "Fair"
+    if (score >= 60) return "Pass"
+    if (score >= 50) return "Below Average"
     return "Fail"
   }
 

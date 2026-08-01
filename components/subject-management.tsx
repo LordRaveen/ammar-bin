@@ -15,7 +15,7 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { 
   Loader2, Plus, Pencil, Trash2, BookOpen, Layers, 
-  Settings2, Activity, Heart, Bookmark, X, Check, Save, Award 
+  Settings2, Activity, Heart, Bookmark, X, Check, Save, Award, AlertTriangle
 } from "lucide-react"
 import { 
   createSubject, updateSubject, deleteSubject,
@@ -356,7 +356,7 @@ export function SubjectManagement() {
 
       setAssignedSubjects(prev => ({
         ...prev,
-        [subjectId]: { max_score: 100, pass_mark: 40 }
+        [subjectId]: { max_score: 100, pass_mark: 40, ca_count: 2 }
       }))
 
       if (componentIds.length > 0) {
@@ -453,7 +453,7 @@ export function SubjectManagement() {
       }))
       setComponentLimits(prev => ({
         ...prev,
-        [key]: { max_ca: 40, max_exam: 60 }
+        [key]: { max_ca: 40, max_exam: 60, ca_count: 2 }
       }))
     } else {
       setAssignedComponents(prev => ({
@@ -1091,115 +1091,185 @@ export function SubjectManagement() {
                             </TableRow>
 
                             {/* Component Checklist toggle sub-row */}
-                            {isAssigned && sub.subject_components?.length > 0 && (
-                              <TableRow className="bg-zinc-50/40 dark:bg-zinc-900/20 border-b border-zinc-150 dark:border-zinc-850">
-                                <TableCell />
-                                <TableCell colSpan={4} className="py-2.5">
-                                  <div className="space-y-3 pl-1 pb-1">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                                      Sub-components for this class:
-                                    </span>
-                                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                      {sub.subject_components.map((comp: any) => {
-                                        const compChecked = (assignedComponents[sub.id] || []).includes(comp.id)
-                                        const key = `${selectedClassId}_${sub.id}_${comp.id}`
-                                        const limits = componentLimits[key] || { max_ca: 40, max_exam: 60 }
+                            {isAssigned && sub.subject_components?.length > 0 && (() => {
+                              const activeComps = assignedComponents[sub.id] || []
+                              
+                              // Calculate component sums
+                              const totalComponentCA = activeComps.reduce((sum, cId) => {
+                                const key = `${selectedClassId}_${sub.id}_${cId}`
+                                return sum + (componentLimits[key]?.max_ca ?? 40)
+                              }, 0)
+
+                              const totalComponentExam = activeComps.reduce((sum, cId) => {
+                                const key = `${selectedClassId}_${sub.id}_${cId}`
+                                return sum + (componentLimits[key]?.max_exam ?? 60)
+                              }, 0)
+
+                              const totalComponentScore = totalComponentCA + totalComponentExam
+                              const parentMaxScore = maxScore
+
+                              return (
+                                <TableRow className="bg-zinc-50/30 dark:bg-zinc-900/10 border-b border-zinc-150 dark:border-zinc-850">
+                                  <TableCell />
+                                  <TableCell colSpan={5} className="py-3 px-4">
+                                    <div className="space-y-3 max-w-2xl">
+                                      <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block">
+                                        Sub-components for this class:
+                                      </span>
+                                      
+                                      <div className="border border-zinc-200/80 dark:border-zinc-850 rounded-lg overflow-hidden bg-white dark:bg-zinc-950 shadow-2xs">
+                                        <Table>
+                                          <TableHeader className="bg-zinc-50 dark:bg-zinc-900/60">
+                                            <TableRow className="border-b border-zinc-200 dark:border-zinc-800 text-[10px] font-bold uppercase tracking-wider">
+                                              <TableHead className="py-2 px-3 text-left">Component Name</TableHead>
+                                              <TableHead className="w-28 py-2 px-3 text-center">Max CA</TableHead>
+                                              <TableHead className="w-28 py-2 px-3 text-center">Max Exam</TableHead>
+                                              <TableHead className="w-40 py-2 px-3 text-center">Total CAs</TableHead>
+                                            </TableRow>
+                                          </TableHeader>
+                                          <TableBody>
+                                            {sub.subject_components.map((comp: any) => {
+                                              const compChecked = activeComps.includes(comp.id)
+                                              const key = `${selectedClassId}_${sub.id}_${comp.id}`
+                                              const limits = componentLimits[key] || { max_ca: 40, max_exam: 60, ca_count: 2 }
+
+                                              return (
+                                                <TableRow key={comp.id} className={cn("border-b border-zinc-100 dark:border-zinc-900 last:border-0 hover:bg-zinc-50/40 dark:hover:bg-zinc-900/20 text-xs", !compChecked && "opacity-60")}>
+                                                  <TableCell className="py-2 px-3">
+                                                    <label className="flex items-center gap-2.5 font-bold text-foreground cursor-pointer select-none">
+                                                      <Checkbox 
+                                                        checked={compChecked}
+                                                        onCheckedChange={(checked) => handleToggleComponent(sub.id, comp.id, !!checked)}
+                                                        className="data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 h-4 w-4"
+                                                      />
+                                                      <span>{comp.name}</span>
+                                                    </label>
+                                                  </TableCell>
+
+                                                  <TableCell className="py-1.5 px-3 text-center">
+                                                    <Input
+                                                      type="number"
+                                                      disabled={!compChecked}
+                                                      value={limits.max_ca}
+                                                      onChange={(e) => {
+                                                        const newVal = Number(e.target.value)
+                                                        setComponentLimits(prev => ({
+                                                          ...prev,
+                                                          [key]: { ...prev[key], max_ca: newVal }
+                                                        }))
+                                                      }}
+                                                      onBlur={async () => {
+                                                        const currentLimits = componentLimits[key] || { max_ca: 40, max_exam: 60, ca_count: 2 }
+                                                        try {
+                                                          await updateClassComponentLimits(selectedClassId, sub.id, comp.id, currentLimits.max_ca, currentLimits.max_exam, currentLimits.ca_count ?? 2)
+                                                          toast.success(`${comp.name} limits updated`)
+                                                        } catch (e: any) {
+                                                          toast.error(e.message || "Failed to update component limits")
+                                                        }
+                                                      }}
+                                                      className="h-8 text-xs font-bold text-center font-mono w-20 border border-blue-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 dark:border-zinc-800 rounded-lg bg-blue-50/5 dark:bg-zinc-900 mx-auto"
+                                                    />
+                                                  </TableCell>
+
+                                                  <TableCell className="py-1.5 px-3 text-center">
+                                                    <Input
+                                                      type="number"
+                                                      disabled={!compChecked}
+                                                      value={limits.max_exam}
+                                                      onChange={(e) => {
+                                                        const newVal = Number(e.target.value)
+                                                        setComponentLimits(prev => ({
+                                                          ...prev,
+                                                          [key]: { ...prev[key], max_exam: newVal }
+                                                        }))
+                                                      }}
+                                                      onBlur={async () => {
+                                                        const currentLimits = componentLimits[key] || { max_ca: 40, max_exam: 60, ca_count: 2 }
+                                                        try {
+                                                          await updateClassComponentLimits(selectedClassId, sub.id, comp.id, currentLimits.max_ca, currentLimits.max_exam, currentLimits.ca_count ?? 2)
+                                                          toast.success(`${comp.name} limits updated`)
+                                                        } catch (e: any) {
+                                                          toast.error(e.message || "Failed to update component limits")
+                                                        }
+                                                      }}
+                                                      className="h-8 text-xs font-bold text-center font-mono w-20 border border-blue-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 dark:border-zinc-800 rounded-lg bg-blue-50/5 dark:bg-zinc-900 mx-auto"
+                                                    />
+                                                  </TableCell>
+
+                                                  <TableCell className="py-1.5 px-3">
+                                                    <div className="flex items-center justify-center gap-4">
+                                                      <label className={cn("flex items-center gap-1.5 cursor-pointer text-xs font-semibold", !compChecked && "pointer-events-none")}>
+                                                        <Checkbox
+                                                          checked={limits.ca_count === 1}
+                                                          onCheckedChange={async () => {
+                                                            if (!compChecked) return
+                                                            setComponentLimits(prev => ({
+                                                              ...prev,
+                                                              [key]: { ...prev[key], ca_count: 1 }
+                                                            }))
+                                                            try {
+                                                              await updateClassComponentLimits(selectedClassId, sub.id, comp.id, limits.max_ca, limits.max_exam, 1)
+                                                              toast.success(`${comp.name} CA count updated to 1`)
+                                                            } catch (err: any) {
+                                                              toast.error(err.message || "Failed to update component CA count")
+                                                            }
+                                                          }}
+                                                          disabled={!compChecked}
+                                                          className="data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 h-4 w-4"
+                                                        />
+                                                        <span>1</span>
+                                                      </label>
+                                                      <label className={cn("flex items-center gap-1.5 cursor-pointer text-xs font-semibold", !compChecked && "pointer-events-none")}>
+                                                        <Checkbox
+                                                          checked={limits.ca_count !== 1} // defaults to 2
+                                                          onCheckedChange={async () => {
+                                                            if (!compChecked) return
+                                                            setComponentLimits(prev => ({
+                                                              ...prev,
+                                                              [key]: { ...prev[key], ca_count: 2 }
+                                                            }))
+                                                            try {
+                                                              await updateClassComponentLimits(selectedClassId, sub.id, comp.id, limits.max_ca, limits.max_exam, 2)
+                                                              toast.success(`${comp.name} CA count updated to 2`)
+                                                            } catch (err: any) {
+                                                              toast.error(err.message || "Failed to update component CA count")
+                                                            }
+                                                          }}
+                                                          disabled={!compChecked}
+                                                          className="data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 h-4 w-4"
+                                                        />
+                                                        <span>2</span>
+                                                      </label>
+                                                    </div>
+                                                  </TableCell>
+                                                </TableRow>
+                                              )
+                                            })}
+                                          </TableBody>
+                                        </Table>
                                         
-                                        return (
-                                          <div key={comp.id} className="flex flex-col gap-2 rounded-lg border border-zinc-200/60 dark:border-zinc-800 p-2.5 bg-white dark:bg-zinc-950 shadow-2xs">
-                                            <label className="flex items-center gap-2 text-xs cursor-pointer select-none font-bold text-foreground">
-                                              <Checkbox 
-                                                checked={compChecked}
-                                                onCheckedChange={(checked) => handleToggleComponent(sub.id, comp.id, !!checked)}
-                                                className="data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600 h-3.5 w-3.5"
-                                              />
-                                              <span>{comp.name}</span>
-                                            </label>
-                                            
-                                            {compChecked && (
-                                              <div className="flex items-center gap-2 mt-1 animate-in fade-in slide-in-from-top-1 duration-150">
-                                                <div className="flex-1 space-y-1">
-                                                  <span className="text-[9px] uppercase tracking-wider text-zinc-400 font-bold">Max CA</span>
-                                                  <Input
-                                                    type="number"
-                                                    value={limits.max_ca}
-                                                    onChange={(e) => {
-                                                      const newVal = Number(e.target.value)
-                                                      setComponentLimits(prev => ({
-                                                        ...prev,
-                                                        [key]: { ...prev[key], max_ca: newVal }
-                                                      }))
-                                                    }}
-                                                    onBlur={async () => {
-                                                      const currentLimits = componentLimits[key] || { max_ca: 40, max_exam: 60, ca_count: 2 }
-                                                      try {
-                                                        await updateClassComponentLimits(selectedClassId, sub.id, comp.id, currentLimits.max_ca, currentLimits.max_exam, currentLimits.ca_count ?? 2)
-                                                        toast.success(`${comp.name} limits updated`)
-                                                      } catch (e: any) {
-                                                        toast.error(e.message || "Failed to update component limits")
-                                                      }
-                                                    }}
-                                                    className="h-7 text-xs font-mono px-2 bg-zinc-50 dark:bg-zinc-900 border-zinc-200 w-full"
-                                                  />
-                                                </div>
-                                                <div className="flex-1 space-y-1">
-                                                  <span className="text-[9px] uppercase tracking-wider text-zinc-400 font-bold">Max Exam</span>
-                                                  <Input
-                                                    type="number"
-                                                    value={limits.max_exam}
-                                                    onChange={(e) => {
-                                                      const newVal = Number(e.target.value)
-                                                      setComponentLimits(prev => ({
-                                                        ...prev,
-                                                        [key]: { ...prev[key], max_exam: newVal }
-                                                      }))
-                                                    }}
-                                                    onBlur={async () => {
-                                                      const currentLimits = componentLimits[key] || { max_ca: 40, max_exam: 60, ca_count: 2 }
-                                                      try {
-                                                        await updateClassComponentLimits(selectedClassId, sub.id, comp.id, currentLimits.max_ca, currentLimits.max_exam, currentLimits.ca_count ?? 2)
-                                                        toast.success(`${comp.name} limits updated`)
-                                                      } catch (e: any) {
-                                                        toast.error(e.message || "Failed to update component limits")
-                                                      }
-                                                    }}
-                                                    className="h-7 text-xs font-mono px-2 bg-zinc-50 dark:bg-zinc-900 border-zinc-200 w-full"
-                                                  />
-                                                </div>
-                                                <div className="flex-1 space-y-1">
-                                                  <span className="text-[9px] uppercase tracking-wider text-zinc-400 font-bold">CAs</span>
-                                                  <select
-                                                    value={limits.ca_count ?? 2}
-                                                    onChange={async (e) => {
-                                                      const newVal = Number(e.target.value)
-                                                      setComponentLimits(prev => ({
-                                                        ...prev,
-                                                        [key]: { ...prev[key], ca_count: newVal }
-                                                      }))
-                                                      const currentLimits = componentLimits[key] || { max_ca: 40, max_exam: 60, ca_count: 2 }
-                                                      try {
-                                                        await updateClassComponentLimits(selectedClassId, sub.id, comp.id, currentLimits.max_ca, currentLimits.max_exam, newVal)
-                                                        toast.success(`${comp.name} CA count updated`)
-                                                      } catch (err: any) {
-                                                        toast.error(err.message || "Failed to update component CA count")
-                                                      }
-                                                    }}
-                                                    className="h-7 text-xs bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded px-1.5 focus:outline-none w-full font-semibold"
-                                                  >
-                                                    <option value={1}>1 CA</option>
-                                                    <option value={2}>2 CAs</option>
-                                                  </select>
-                                                </div>
-                                              </div>
-                                            )}
+                                        {/* Validation Bar */}
+                                        <div className="flex items-center justify-between text-xs py-2.5 px-4 bg-zinc-50/50 dark:bg-zinc-900/30 border-t border-zinc-200 dark:border-zinc-800">
+                                          <div className="flex items-center gap-1.5 font-bold text-muted-foreground">
+                                            <span>Sub-component Max Sum:</span>
+                                            <span className="font-mono bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded text-foreground">{totalComponentCA} (CA) + {totalComponentExam} (Exam) = {totalComponentScore}</span>
                                           </div>
-                                        )
-                                      })}
+                                          {totalComponentScore === parentMaxScore ? (
+                                            <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                                              <Check className="h-4 w-4 stroke-[3px]" /> Match parent max ({parentMaxScore})
+                                            </span>
+                                          ) : (
+                                            <span className="text-amber-600 dark:text-amber-400 font-black flex items-center gap-1 animate-pulse">
+                                              <AlertTriangle className="h-4 w-4 shrink-0" /> Mismatch (Parent: {parentMaxScore})
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
                                     </div>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            )}
+                                  </TableCell>
+                                </TableRow>
+                              )
+                            })()}
                           </Fragment>
                         )
                       })}
