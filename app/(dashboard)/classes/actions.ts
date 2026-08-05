@@ -131,3 +131,65 @@ export async function deleteSection(sectionId: string) {
     throw error
   }
 }
+
+export async function updateClass(
+  classId: string,
+  name: string,
+  capacity: number,
+  classTeacherId: string | null,
+  sectionId: string
+) {
+  try {
+    const supabase = await createServerClient()
+
+    if (!name || !capacity || !sectionId) {
+      return { error: "Name, capacity, and section are required" }
+    }
+
+    const { data, error } = await supabase
+      .from("classes")
+      .update({
+        name,
+        capacity,
+        class_teacher_id: classTeacherId || null,
+        section_id: sectionId,
+      })
+      .eq("id", classId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error("[v0] Error updating class:", error)
+      return { error: "Failed to update class" }
+    }
+
+    revalidatePath("/classes")
+    return { success: true, data }
+  } catch (error) {
+    console.error("[v0] Error in updateClass action:", error)
+    return { error: "An unexpected error occurred" }
+  }
+}
+
+export async function deleteClass(classId: string) {
+  try {
+    const supabase = await createServerClient()
+
+    const { error } = await supabase
+      .from("classes")
+      .update({ is_active: false })
+      .eq("id", classId)
+
+    if (error) {
+      console.error("[v0] Error deleting class:", error)
+      return { error: "Failed to delete class" }
+    }
+
+    revalidatePath("/classes")
+    return { success: true }
+  } catch (error) {
+    console.error("[v0] Error in deleteClass action:", error)
+    return { error: "An unexpected error occurred" }
+  }
+}
+

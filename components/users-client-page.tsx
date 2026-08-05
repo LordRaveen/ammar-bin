@@ -21,7 +21,7 @@ interface UsersClientPageProps {
 }
 
 export function UsersClientPage({ initialUsers, totalCount }: UsersClientPageProps) {
-  const [users] = useState(initialUsers)
+  const [users, setUsers] = useState(initialUsers)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [editUserId, setEditUserId] = useState<string | null>(null)
@@ -73,6 +73,10 @@ export function UsersClientPage({ initialUsers, totalCount }: UsersClientPagePro
     setRowSelection({})
   }, [searchTerm, roleFilter])
 
+  useEffect(() => {
+    setUsers(initialUsers)
+  }, [initialUsers])
+
   const handleRowClick = (userId: string) => {
     setSelectedUserId(userId)
   }
@@ -85,8 +89,9 @@ export function UsersClientPage({ initialUsers, totalCount }: UsersClientPagePro
     window.location.reload()
   }
 
-  const handleUserDeleted = () => {
-    window.location.reload()
+  const handleUserDeleted = (userId: string) => {
+    setUsers((prev) => prev.filter((u) => u.id !== userId))
+    setDeleteUserId(null)
   }
 
   const handleSelectAll = (checked: boolean) => {
@@ -392,6 +397,7 @@ export function UsersClientPage({ initialUsers, totalCount }: UsersClientPagePro
       {deleteUserId && (
         <DeleteTeacherDialog
           teacherId={deleteUserId}
+          teacher={users.find((u) => u.id === deleteUserId)}
           open={!!deleteUserId}
           onOpenChange={(open) => {
             if (!open) setDeleteUserId(null)

@@ -66,7 +66,7 @@ export function TeachersClientPage({
   sessionId,
 }: TeachersClientPageProps) {
   const router = useRouter()
-  const [teachers] = useState(initialTeachers)
+  const [teachers, setTeachers] = useState(initialTeachers)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null)
   const [editTeacherId, setEditTeacherId] = useState<string | null>(null)
@@ -129,8 +129,17 @@ export function TeachersClientPage({
     setRowSelection({})
   }, [searchTerm])
 
+  useEffect(() => {
+    setTeachers(initialTeachers)
+  }, [initialTeachers])
+
   const handleSheetClose = () => {
     setSelectedTeacherId(null)
+  }
+
+  const handleTeacherDeleted = (teacherId: string) => {
+    setTeachers((prev) => prev.filter((t) => t.id !== teacherId))
+    setDeleteTeacherId(null)
   }
 
   const handleRowClick = (teacherId: string) => {
@@ -901,7 +910,7 @@ export function TeachersClientPage({
         teacherId={editTeacherId || ""}
         open={editTeacherId !== null}
         onOpenChange={(open) => !open && setEditTeacherId(null)}
-        onSuccess={handleSheetClose}
+        onSuccess={() => router.refresh()}
       />
 
       <DeleteTeacherDialog
@@ -909,7 +918,7 @@ export function TeachersClientPage({
         teacher={teachers.find((t) => t.id === deleteTeacherId)}
         open={deleteTeacherId !== null}
         onOpenChange={(open) => !open && setDeleteTeacherId(null)}
-        onSuccess={handleSheetClose}
+        onSuccess={handleTeacherDeleted}
       />
 
       {/* REUSABLE SELECT_TEACHER DIALOG */}

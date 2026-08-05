@@ -279,14 +279,14 @@ export function BulkAddStudentsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-6">
+      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-6">
         <DialogHeader className="px-1 pb-3 border-b">
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
               <FileSpreadsheet className="h-5 w-5" />
             </div>
             <div>
-              <DialogTitle className="text-lg font-bold">Bulk Import Students</DialogTitle>
+              <DialogTitle className="text-md font-bold">Bulk Import Students</DialogTitle>
               <DialogDescription className="text-xs">
                 Upload a CSV file or paste table data directly from Excel / Google Sheets to enroll students.
               </DialogDescription>
@@ -320,7 +320,7 @@ export function BulkAddStudentsModal({
                       </SelectItem>
                     ))}
                     <SelectItem value="NEW_SECTION" className="text-xs text-emerald-600 font-semibold">
-                      + Create New Section (e.g. Combined, Married Women)
+                      + Create New Section
                     </SelectItem>
                   </SelectContent>
                 </Select>

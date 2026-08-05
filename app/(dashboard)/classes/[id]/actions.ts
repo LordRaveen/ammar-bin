@@ -120,14 +120,27 @@ export async function assignSubjectTeacher(classId: string, teacherId: string, s
   await requireAdmin()
   const supabase = await createClient()
 
-  const { error } = await supabase.from("teacher_subject_assignments").upsert({
-    teacher_id: teacherId,
-    class_id: classId,
-    subject_id: subjectId,
-    session_id: sessionId,
-  })
+  try {
+    const { error } = await supabase.from("teacher_subject_assignments").upsert(
+      {
+        teacher_id: teacherId,
+        class_id: classId,
+        subject_id: subjectId,
+        session_id: sessionId,
+      },
+      { onConflict: "teacher_id,class_id,subject_id" }
+    )
 
-  if (error) throw new Error(error.message)
+    if (error) throw error
+  } catch (err: any) {
+    const isUniqueViolation = 
+      err.code === "23505" || 
+      (err.message && err.message.includes("teacher_subject_assignments_teacher_id_class_id_subject_id_key"))
+    
+    if (!isUniqueViolation) {
+      throw new Error(err.message || "Failed to assign subject teacher")
+    }
+  }
 }
 
 export async function removeSubjectTeacher(classId: string, subjectId: string, sessionId: string) {

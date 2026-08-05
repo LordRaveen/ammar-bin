@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { toast } from "sonner"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -61,6 +61,7 @@ export function FeesTab() {
   const [selectedSession, setSelectedSession] = useState("")
   const [selectedTerm, setSelectedTerm] = useState("")
   const [selectedClass, setSelectedClass] = useState("")
+  const [selectedSectionFilter, setSelectedSectionFilter] = useState("All")
   const [sessions, setSessions] = useState<Session[]>([])
   const [terms, setTerms] = useState<Term[]>([])
   const [classes, setClasses] = useState<Class[]>([])
@@ -71,6 +72,30 @@ export function FeesTab() {
   const [bulkGenerateOpen, setBulkGenerateOpen] = useState(false)
   const [editingFee, setEditingFee] = useState<FeeStructure | null>(null)
   const supabase = createBrowserClient()
+
+  // Compute sections list dynamically
+  const sectionsList = useMemo(() => {
+    return Array.from(new Set(classes.map(c => c.section?.name).filter(Boolean)))
+  }, [classes])
+
+  // Filter classes by selected section tab
+  const filteredClasses = useMemo(() => {
+    return classes.filter(cls => 
+      selectedSectionFilter === "All" || cls.section?.name === selectedSectionFilter
+    )
+  }, [classes, selectedSectionFilter])
+
+  // Auto select class when section filter changes
+  useEffect(() => {
+    if (filteredClasses.length > 0) {
+      const isStillInList = filteredClasses.some(c => c.id === selectedClass)
+      if (!isStillInList) {
+        setSelectedClass(filteredClasses[0].id)
+      }
+    } else {
+      setSelectedClass("")
+    }
+  }, [filteredClasses, selectedClass])
 
   // Fetch sessions on mount
   useEffect(() => {
@@ -215,74 +240,102 @@ export function FeesTab() {
 
   return (
     <div className="space-y-6">
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList>
-          <TabsTrigger value="by-class">By Class</TabsTrigger>
-          <TabsTrigger value="by-category">By Category</TabsTrigger>
-          <TabsTrigger value="templates">Templates</TabsTrigger>
-          <TabsTrigger value="manage-fees">Manage Fee Categories</TabsTrigger>
-        </TabsList>
+      {/* Tabs wrapper */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-zinc-200/80 dark:border-zinc-800/80 pb-4">
+          <TabsList className="bg-zinc-100/60 dark:bg-zinc-900/60 p-1 rounded-xl w-full sm:w-auto">
+            <TabsTrigger value="by-class" className="text-xs font-bold rounded-lg px-4 py-2">By Class</TabsTrigger>
+            <TabsTrigger value="by-category" className="text-xs font-bold rounded-lg px-4 py-2">By Category</TabsTrigger>
+            <TabsTrigger value="templates" className="text-xs font-bold rounded-lg px-4 py-2">Templates</TabsTrigger>
+            <TabsTrigger value="manage-fees" className="text-xs font-bold rounded-lg px-4 py-2">Manage Fee Categories</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="by-class" className="space-y-6 mt-6">
-          {/* Top Filters - Clean Design */}
-          <div className="flex flex-col md:flex-row gap-6 md:items-end">
-            <div className="space-y-1.5 flex-1 min-w-[200px] max-w-[250px]">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Academic Session</label>
-              <Select value={selectedSession} onValueChange={setSelectedSession}>
-                <SelectTrigger className="w-full bg-background border-input shadow-sm h-10">
-                  <SelectValue placeholder="Select session" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sessions.map(s => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {/* Academic Session Selector */}
+            <Select value={selectedSession} onValueChange={setSelectedSession}>
+              <SelectTrigger className="w-full sm:w-[150px] bg-background border border-zinc-200/80 dark:border-zinc-800/80 h-9 text-xs rounded-xl shadow-none">
+                <SelectValue placeholder="Session" />
+              </SelectTrigger>
+              <SelectContent>
+                {sessions.map(s => (
+                  <SelectItem key={s.id} value={s.id} className="text-xs">
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-            <div className="space-y-1.5 flex-1 min-w-[200px] max-w-[250px]">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Term</label>
-              <Select value={selectedTerm} onValueChange={setSelectedTerm}>
-                <SelectTrigger className="w-full bg-background border-input shadow-sm h-10">
-                  <SelectValue placeholder="Select term" />
-                </SelectTrigger>
-                <SelectContent>
-                  {terms.map(t => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Term Selector */}
+            <Select value={selectedTerm} onValueChange={setSelectedTerm}>
+              <SelectTrigger className="w-full sm:w-[150px] bg-background border border-zinc-200/80 dark:border-zinc-800/80 h-9 text-xs rounded-xl shadow-none">
+                <SelectValue placeholder="Term" />
+              </SelectTrigger>
+              <SelectContent>
+                {terms.map(t => (
+                  <SelectItem key={t.id} value={t.id} className="text-xs">
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+        </div>
 
+        <TabsContent value="by-class" className="space-y-6 mt-0">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
             {/* Left Sidebar - Class Selection */}
             <div className="md:col-span-3 lg:col-span-3 space-y-4">
-              <div className="font-medium text-sm flex items-center justify-between">
-                <span>Classes</span>
-                <span className="text-xs text-muted-foreground">{classes.length} found</span>
+              <div className="space-y-3">
+                <div className="font-bold text-xs uppercase tracking-wider text-muted-foreground pl-0.5 flex items-center justify-between">
+                  <span>Sections</span>
+                  <span className="text-[10px] lowercase text-muted-foreground">{filteredClasses.length} class(es)</span>
+                </div>
+                
+                {/* Section filter tabs */}
+                <div className="flex flex-wrap gap-1 p-1 rounded-xl bg-zinc-100/60 dark:bg-zinc-900/60 border border-zinc-200/60 dark:border-zinc-800/60">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSectionFilter("All")}
+                    className={`flex-1 text-[10px] font-black uppercase tracking-wider py-1.5 px-2 rounded-lg transition-colors text-center ${
+                      selectedSectionFilter === "All"
+                        ? "bg-white dark:bg-zinc-950 text-foreground border border-zinc-200/30 dark:border-zinc-800/30"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    All
+                  </button>
+                  {sectionsList.map((secName: any) => (
+                    <button
+                      key={secName}
+                      type="button"
+                      onClick={() => setSelectedSectionFilter(secName)}
+                      className={`flex-1 text-[10px] font-black uppercase tracking-wider py-1.5 px-2 rounded-lg transition-colors text-center ${
+                        selectedSectionFilter === secName
+                          ? "bg-white dark:bg-zinc-950 text-foreground border border-zinc-200/30 dark:border-zinc-800/30"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {secName}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div className="space-y-1 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-                {classes.map(cls => (
+              <div className="space-y-1 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar">
+                {filteredClasses.map(cls => (
                   <button
                     key={cls.id}
                     onClick={() => setSelectedClass(cls.id)}
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm transition-all flex items-center justify-between group ${selectedClass === cls.id
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                    className={`w-full text-left px-3 py-2 rounded-xl text-xs transition-all flex items-center justify-between group ${selectedClass === cls.id
+                      ? "bg-zinc-900 text-zinc-50 dark:bg-zinc-100 dark:text-zinc-950 font-bold"
+                      : "hover:bg-zinc-100/60 dark:hover:bg-zinc-900/40 text-muted-foreground hover:text-foreground"
                       }`}
                   >
                     <span className="truncate font-medium">{cls.name}</span>
                     {cls.section?.name && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded border ${selectedClass === cls.id
-                        ? "border-primary-foreground/30 bg-primary-foreground/10"
-                        : "border-border bg-muted/50"
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider ${selectedClass === cls.id
+                        ? "border-zinc-700 bg-zinc-800 text-zinc-300 dark:border-zinc-300 dark:bg-zinc-200 dark:text-zinc-700"
+                        : "border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900"
                         }`}>
                         {cls.section.name}
                       </span>
@@ -297,17 +350,17 @@ export function FeesTab() {
               <Card className="border-none shadow-none bg-transparent">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                   <div>
-                    <h2 className="text-lg font-semibold tracking-tight">
+                    <h2 className="text-base font-black uppercase tracking-wider">
                       {currentClass ? currentClass.name : "Select a Class"}
-                      {currentClass?.section?.name && <span className="text-muted-foreground font-normal ml-2 text-base">{currentClass.section.name}</span>}
+                      {currentClass?.section?.name && <span className="text-muted-foreground font-normal ml-2 text-sm">{currentClass.section.name}</span>}
                     </h2>
-                    <p className="text-sm text-muted-foreground">Manage fee structure and amounts</p>
+                    <p className="text-xs text-muted-foreground">Manage fee structure and amounts</p>
                   </div>
                   <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                     <Button
                       variant="outline"
                       onClick={() => setPreviewModalOpen(true)}
-                      className="gap-2 h-9 text-xs"
+                      className="gap-2 h-9 text-xs font-semibold rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 hover:bg-zinc-100/60 dark:hover:bg-zinc-900/40 shadow-none"
                     >
                       <Eye className="h-3.5 w-3.5" />
                       Preview
@@ -315,7 +368,7 @@ export function FeesTab() {
                     <Button
                       variant="outline"
                       onClick={() => setBulkGenerateOpen(true)}
-                      className="gap-2 h-9 text-xs"
+                      className="gap-2 h-9 text-xs font-semibold rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 hover:bg-zinc-100/60 dark:hover:bg-zinc-900/40 shadow-none"
                     >
                       <RotateCw className="h-3.5 w-3.5" />
                       Generate
@@ -325,7 +378,7 @@ export function FeesTab() {
                         setEditingFee(null)
                         setFeeModalOpen(true)
                       }}
-                      className="gap-2 h-9 text-xs"
+                      className="gap-2 h-9 text-xs font-bold uppercase tracking-wider rounded-xl bg-zinc-900 text-zinc-50 hover:bg-zinc-850 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 transition-colors shadow-none"
                     >
                       <Plus className="h-3.5 w-3.5" />
                       Add Fee
@@ -333,75 +386,78 @@ export function FeesTab() {
                   </div>
                 </div>
 
-                <div className="rounded-md border bg-card">
+                <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-950 overflow-hidden shadow-none">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-muted/50 hover:bg-muted/50">
-                        <TableHead>Category</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
-                        <TableHead>Due Date</TableHead>
-                        <TableHead>Gender</TableHead>
-                        <TableHead>Recurrence</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+                      <TableRow className="bg-zinc-50/50 dark:bg-zinc-900/30 hover:bg-zinc-50/50 dark:hover:bg-zinc-900/30">
+                        <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Category</TableHead>
+                        <TableHead className="text-right text-xs font-bold uppercase tracking-wider text-muted-foreground">Amount</TableHead>
+                        <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Due Date</TableHead>
+                        <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Gender</TableHead>
+                        <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Recurrence</TableHead>
+                        <TableHead className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Status</TableHead>
+                        <TableHead className="text-right text-xs font-bold uppercase tracking-wider text-muted-foreground">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {loading ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                          <TableCell colSpan={7} className="h-32 text-center text-xs text-muted-foreground italic">
                             Loading fee structures...
                           </TableCell>
                         </TableRow>
                       ) : feeStructures.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                          <TableCell colSpan={7} className="h-32 text-center text-xs text-muted-foreground italic">
                             No fee structures found for this class.
                           </TableCell>
                         </TableRow>
                       ) : (
                         feeStructures.map(fee => (
-                          <TableRow key={fee.id} className={!fee.active ? "opacity-60 bg-muted/20" : ""}>
-                            <TableCell className="font-medium">
+                          <TableRow key={fee.id} className={!fee.active ? "opacity-60 bg-zinc-50/20 dark:bg-zinc-900/10" : ""}>
+                            <TableCell className="font-semibold text-xs py-3">
                               {fee.fee_categories?.name}
                             </TableCell>
-                            <TableCell className="text-right font-bold font-mono text-muted-foreground">
+                            <TableCell className="text-right font-black font-mono text-zinc-900 dark:text-zinc-100 text-xs py-3">
                               ₦{Number(fee.amount).toLocaleString()}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="text-xs py-3 text-muted-foreground font-medium">
                               {fee.due_date
                                 ? new Date(fee.due_date).toLocaleDateString("en-GB", {
                                   day: "numeric",
                                   month: "short",
+                                  year: "numeric"
                                 })
                                 : <span className="text-muted-foreground">-</span>}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="py-3">
                               {fee.gender_specific ? (
-                                <Badge variant="outline" className="text-[10px] py-0 h-5">
+                                <Badge variant="outline" className="text-[9px] font-bold py-0.5 px-1.5 h-5 rounded-md uppercase tracking-wider border-zinc-200 dark:border-zinc-800">
                                   {fee.gender_specific}
                                 </Badge>
                               ) : (
-                                <span className="text-muted-foreground text-xs">All</span>
+                                <span className="text-muted-foreground text-xs font-medium">All</span>
                               )}
                             </TableCell>
-                            <TableCell>
-                              {fee.fee_categories?.is_recurring && (
-                                <div className="flex items-center gap-1.5 text-blue-600">
-                                  <RotateCw className="h-3.5 w-3.5" />
-                                  <span className="text-xs">Recurring</span>
+                            <TableCell className="py-3">
+                              {fee.fee_categories?.is_recurring ? (
+                                <div className="flex items-center gap-1 text-blue-600 font-semibold text-xs">
+                                  <RotateCw className="h-3 w-3" />
+                                  <span>Recurring</span>
                                 </div>
+                              ) : (
+                                <span className="text-muted-foreground text-xs font-medium">One-time</span>
                               )}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="py-3">
                               <Badge
                                 variant={fee.active ? "secondary" : "outline"}
-                                className={`text-[10px] h-5 ${fee.active ? "bg-green-100 text-green-700 hover:bg-green-100 hover:text-green-700 border-green-200" : "text-muted-foreground"}`}
+                                className={`text-[9px] font-bold py-0.5 px-1.5 h-5 rounded-md uppercase tracking-wider ${fee.active ? "bg-green-100 text-green-700 hover:bg-green-100 hover:text-green-700 border-green-200 dark:bg-green-950/40 dark:text-green-450 dark:border-green-800/40" : "text-muted-foreground"}`}
                               >
                                 {fee.active ? "Active" : "Inactive"}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-right py-3">
                               <div className="flex items-center justify-end gap-1">
                                 <Button
                                   variant="ghost"
@@ -450,9 +506,9 @@ export function FeesTab() {
 
 
         <TabsContent value="by-category">
-          <Card>
+          <Card className="border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-950 rounded-2xl shadow-none">
             <CardContent className="py-12">
-              <p className="text-center text-muted-foreground">Coming soon...</p>
+              <p className="text-center text-xs text-muted-foreground italic">Coming soon...</p>
             </CardContent>
           </Card>
         </TabsContent>

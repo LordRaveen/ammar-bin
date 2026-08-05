@@ -25,26 +25,53 @@ export async function getUser(): Promise<AuthUser | null> {
       error: authError,
     } = await supabase.auth.getUser()
 
-    if (authError || !user) {
+    if (authError) {
+      const errMsg = authError.message?.toLowerCase() || ""
+      const isNetworkError =
+        errMsg.includes("fetch") ||
+        errMsg.includes("network") ||
+        errMsg.includes("connect") ||
+        errMsg.includes("timeout") ||
+        errMsg.includes("abort") ||
+        errMsg.includes("econnrefused") ||
+        errMsg.includes("enotfound")
+
+      if (isNetworkError) {
+        throw authError
+      }
+
       devLog.debug("No authenticated user found")
       return null
     }
 
-    const { data: profile } = await supabase
+    if (!user) {
+      devLog.debug("No authenticated user found")
+      return null
+    }
+
+    const { data: profile, error: profileError } = await supabase
       .from("user_profiles")
       .select("role, status")
       .eq("user_id", user.id)
       .maybeSingle()
 
+    if (profileError) {
+      throw profileError
+    }
+
     let userRole: any = profile?.role
     let isActive: boolean = profile ? profile.status === "Active" : true
 
     if (!userRole) {
-      const { data: roleData } = await supabase
+      const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
         .select("role, is_active")
         .eq("user_id", user.id)
         .maybeSingle()
+
+      if (roleError) {
+        throw roleError
+      }
 
       userRole = roleData?.role || (user.user_metadata?.role as any) || "admin"
       if (roleData) isActive = roleData.is_active
@@ -56,7 +83,24 @@ export async function getUser(): Promise<AuthUser | null> {
       role: userRole,
       isActive: isActive,
     }
-  } catch (error) {
+  } catch (error: any) {
+    const errMsg = error?.message?.toLowerCase() || ""
+    const isNetworkError =
+      errMsg.includes("failed to fetch") ||
+      errMsg.includes("network") ||
+      errMsg.includes("timeout") ||
+      errMsg.includes("connect") ||
+      errMsg.includes("econnrefused") ||
+      errMsg.includes("enotfound") ||
+      error?.name === "TypeError" ||
+      error?.code === "ENOTFOUND" ||
+      error?.code === "ECONNREFUSED" ||
+      error?.code === "ETIMEDOUT"
+
+    if (isNetworkError) {
+      throw new Error(`Connection issue: ${error.message || "Failed to reach server. Please check your internet connection."}`)
+    }
+
     if (error instanceof Error && error.name === "AbortError") {
       devLog.debug("Auth request aborted (navigation in progress)")
       return null

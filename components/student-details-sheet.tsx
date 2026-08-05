@@ -181,24 +181,15 @@ export function StudentDetailsSheet({
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto p-0 border-l border-zinc-200 dark:border-zinc-800 bg-white dark:bg-black [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto p-0 border-l border-zinc-200 dark:border-zinc-800 bg-white dark:bg-black [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
           <SheetHeader className="px-6 pt-6 pb-4 border-b border-zinc-100 dark:border-zinc-900">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
-                <SheetTitle className="text-xl font-bold flex items-center gap-2">
+                <SheetTitle className="text-lg font-bold flex items-center gap-2">
                   <GraduationCap className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                   Student Profile & Enrolments
                 </SheetTitle>
-                <SheetDescription className="text-xs text-muted-foreground mt-0.5">
-                  View student personal files, guardian details, and active classes.
-                </SheetDescription>
               </div>
-              <Button size="sm" variant="outline" className="h-8 text-xs font-semibold gap-1" asChild>
-                <Link href={`/students/${studentId}`}>
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  Expand Profile
-                </Link>
-              </Button>
             </div>
           </SheetHeader>
 
@@ -208,7 +199,7 @@ export function StudentDetailsSheet({
               <p className="text-xs font-medium">Loading student files...</p>
             </div>
           ) : student ? (
-            <div className="px-6 py-6 space-y-6">
+            <div className="px-6 pb-6 space-y-6">
               <Tabs defaultValue="profile" className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-6 bg-zinc-100 dark:bg-zinc-900 p-1 rounded-xl">
                   <TabsTrigger value="profile" className="text-xs py-2 rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-black data-[state=active]:shadow-sm">Profile Details</TabsTrigger>

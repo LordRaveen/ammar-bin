@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import {
   IconLogout,
   IconUserCircle,
@@ -68,6 +69,9 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar()
   const router = useRouter()
+  // Defer DropdownMenu rendering to client-only to prevent Radix ID hydration mismatch
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -78,6 +82,29 @@ export function NavUser({
 
   const initials = getInitials(user.name, user.email)
   const displayName = user.name || user.email.split('@')[0]
+
+  // Render a static placeholder during SSR to avoid Radix useId() mismatch
+  if (!mounted) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton size="lg">
+            <Avatar className="h-8 w-8 rounded-lg">
+              <AvatarFallback className="rounded-lg bg-primary text-primary-foreground">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="grid flex-1 text-left text-sm leading-tight">
+              <span className="truncate font-semibold">{displayName}</span>
+              <span className="text-muted-foreground truncate text-xs">
+                {user.email}
+              </span>
+            </div>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    )
+  }
 
   return (
     <SidebarMenu>

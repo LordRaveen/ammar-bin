@@ -50,6 +50,12 @@ export default function SignInPage() {
 
     devLog.debug("Attempting sign in for:", email)
 
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setError("Network connection error. Please check your internet connection and try again.")
+      setIsLoading(false)
+      return
+    }
+
     try {
       const lockoutController = new AbortController()
       const lockoutTimeout = setTimeout(() => lockoutController.abort(), 5000)
@@ -167,7 +173,18 @@ export default function SignInPage() {
 
       devLog.error("Sign in error:", error)
 
-      if (!isMounted.current) return
+      const isNetworkError =
+        (typeof navigator !== "undefined" && !navigator.onLine) ||
+        error.message?.toLowerCase().includes("failed to fetch") ||
+        error.message?.toLowerCase().includes("network") ||
+        error.message?.toLowerCase().includes("timeout") ||
+        error.message?.toLowerCase().includes("connect") ||
+        error.message?.toLowerCase().includes("load failed")
+
+      if (isNetworkError) {
+        setError("Network connection error. Please check your internet connection and try again.")
+        return
+      }
 
       try {
         const trackResponse = await fetch("/api/auth/track-login", {
@@ -208,98 +225,127 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center p-6 md:p-10 bg-muted/40">
-      <div className="w-full max-w-sm">
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-col items-center gap-2 text-center">
-            <h1 className="text-2xl font-bold">Ammar Bin Yasir Institute</h1>
-            <p className="text-sm text-muted-foreground">معهد عمار بن ياسر</p>
+    <div className="flex min-h-screen w-full items-center justify-center p-4 sm:p-6 bg-zinc-50 dark:bg-zinc-950 font-sans">
+      <div className="w-full max-w-[420px] space-y-6">
+        {/* Branding & Logo Header */}
+        <div className="flex flex-col items-center text-center space-y-3">
+          <div className="h-12 w-12 rounded-2xl bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-zinc-50 dark:text-zinc-950 shadow-md">
+            <IconLock className="h-6 w-6 stroke-[1.5]" />
+          </div>
+          <div className="space-y-1">
+            <h1 className="text-xl font-black tracking-tight uppercase text-foreground">
+              Ammar Bin Yasir Institute
+            </h1>
+            <p className="text-xs font-semibold text-muted-foreground tracking-wide italic">
+              معهد عمار بن ياسر
+            </p>
+          </div>
+        </div>
+
+        {/* Auth Card */}
+        <Card className="border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 shadow-xl rounded-3xl overflow-hidden p-6 sm:p-8 space-y-6">
+          <div className="space-y-1.5">
+            <CardTitle className="text-lg font-black uppercase tracking-wider text-foreground">Login</CardTitle>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl">Sign In</CardTitle>
-              <CardDescription>Enter your credentials to access the school management system</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSignIn} method="dialog" action="#">
-                <div className="flex flex-col gap-6">
-                  <div className="grid gap-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="admin@ammarschool.edu.ng"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      disabled={isLoading}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="password">Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        className="pr-10"
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        disabled={isLoading || lockoutInfo?.locked}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
-                        onClick={() => setShowPassword(!showPassword)}
-                        tabIndex={-1}
-                      >
-                        {showPassword ? (
-                          <IconEyeOff className="h-4 w-4" />
-                        ) : (
-                          <IconEye className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-end">
-                    <Link href="/auth/forgot-password" className="text-sm text-primary hover:underline">
-                      Forgot password?
-                    </Link>
-                  </div>
-                  {error && (
-                    <Alert
-                      variant={lockoutInfo?.locked ? "destructive" : "default"}
-                      className={lockoutInfo?.locked ? "" : "border-amber-500 bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-500/30"}
-                    >
-                      {lockoutInfo?.locked ? (
-                        <IconLock className="h-4 w-4" />
-                      ) : (
-                        <IconAlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                      )}
-                      <AlertDescription className="text-sm font-medium text-amber-900 dark:text-amber-200">{error}</AlertDescription>
-                    </Alert>
-                  )}
-                  <Button type="submit" className="w-full" disabled={isLoading || lockoutInfo?.locked}>
-                    {isLoading ? "Signing in..." : lockoutInfo?.locked ? "Account Locked" : "Sign In"}
-                  </Button>
-                </div>
-              </form>
+          <form onSubmit={handleSignIn} className="space-y-4">
+            {/* Email Field */}
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Email Address
+              </Label>
+              <div className="relative">
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="admin@ammarschool.edu.ng"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isLoading}
+                  className="bg-zinc-50/50 dark:bg-zinc-950 border-zinc-200/80 dark:border-zinc-800/80 focus:border-zinc-400 dark:focus:border-zinc-700 h-10 text-xs font-medium rounded-xl"
+                />
+              </div>
+            </div>
 
-              <div className="mt-4 text-center text-sm">
-                <Link href="/auth/parent-login" className="text-primary hover:underline">
-                  Parent/Guardian Login
+            {/* Password Field */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Password
+                </Label>
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-[11px] font-bold text-zinc-500 hover:text-foreground transition-colors"
+                >
+                  Forgot password?
                 </Link>
               </div>
-
-              <div className="mt-2 text-center text-sm text-muted-foreground">
-                <p>Contact the administrator if you need access credentials.</p>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoading || lockoutInfo?.locked}
+                  className="bg-zinc-50/50 dark:bg-zinc-950 border-zinc-200/80 dark:border-zinc-800/80 focus:border-zinc-400 dark:focus:border-zinc-700 h-10 text-xs font-medium rounded-xl pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent text-zinc-400 hover:text-foreground transition-colors"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <IconEyeOff className="h-4 w-4" />
+                  ) : (
+                    <IconEye className="h-4 w-4" />
+                  )}
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+
+            {/* Error Notification */}
+            {error && (
+              <Alert
+                variant={lockoutInfo?.locked ? "destructive" : "default"}
+                className={lockoutInfo?.locked
+                  ? "border-red-500/30 bg-red-500/5 text-red-600 rounded-xl"
+                  : "border-amber-500/30 bg-amber-500/5 text-amber-600 dark:text-amber-400 rounded-xl"}
+              >
+                <div className="flex items-start gap-2.5">
+                  {lockoutInfo?.locked ? (
+                    <IconLock className="h-4 w-4 mt-0.5 shrink-0" />
+                  ) : (
+                    <IconAlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  )}
+                  <AlertDescription className="text-[11px] font-medium leading-relaxed">
+                    {error}
+                  </AlertDescription>
+                </div>
+              </Alert>
+            )}
+
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              className="w-full h-10 text-xs font-bold uppercase tracking-wider rounded-xl bg-zinc-900 text-zinc-50 hover:bg-zinc-850 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 transition-colors"
+              disabled={isLoading || lockoutInfo?.locked}
+            >
+              {isLoading ? "Signing in..." : lockoutInfo?.locked ? "Account Locked" : "Sign In"}
+            </Button>
+          </form>
+
+          {/* Footer portal swap */}
+          <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800/80 flex flex-col items-center gap-2">
+            <p className="text-[10px] text-muted-foreground text-center">
+              Authorized school personnel only. Contact administrative offices to request authorization credentials.
+            </p>
+          </div>
+        </Card>
       </div>
     </div>
   )

@@ -137,11 +137,11 @@ export default function ResetPasswordPage() {
 
   if (isCheckingSession) {
     return (
-      <div className="flex min-h-screen w-full items-center justify-center p-6 md:p-10 bg-muted/40">
-        <Card className="w-full max-w-sm">
-          <CardContent className="flex flex-col items-center justify-center py-10">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4" />
-            <p className="text-sm text-muted-foreground">Verifying reset link...</p>
+      <div className="flex min-h-screen w-full items-center justify-center p-4 sm:p-6 bg-zinc-50 dark:bg-zinc-950 font-sans">
+        <Card className="w-full max-w-[420px] border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 shadow-xl rounded-3xl p-8">
+          <CardContent className="flex flex-col items-center justify-center py-10 space-y-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Verifying reset token link...</p>
           </CardContent>
         </Card>
       </div>
@@ -150,26 +150,29 @@ export default function ResetPasswordPage() {
 
   if (!hasValidSession) {
     return (
-      <div className="flex min-h-screen w-full items-center justify-center p-6 md:p-10 bg-muted/40">
-        <div className="w-full max-w-sm">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2 text-destructive">
-                <AlertCircle className="h-5 w-5" />
-                <CardTitle>Invalid Reset Link</CardTitle>
+      <div className="flex min-h-screen w-full items-center justify-center p-4 sm:p-6 bg-zinc-50 dark:bg-zinc-950 font-sans">
+        <div className="w-full max-w-[420px]">
+          <Card className="border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 shadow-xl rounded-3xl overflow-hidden p-6 sm:p-8 space-y-6">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-red-650 dark:text-red-500">
+                <AlertCircle className="h-5 w-5 shrink-0" />
+                <CardTitle className="text-lg font-black uppercase tracking-wider">Invalid Reset Link</CardTitle>
               </div>
-              <CardDescription>This password reset link is invalid or has expired.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Password reset links expire after 1 hour for security reasons. Please request a new reset link.
-                </p>
-                <Button onClick={() => router.push("/auth/forgot-password")} className="w-full">
-                  Request New Reset Link
-                </Button>
-              </div>
-            </CardContent>
+              <CardDescription className="text-xs text-muted-foreground">
+                This password reset link is invalid or has expired.
+              </CardDescription>
+            </div>
+            <div className="space-y-4">
+              <p className="text-xs font-medium text-muted-foreground leading-relaxed">
+                For security reasons, password recovery access links are only valid for 1 hour. Please request a new link to proceed.
+              </p>
+              <Button
+                onClick={() => router.push("/auth/forgot-password")}
+                className="w-full h-10 text-xs font-bold uppercase tracking-wider rounded-xl bg-zinc-900 text-zinc-50 hover:bg-zinc-850 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 transition-colors"
+              >
+                Request New Reset Link
+              </Button>
+            </div>
           </Card>
         </div>
       </div>
@@ -177,87 +180,106 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center p-6 md:p-10 bg-muted/40">
-      <div className="w-full max-w-sm">
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-col items-center gap-2 text-center">
-            <div className="rounded-full bg-primary/10 p-3">
-              <Lock className="h-8 w-8 text-primary" />
-            </div>
-            <h1 className="text-2xl font-bold">Create New Password</h1>
-            <p className="text-sm text-muted-foreground">Enter your new password below</p>
+    <div className="flex min-h-screen w-full items-center justify-center p-4 sm:p-6 bg-zinc-50 dark:bg-zinc-950 font-sans">
+      <div className="w-full max-w-[420px] space-y-6">
+        {/* Branding & Logo Header */}
+        <div className="flex flex-col items-center text-center space-y-3">
+          <div className="h-12 w-12 rounded-2xl bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-zinc-50 dark:text-zinc-950 shadow-md">
+            <Lock className="h-6 w-6 stroke-[1.5]" />
+          </div>
+          <div className="space-y-1">
+            <h1 className="text-xl font-black tracking-tight uppercase text-foreground">
+              Ammar Bin Yasir Institute
+            </h1>
+            <p className="text-xs font-semibold text-muted-foreground tracking-wide italic">
+              معهد عمار بن ياسر
+            </p>
+          </div>
+        </div>
+
+        {/* Auth Card */}
+        <Card className="border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 shadow-xl rounded-3xl overflow-hidden p-6 sm:p-8 space-y-6">
+          <div className="space-y-1.5">
+            <CardTitle className="text-lg font-black uppercase tracking-wider text-foreground">Create New Password</CardTitle>
+            <CardDescription className="text-xs text-muted-foreground">
+              Choose a strong password to secure your account.
+            </CardDescription>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Reset Password</CardTitle>
-              <CardDescription>Choose a strong password to secure your account</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit}>
-                <div className="flex flex-col gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="password">New Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      disabled={isLoading}
-                      placeholder="Min. 8 characters"
-                    />
-                    {password && (
-                      <div className="space-y-1">
-                        <div className="flex gap-1 h-1">
-                          <div
-                            className={`${strengthWidth[passwordStrength]} ${strengthColor[passwordStrength]} transition-all rounded`}
-                          />
-                          <div className="flex-1 bg-muted rounded" />
-                        </div>
-                        <p className="text-xs text-muted-foreground capitalize">
-                          Password strength: {passwordStrength}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      required
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      disabled={isLoading}
-                      placeholder="Re-enter password"
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* New Password */}
+            <div className="space-y-1.5">
+              <Label htmlFor="password" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                New Password
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
+                placeholder="Min. 8 characters"
+                className="bg-zinc-50/50 dark:bg-zinc-950 border-zinc-200/80 dark:border-zinc-800/80 focus:border-zinc-400 dark:focus:border-zinc-700 h-10 text-xs font-medium rounded-xl"
+              />
+              {password && (
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex gap-1 h-1 bg-zinc-100 dark:bg-zinc-900 rounded-full overflow-hidden">
+                    <div
+                      className={`${strengthWidth[passwordStrength]} ${strengthColor[passwordStrength]} transition-all`}
                     />
                   </div>
-
-                  {error && (
-                    <div className="rounded-md bg-destructive/15 p-3">
-                      <p className="text-sm text-destructive">{error}</p>
-                    </div>
-                  )}
-
-                  <div className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
-                    <p className="font-medium mb-1">Password requirements:</p>
-                    <ul className="list-disc list-inside space-y-0.5">
-                      <li>At least 8 characters long</li>
-                      <li>Mix of uppercase and lowercase letters</li>
-                      <li>At least one number</li>
-                    </ul>
-                  </div>
-
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? "Resetting..." : "Reset Password"}
-                  </Button>
+                  <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">
+                    Password strength: <span className="text-foreground">{passwordStrength}</span>
+                  </p>
                 </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
+              )}
+            </div>
+
+            {/* Confirm Password */}
+            <div className="space-y-1.5">
+              <Label htmlFor="confirmPassword" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Confirm Password
+              </Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={isLoading}
+                placeholder="Re-enter password"
+                className="bg-zinc-50/50 dark:bg-zinc-950 border-zinc-200/80 dark:border-zinc-800/80 focus:border-zinc-400 dark:focus:border-zinc-700 h-10 text-xs font-medium rounded-xl"
+              />
+            </div>
+
+            {/* Error Notification */}
+            {error && (
+              <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-3 text-[11px] font-medium leading-relaxed text-red-600">
+                {error}
+              </div>
+            )}
+
+            {/* Guidelines box */}
+            <div className="bg-zinc-50/50 dark:bg-zinc-950/40 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-850 space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Password Requirements</p>
+              <ul className="text-[10px] font-medium text-muted-foreground space-y-1">
+                <li>• At least 8 characters long</li>
+                <li>• Mix of uppercase and lowercase letters</li>
+                <li>• At least one number or special character</li>
+              </ul>
+            </div>
+
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              className="w-full h-10 text-xs font-bold uppercase tracking-wider rounded-xl bg-zinc-900 text-zinc-50 hover:bg-zinc-850 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 transition-colors"
+              disabled={isLoading}
+            >
+              {isLoading ? "Resetting..." : "Reset Password"}
+            </Button>
+          </form>
+        </Card>
       </div>
     </div>
   )

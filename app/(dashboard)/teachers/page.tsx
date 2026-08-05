@@ -29,6 +29,7 @@ export default async function TeachersPage({
     .from("teachers")
     .select("*")
     .ilike("role", "teacher")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
 
   // 3. Fetch all active classes
@@ -97,6 +98,7 @@ export default async function TeachersPage({
     .from("teachers")
     .select("*", { count: "exact", head: true })
     .ilike("role", "teacher")
+    .is("deleted_at", null)
 
   return (
     <TeachersClientPage

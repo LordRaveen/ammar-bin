@@ -321,8 +321,8 @@ export function FeeTemplatesTab() {
                     {filteredTemplates.map((template) => {
                         const total = template.fee_template_items.reduce((sum, item) => sum + Number(item.amount), 0)
                         return (
-                            <Card key={template.id} className="gap-0 group border shadow-none hover:border-slate-400 dark:hover:border-slate-700 transition-all cursor-default dark:bg-slate-950 overflow-hidden relative">
-                                <div className="absolute top-0 left-0 w-1 h-full bg-slate-200 group-hover:bg-slate-900 dark:bg-slate-800 dark:group-hover:bg-slate-400 transition-colors" />
+                            <Card key={template.id} className="gap-0 group border border-zinc-200/80 dark:border-zinc-800/80 shadow-none hover:border-zinc-400 dark:hover:border-zinc-700 transition-all cursor-default bg-white dark:bg-zinc-950 overflow-hidden relative rounded-2xl">
+                                <div className="absolute top-0 left-0 w-1 h-full bg-zinc-200 group-hover:bg-zinc-900 dark:bg-zinc-850 dark:group-hover:bg-zinc-100 transition-colors" />
                                 <CardHeader className="pb-3 px-5">
                                     <div className="flex justify-between items-start">
                                         <div className="space-y-1">
@@ -359,20 +359,20 @@ export function FeeTemplatesTab() {
                                         {template.fee_template_items.map((item, idx) => (
                                             <div key={idx} className="flex justify-between items-center text-[10px] font-semibold">
                                                 <span className="text-muted-foreground uppercase">{item.fee_categories?.name}</span>
-                                                <span className="font-mono bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded">₦{Number(item.amount).toLocaleString()}</span>
+                                                <span className="font-mono bg-zinc-50 dark:bg-zinc-900 px-1.5 py-0.5 rounded">₦{Number(item.amount).toLocaleString()}</span>
                                             </div>
                                         ))}
                                     </div>
-                                    <div className="flex items-center justify-between border-t dark:border-slate-800 py-2 mt-0">
-                                        <div className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400">
+                                    <div className="flex items-center justify-between border-t border-zinc-100 dark:border-zinc-800 py-2 mt-0">
+                                        <div className="text-base font-black font-mono text-emerald-600 dark:text-emerald-400">
                                             ₦{total.toLocaleString()}
                                         </div>
-                                        <Badge variant="outline" className="text-[9px] font-bold uppercase py-0 px-2 tracking-widest border-slate-200 dark:border-slate-800 h-5">
+                                        <Badge variant="outline" className="text-[9px] font-bold uppercase py-0 px-2 tracking-widest border-zinc-200 dark:border-zinc-850 h-5">
                                             {template.fee_template_items.length} Component{template.fee_template_items.length !== 1 ? 's' : ''}
                                         </Badge>
                                     </div>
                                 </CardContent>
-                                <CardFooter className="py-0 px-5 bg-slate-50/50 dark:bg-slate-900/40 text-[9px] text-muted-foreground uppercase font-bold tracking-widest border-t dark:border-slate-800">
+                                <CardFooter className="py-2.5 px-5 bg-zinc-50/50 dark:bg-zinc-900/40 text-[9px] text-muted-foreground uppercase font-bold tracking-widest border-t border-zinc-200/50 dark:border-zinc-800/50">
                                     Last Updated: {new Date(template.updated_at).toLocaleDateString()}
                                 </CardFooter>
                             </Card>

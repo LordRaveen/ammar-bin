@@ -31,6 +31,15 @@ export default function ForgotPasswordPage() {
     setIsLoading(true)
     setMessage(null)
 
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setMessage({
+        type: "error",
+        text: "Network connection error. Please check your internet connection and try again.",
+      })
+      setIsLoading(false)
+      return
+    }
+
     try {
       const supabase = createClient()
 
@@ -93,9 +102,19 @@ export default function ForgotPasswordPage() {
       })
       setEmail("")
     } catch (error: any) {
+      const isNetworkError =
+        (typeof navigator !== "undefined" && !navigator.onLine) ||
+        error.message?.toLowerCase().includes("failed to fetch") ||
+        error.message?.toLowerCase().includes("network") ||
+        error.message?.toLowerCase().includes("timeout") ||
+        error.message?.toLowerCase().includes("connect") ||
+        error.message?.toLowerCase().includes("load failed")
+
       setMessage({
         type: "error",
-        text: error.message || "Failed to send reset link. Please contact the school admin for manual password reset.",
+        text: isNetworkError
+          ? "Network connection error. Please check your internet connection and try again."
+          : error.message || "Failed to send reset link. Please contact the school admin for manual password reset.",
       })
     } finally {
       setIsLoading(false)
@@ -103,87 +122,105 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center p-6 md:p-10 bg-muted/40">
-      <div className="w-full max-w-sm">
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-col items-center gap-2 text-center">
-            <div className="rounded-full bg-primary/10 p-3">
-              <Mail className="h-8 w-8 text-primary" />
-            </div>
-            <h1 className="text-2xl font-bold">Reset Password</h1>
-            <p className="text-sm text-muted-foreground">Enter your email to receive a reset link</p>
+    <div className="flex min-h-screen w-full items-center justify-center p-4 sm:p-6 bg-zinc-50 dark:bg-zinc-950 font-sans">
+      <div className="w-full max-w-[420px] space-y-6">
+        {/* Branding & Logo Header */}
+        <div className="flex flex-col items-center text-center space-y-3">
+          <div className="h-12 w-12 rounded-2xl bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-zinc-50 dark:text-zinc-950 shadow-md">
+            <Mail className="h-6 w-6 stroke-[1.5]" />
+          </div>
+          <div className="space-y-1">
+            <h1 className="text-xl font-black tracking-tight uppercase text-foreground">
+              Ammar Bin Yasir Institute
+            </h1>
+            <p className="text-xs font-semibold text-muted-foreground tracking-wide italic">
+              معهد عمار بن ياسر
+            </p>
+          </div>
+        </div>
+
+        {/* Auth Card */}
+        <Card className="border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 shadow-xl rounded-3xl overflow-hidden p-6 sm:p-8 space-y-4">
+          <div className="space-y-1.5">
+            <CardTitle className="text-lg font-black uppercase tracking-wider text-foreground">Forgot Password</CardTitle>
+            <CardDescription className="text-xs text-muted-foreground">
+              We'll send you an activation or reset link to restore access to your portal account.
+            </CardDescription>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Forgot Password</CardTitle>
-              <CardDescription>We'll send you a link to reset your password</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} method="dialog">
-                <div className="flex flex-col gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="your.email@example.com"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      disabled={isLoading}
-                    />
-                  </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Email Field */}
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Email Address
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="your.email@example.com"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
+                className="bg-zinc-50/50 dark:bg-zinc-950 border-zinc-200/80 dark:border-zinc-800/80 focus:border-zinc-400 dark:focus:border-zinc-700 h-10 text-xs font-medium rounded-xl"
+              />
+            </div>
 
-                  {message && (
-                    <Alert
-                      className={
-                        message.type === "success"
-                          ? "bg-green-50 text-green-800 border-green-200"
-                          : message.type === "warning"
-                            ? "bg-amber-50 text-amber-800 border-amber-200"
-                            : "bg-destructive/15 text-destructive border-destructive/20"
-                      }
-                    >
-                      {message.type === "success" ? (
-                        <CheckCircle2 className="h-4 w-4" />
-                      ) : (
-                        <AlertCircle className="h-4 w-4" />
-                      )}
-                      <AlertDescription className="text-sm">{message.text}</AlertDescription>
-                    </Alert>
+            {/* Alert Message */}
+            {message && (
+              <Alert
+                className={
+                  message.type === "success"
+                    ? "bg-emerald-500/5 text-emerald-600 border-emerald-500/20 rounded-xl"
+                    : message.type === "warning"
+                      ? "bg-amber-500/5 text-amber-600 dark:text-amber-400 border-amber-500/20 rounded-xl"
+                      : "bg-red-500/5 text-red-600 border-red-500/20 rounded-xl"
+                }
+              >
+                <div className="flex items-start gap-2.5">
+                  {message.type === "success" ? (
+                    <CheckCircle2 className="h-4 w-4 mt-0.5 shrink-0" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
                   )}
-
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? "Sending..." : "Send Reset Link"}
-                  </Button>
-
-                  <div className="flex items-center justify-center gap-2 text-sm">
-                    <ArrowLeft className="h-4 w-4" />
-                    <Link
-                      href={isParentPortal ? "/auth/parent-login" : "/auth/signin"}
-                      className="text-primary hover:underline"
-                    >
-                      Back to {isParentPortal ? "Parent" : "Staff"} Login
-                    </Link>
-                  </div>
+                  <AlertDescription className="text-[11px] font-medium leading-relaxed">
+                    {message.text}
+                  </AlertDescription>
                 </div>
-              </form>
-            </CardContent>
-          </Card>
+              </Alert>
+            )}
 
-          <Card className="border-muted">
-            <CardContent className="pt-6 space-y-2">
-              <p className="text-xs text-muted-foreground text-center font-semibold">Not receiving emails?</p>
-              <ul className="text-xs text-muted-foreground space-y-1">
-                <li>• Check your spam/junk folder</li>
-                <li>• Wait 5-10 minutes for delivery</li>
-                <li>• Verify your email address is correct</li>
-                <li>• Contact school admin: admin@school.com</li>
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              className="w-full h-10 text-xs font-bold uppercase tracking-wider rounded-xl bg-zinc-900 text-zinc-50 hover:bg-zinc-850 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 transition-colors"
+              disabled={isLoading}
+            >
+              {isLoading ? "Sending..." : "Send Reset Link"}
+            </Button>
+          </form>
+
+          {/* Guidelines block */}
+          <div className="bg-zinc-50/50 dark:bg-zinc-950/40 p-3 rounded-2xl border border-zinc-100 dark:border-zinc-850 space-y-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Not receiving emails?</p>
+            <ul className="text-[10px] font-medium text-muted-foreground space-y-1">
+              <li>• Double check your junk/spam filters</li>
+              <li>• Verify you entered your correct system email address</li>
+              <li>• Access token codes expire after 1 hour</li>
+            </ul>
+          </div>
+
+          {/* Go Back Link */}
+          <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-center">
+            <Link
+              href={isParentPortal ? "/auth/parent-login" : "/auth/signin"}
+              className="text-xs font-bold text-zinc-500 hover:text-foreground transition-colors flex items-center gap-1.5"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span>Back to Login</span>
+            </Link>
+          </div>
+        </Card>
       </div>
     </div>
   )

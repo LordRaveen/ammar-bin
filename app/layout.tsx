@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Toaster } from 'sonner'
 import { ThemeProvider } from '@/components/theme-provider'
+import { NetworkStatusIndicator } from '@/components/network-status-indicator'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
@@ -46,6 +47,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <NetworkStatusIndicator />
           {children}
         </ThemeProvider>
         <Toaster />
@@ -54,3 +56,4 @@ export default function RootLayout({
     </html>
   )
 }
+

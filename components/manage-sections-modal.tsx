@@ -31,6 +31,8 @@ import {
 } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { updateSection, deleteSection } from "@/app/(dashboard)/classes/actions"
+import { AddSectionModal } from "./add-section-modal"
+import { useEffect } from "react"
 
 interface Section {
   id: string
@@ -51,6 +53,10 @@ export function ManageSectionsModal({ sections }: ManageSectionsModalProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [sectionToDelete, setSectionToDelete] = useState<Section | null>(null)
   const router = useRouter()
+
+  useEffect(() => {
+    setData(sections)
+  }, [sections])
 
   const handleEdit = (section: Section) => {
     setEditingId(section.id)
@@ -129,8 +135,13 @@ export function ManageSectionsModal({ sections }: ManageSectionsModalProps) {
         </Button>
       </DialogTrigger>
       <DialogContent className="!sm:max-w-3xl w-full max-w-3xl">
-        <DialogHeader>
-          <DialogTitle>Manage Sections</DialogTitle>
+        <DialogHeader className="flex flex-row items-center justify-between border-b pb-3 mb-4">
+          <div>
+            <DialogTitle>Manage Sections</DialogTitle>
+          </div>
+          <div className="mr-8">
+            <AddSectionModal />
+          </div>
         </DialogHeader>
 
         <div className="border rounded-lg overflow-hidden">

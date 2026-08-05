@@ -76,24 +76,9 @@ const getNavigationByRole = (role: UserRole) => {
       icon: IconUser,
     },
     {
-      title: "Assessments",
-      url: "/assessments/results",
-      icon: IconClipboardCheck,
-    },
-    {
       title: "Finance",
       url: "/finance",
       icon: IconCoin,
-    },
-    {
-      title: "Reports",
-      url: "/reports",
-      icon: IconFileText,
-    },
-    {
-      title: "Announcements",
-      url: "/announcements",
-      icon: IconSpeakerphone,
     },
     {
       title: "Settings",
@@ -132,11 +117,6 @@ const getNavigationByRole = (role: UserRole) => {
       url: "/finance",
       icon: IconCoin,
     },
-    {
-      title: "Reports",
-      url: "/reports",
-      icon: IconFileText,
-    },
   ]
 
   const accountantNav = [
@@ -154,11 +134,6 @@ const getNavigationByRole = (role: UserRole) => {
       title: "Finance",
       url: "/finance",
       icon: IconCoin,
-    },
-    {
-      title: "Reports",
-      url: "/reports",
-      icon: IconFileText,
     },
   ]
 
@@ -188,11 +163,6 @@ const getNavigationByRole = (role: UserRole) => {
       title: "Attendance",
       url: "/parent/attendance",
       icon: IconCalendarEvent,
-    },
-    {
-      title: "Announcements",
-      url: "/parent/announcements",
-      icon: IconFileText,
     },
     {
       title: "Profile",

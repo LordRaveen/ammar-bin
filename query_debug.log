@@ -1,10 +1,90 @@
 {
-  "timestamp": "2026-07-21T10:13:33.384Z",
-  "studentId": "f683cd5b-7338-4237-bac8-a649a7f12844",
-  "sessionId": "c1cd73ae-c8bd-4669-a9d5-6b0e776b3bfb",
-  "termId": "ef500655-3c4e-4ce6-933c-cb377182212d",
-  "result": null,
-  "scoresLength": 0,
+  "timestamp": "2026-08-01T22:53:01.740Z",
+  "studentId": "28a77701-6d74-48a5-adb6-f623c4cae6eb",
+  "sessionId": "a8921738-dbab-4cfe-968d-6c17df1df18c",
+  "termId": "2be3da4e-9259-4070-ba4e-451c95f5b8f5",
+  "result": {
+    "id": "4db0eae8-bc24-46b1-880c-8f3bc25cd668",
+    "student_id": "28a77701-6d74-48a5-adb6-f623c4cae6eb",
+    "session_id": "a8921738-dbab-4cfe-968d-6c17df1df18c",
+    "term_id": "2be3da4e-9259-4070-ba4e-451c95f5b8f5",
+    "class_id": "212afbf1-3db0-4fa9-b5a4-25e100a9dbd4",
+    "total_score": 458,
+    "average_score": 91.6,
+    "position": 2,
+    "total_subjects": 5,
+    "subjects_passed": 5,
+    "subjects_failed": 0,
+    "remarks": null,
+    "teacher_remark": "Excellent result. Continue striving for excellence.",
+    "principal_remark": "Excellent performance. Keep maintaining this high standard.",
+    "generated_at": "2026-08-01T16:58:23.658+00:00",
+    "is_published": false,
+    "published_at": null,
+    "parent_can_view": false,
+    "attendance_present": 132,
+    "total_school_days": 140
+  },
+  "scoresLength": 21,
   "scoresError": null,
-  "scoresSample": []
+  "scoresSample": [
+    {
+      "id": "c0dbb7dd-cdca-4ad5-a865-27eadcc8ae2d",
+      "assessment_id": "d9a0ba38-b5bd-4381-86e9-99e9c3959226",
+      "student_id": "28a77701-6d74-48a5-adb6-f623c4cae6eb",
+      "score": 20,
+      "grade": "D",
+      "remarks": "Weak",
+      "entered_by": "3462dcc4-da47-4f7f-a5d0-1325fec0e79b",
+      "created_at": "2026-07-31T11:28:59.841425+00:00",
+      "updated_at": "2026-07-31T11:28:59.841425+00:00",
+      "assessments": {
+        "id": "d9a0ba38-b5bd-4381-86e9-99e9c3959226",
+        "term_id": "2be3da4e-9259-4070-ba4e-451c95f5b8f5",
+        "subjects": {
+          "code": "QUR",
+          "name": "AlQur'an"
+        },
+        "session_id": "a8921738-dbab-4cfe-968d-6c17df1df18c",
+        "assessment_types": {
+          "name": "CA Test 1",
+          "max_score": 20
+        },
+        "subject_component": {
+          "id": "aacbee5c-b391-4f76-bc39-1b7038bdcc3a",
+          "name": "Oral"
+        },
+        "assessment_type_id": "f923521f-e268-45f1-9dea-6acb81d9f9fd"
+      }
+    },
+    {
+      "id": "4bc64a1b-c1dc-4237-83e2-3e73c83a9559",
+      "assessment_id": "d7ca60fe-3e54-4ed2-8959-026836925029",
+      "student_id": "28a77701-6d74-48a5-adb6-f623c4cae6eb",
+      "score": 20,
+      "grade": "D",
+      "remarks": "Weak",
+      "entered_by": "3462dcc4-da47-4f7f-a5d0-1325fec0e79b",
+      "created_at": "2026-07-31T11:29:01.070674+00:00",
+      "updated_at": "2026-07-31T11:29:01.070674+00:00",
+      "assessments": {
+        "id": "d7ca60fe-3e54-4ed2-8959-026836925029",
+        "term_id": "2be3da4e-9259-4070-ba4e-451c95f5b8f5",
+        "subjects": {
+          "code": "QUR",
+          "name": "AlQur'an"
+        },
+        "session_id": "a8921738-dbab-4cfe-968d-6c17df1df18c",
+        "assessment_types": {
+          "name": "Exam",
+          "max_score": 60
+        },
+        "subject_component": {
+          "id": "aacbee5c-b391-4f76-bc39-1b7038bdcc3a",
+          "name": "Oral"
+        },
+        "assessment_type_id": "e770bb8c-28f0-4070-8a56-9d83a06161b5"
+      }
+    }
+  ]
 }

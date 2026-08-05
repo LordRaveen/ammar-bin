@@ -33,9 +33,11 @@ import { cn } from "@/lib/utils"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { AddStudentToClassModal } from "@/components/add-student-to-class-modal"
-import { AddSubjectToClassModal } from "@/components/add-subject-to-class-modal"
+import { ClassSubjectsChecklistModal } from "@/components/class-subjects-checklist-modal"
 import { AssignTeacherModal } from "@/components/assign-teacher-modal"
 import { ReassignTeacherModal } from "@/components/reassign-teacher-modal"
+import { EditStudentModal } from "@/components/edit-student-modal"
+import { StudentDetailsSheet } from "@/components/student-details-sheet"
 import { isAdmin } from "@/lib/auth/role-redirect"
 import {
   addStudentToClass,
@@ -230,7 +232,23 @@ export function ResultFinalizationInterface({
     sectionId: classData?.section_id || "",
   })
 
+  // Student Details Sheet and Edit Modal States
+  const [isDetailsSheetOpen, setIsDetailsSheetOpen] = useState(false)
+  const [detailSheetStudentId, setDetailSheetStudentId] = useState<string | null>(null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [editModalStudent, setEditModalStudent] = useState<any | null>(null)
+
   const hasAdminAccess = useMemo(() => isAdmin(userRole), [userRole])
+
+  // Synchronize classDetails name with window.__breadcrumbLabels for AppHeader
+  useEffect(() => {
+    if (typeof window !== "undefined" && classDetails?.id && classDetails?.name) {
+      const gLabels = (window as any).__breadcrumbLabels || {};
+      gLabels[classDetails.id] = classDetails.name;
+      (window as any).__breadcrumbLabels = gLabels;
+      window.dispatchEvent(new Event("breadcrumb-update"));
+    }
+  }, [classDetails]);
 
   // Fetch all database records related to Class Info
   useEffect(() => {
@@ -323,17 +341,45 @@ export function ResultFinalizationInterface({
 
         if (subjectsData) {
           const subjectIds = subjectsData.map((s) => s.subject_id)
-          const { data: assignments } = await supabase
-            .from("teacher_subject_assignments")
-            .select("subject_id, teacher:teachers(first_name, last_name, email, photo_url)")
-            .eq("class_id", currentClassId)
-            .eq("session_id", sessionId)
-            .in("subject_id", subjectIds)
+
+          // Fetch teacher assignments and subject components in parallel
+          const [
+            { data: assignments },
+            { data: classComps }
+          ] = await Promise.all([
+            supabase
+              .from("teacher_subject_assignments")
+              .select("subject_id, teacher:teachers(first_name, last_name, email, photo_url)")
+              .eq("class_id", currentClassId)
+              .eq("session_id", sessionId)
+              .in("subject_id", subjectIds),
+            supabase
+              .from("class_subject_components")
+              .select("*, subject_component:subject_components(id, name)")
+              .eq("class_id", currentClassId)
+          ])
+
+          // Map components by subject_id
+          const componentsMap = new Map<string, any[]>()
+          classComps?.forEach((cc) => {
+            if (cc.subject_component) {
+              if (!componentsMap.has(cc.subject_id)) {
+                componentsMap.set(cc.subject_id, [])
+              }
+              componentsMap.get(cc.subject_id)!.push({
+                id: cc.subject_component.id,
+                name: cc.subject_component.name,
+                max_ca: cc.max_ca || 0,
+                max_exam: cc.max_exam || 0,
+              })
+            }
+          })
 
           const teacherMap = new Map((assignments || []).map((a) => [a.subject_id, a.teacher]))
           const enrichedSubjects = subjectsData.map((s) => ({
             ...s,
             teacher: teacherMap.get(s.subject_id),
+            components: componentsMap.get(s.subject_id) || [],
           }))
           setClassSubjects(enrichedSubjects)
         }
@@ -1314,7 +1360,9 @@ export function ResultFinalizationInterface({
   }, [selectedStudent, sessionId, termId, terms, supabase])
 
   const handleClassSwitch = (newClassId: string) => {
-    if (showSelectors) {
+    if (pathname.includes("/classes/")) {
+      router.push(`/classes/${newClassId}?session=${sessionId}&term=${termId}`)
+    } else if (showSelectors) {
       router.push(`${pathname}?session=${sessionId}&term=${termId}&class=${newClassId}`)
     } else {
       router.push(`/classes/${newClassId}`)
@@ -1323,12 +1371,20 @@ export function ResultFinalizationInterface({
 
   const handleSessionChange = (value: string) => {
     setSessionId(value)
-    router.push(`${pathname}?session=${value}&term=${termId}&class=${initialClassId}`)
+    if (pathname.includes("/classes/")) {
+      router.push(`/classes/${initialClassId}?session=${value}&term=${termId}`)
+    } else {
+      router.push(`${pathname}?session=${value}&term=${termId}&class=${initialClassId}`)
+    }
   }
 
   const handleTermChange = (value: string) => {
     setTermId(value)
-    router.push(`${pathname}?session=${sessionId}&term=${value}&class=${initialClassId}`)
+    if (pathname.includes("/classes/")) {
+      router.push(`/classes/${initialClassId}?session=${sessionId}&term=${value}`)
+    } else {
+      router.push(`${pathname}?session=${sessionId}&term=${value}&class=${initialClassId}`)
+    }
   }
 
   const handleSkillRatingChange = (
@@ -1567,7 +1623,14 @@ export function ResultFinalizationInterface({
               <TableBody>
                 {enrolledStudents.length > 0 ? (
                   enrolledStudents.map((student) => (
-                    <TableRow key={student.id} className="hover:bg-slate-50/30 dark:hover:bg-zinc-900/10">
+                    <TableRow
+                      key={student.id}
+                      className="hover:bg-slate-50/30 dark:hover:bg-zinc-900/10 cursor-pointer"
+                      onClick={() => {
+                        setDetailSheetStudentId(student.id)
+                        setIsDetailsSheetOpen(true)
+                      }}
+                    >
                       <TableCell className="py-2">
                         <Avatar className="h-8 w-8">
                           {student.photo_url && <AvatarImage src={student.photo_url} />}
@@ -1588,15 +1651,30 @@ export function ResultFinalizationInterface({
                         </Badge>
                       </TableCell>
                       {hasAdminAccess && (
-                        <TableCell className="text-right py-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                            onClick={() => handleRemoveStudent(student.enrollment_id)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                        <TableCell className="text-right py-2" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                              onClick={() => {
+                                setEditModalStudent(student)
+                                setIsEditModalOpen(true)
+                              }}
+                              title="Edit Student"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              onClick={() => handleRemoveStudent(student.enrollment_id)}
+                              title="Remove Student"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         </TableCell>
                       )}
                     </TableRow>
@@ -1649,7 +1727,24 @@ export function ResultFinalizationInterface({
                 {classSubjects.length > 0 ? (
                   classSubjects.map((cs) => (
                     <TableRow key={cs.id} className="hover:bg-slate-50/30 dark:hover:bg-zinc-900/10">
-                      <TableCell className="font-semibold text-xs py-2">{cs.subject?.name}</TableCell>
+                      <TableCell className="font-semibold text-xs py-2">
+                        <div>
+                          <span className="font-semibold block">{cs.subject?.name}</span>
+                          {cs.components && cs.components.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {cs.components.map((comp: any) => (
+                                <Badge
+                                  key={comp.id}
+                                  variant="outline"
+                                  className="text-[9px] px-1.5 py-0 bg-slate-50/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 text-zinc-500 font-semibold"
+                                >
+                                  {comp.name} ({comp.max_ca + comp.max_exam})
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell className="text-xs py-2">{cs.subject?.code}</TableCell>
                       <TableCell className="text-xs py-2">{cs.max_score}</TableCell>
                       <TableCell className="text-xs py-2">{cs.pass_mark}</TableCell>
@@ -2420,19 +2515,36 @@ export function ResultFinalizationInterface({
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <h3 className="text-base font-bold leading-tight">
-                        {selectedStudent.first_name} {selectedStudent.last_name}
-                      </h3>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDetailSheetStudentId(selectedStudent.id)
+                            setIsDetailsSheetOpen(true)
+                          }}
+                          className="text-base font-bold leading-tight hover:text-blue-600 transition-colors text-left font-sans"
+                        >
+                          {selectedStudent.first_name} {selectedStudent.last_name}
+                        </button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-zinc-500 hover:text-foreground shrink-0 rounded-md"
+                          onClick={() => {
+                            setEditModalStudent(selectedStudent)
+                            setIsEditModalOpen(true)
+                          }}
+                          title="Edit Student Information"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {selectedStudent.student_id}
                       </p>
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="h-8 text-xs font-medium">
-                      <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                      Edit
-                    </Button>
                     
                     {/* Canva-style Split Group Print Button */}
                     <div className="inline-flex rounded-md border border-input bg-background p-0.5 shadow-2xs">
@@ -2990,11 +3102,15 @@ export function ResultFinalizationInterface({
             unenrolledStudents={unenrolledStudents}
           />
 
-          <AddSubjectToClassModal
+          <ClassSubjectsChecklistModal
             open={showAddSubjectModal}
             onOpenChange={setShowAddSubjectModal}
             classId={initialClassId || classData?.id}
-            availableSubjects={availableSubjects}
+            classNameText={classDetails?.name || "Class"}
+            onAssignedSubjectsChanged={() => {
+              setRefreshKey((prev) => prev + 1)
+              router.refresh()
+            }}
           />
 
           <AssignTeacherModal
@@ -3026,6 +3142,33 @@ export function ResultFinalizationInterface({
               subjectName={tempSubjectForReassign.name}
               currentTeacher={tempSubjectForReassign.teacher}
               teachers={allTeachers}
+            />
+          )}
+
+          {/* Student Details Sheet drawer */}
+          <StudentDetailsSheet
+            studentId={detailSheetStudentId}
+            open={isDetailsSheetOpen}
+            onOpenChange={setIsDetailsSheetOpen}
+            userRole={userRole}
+            sessions={sessions}
+            terms={terms}
+            classes={classes}
+          />
+
+          {/* Student Editing Modal */}
+          {editModalStudent && (
+            <EditStudentModal
+              student={editModalStudent}
+              guardians={[]}
+              open={isEditModalOpen}
+              onOpenChange={(isOpen) => {
+                setIsEditModalOpen(isOpen)
+                if (!isOpen) {
+                  setRefreshKey((prev) => prev + 1)
+                  router.refresh()
+                }
+              }}
             />
           )}
         </>

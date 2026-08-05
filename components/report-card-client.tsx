@@ -101,7 +101,7 @@ export function ReportCardClient({
         {/* Interactive Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-50 dark:bg-zinc-900/30 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800">
           <div className="flex items-center gap-4">
-            <Link href="/assessments/results">
+            <Link href="/classes">
               <Button variant="ghost" size="icon" className="h-10 w-10 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-white dark:bg-zinc-950">
                 <ChevronLeft className="h-5 w-5" />
               </Button>

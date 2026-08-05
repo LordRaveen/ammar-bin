@@ -1,7 +1,8 @@
 import { requireAuth } from "@/lib/auth/get-user"
 import { createServerClient } from "@/lib/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { GraduationCap, Users, ClipboardCheck, TrendingUp, BookOpen, FileText } from "lucide-react"
+import { GraduationCap, Users, ClipboardCheck, TrendingUp, BookOpen } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 
 export const dynamic = "force-dynamic"
@@ -135,103 +136,147 @@ export default async function TeacherDashboardPage() {
     .limit(5)
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Welcome back, {teacher.first_name}</h1>
-        <p className="text-muted-foreground">Here's an overview of your classes and activities</p>
+    <div className="space-y-6 pt-2 pb-8">
+      {/* Header section with Greeting */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-3">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight font-mono">Dashboard</h1>
+          </div>
+          <p className="text-muted-foreground flex items-center gap-2 font-mono text-xs">
+            Welcome back, <span className="text-foreground font-semibold">{teacher.first_name} {teacher.last_name}</span>
+            <span className="h-1 w-1 rounded-full bg-slate-300" />
+            {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </p>
+        </div>
       </div>
 
+      {/* Academic Status Bar */}
       {activeSession && activeTerm && (
-        <Card className="bg-primary text-primary-foreground">
-          <CardHeader>
-            <CardTitle>Active Session</CardTitle>
-            <CardDescription className="text-primary-foreground/80">Current academic period</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              <p className="text-2xl font-bold">{activeSession.name}</p>
-              <p className="text-lg">{activeTerm.name}</p>
-              <p className="text-sm text-primary-foreground/80">
-                {new Date(activeTerm.start_date).toLocaleDateString()} -{" "}
-                {new Date(activeTerm.end_date).toLocaleDateString()}
-              </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="md:col-span-3 border-1 border-emerald-700 shadow-none bg-gradient-to-r from-slate-900 to-slate-800 dark:from-slate-950 dark:to-slate-900 text-white overflow-hidden relative">
+            <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
+              <GraduationCap className="h-32 w-32" />
             </div>
-          </CardContent>
-        </Card>
+            <CardContent className="py-4 px-6 relative">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 font-bold">CURRENT SESSION</Badge>
+                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-extrabold">{activeSession.name}</h2>
+                    <p className="text-slate-400 font-medium text-md mt-1">{activeTerm.name}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 md:flex items-center gap-8 text-right">
+                  <div className="space-y-1">
+                    <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Session Ends</p>
+                    <p className="text-lg font-bold">{new Date(activeTerm.end_date || activeSession.end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                  </div>
+                  <div className="space-y-1 border-l border-slate-700 pl-8 text-left md:text-right">
+                    <p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Term Range</p>
+                    <p className="text-sm font-semibold text-slate-300">
+                      {new Date(activeTerm.start_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - {new Date(activeTerm.end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
+      {/* KPI Row */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Classes Assigned</CardTitle>
-            <GraduationCap className="h-4 w-4 text-muted-foreground" />
+        {/* Classes Assigned */}
+        <Card className="gap-0 py-2 border shadow-none group hover:border-primary/20 transition-all duration-300">
+          <CardHeader className="px-3 flex flex-row items-center justify-between pb-0">
+            <CardTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Classes Assigned</CardTitle>
+            <div className="h-8 w-8 rounded-lg bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center text-blue-600">
+              <GraduationCap className="h-4 w-4" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{assignedClasses.length}</div>
-            <p className="text-xs text-muted-foreground">Active classes this term</p>
+          <CardContent className="px-3 pt-1">
+            <div className="text-xl font-bold">{assignedClasses.length}</div>
+            <p className="text-[10px] text-muted-foreground font-medium mt-1">Active classes this term</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Students</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+        {/* Total Students */}
+        <Card className="gap-0 py-2 border shadow-none group hover:border-primary/20 transition-all duration-300">
+          <CardHeader className="px-3 flex flex-row items-center justify-between pb-0">
+            <CardTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Total Students</CardTitle>
+            <div className="h-8 w-8 rounded-lg bg-purple-50 dark:bg-purple-950/30 flex items-center justify-center text-purple-600">
+              <Users className="h-4 w-4" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalStudents}</div>
-            <p className="text-xs text-muted-foreground">Students you teach</p>
+          <CardContent className="px-3 pt-1">
+            <div className="text-xl font-bold">{totalStudents}</div>
+            <p className="text-[10px] text-muted-foreground font-medium mt-1">Students in your classes</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Subjects Assigned</CardTitle>
-            <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
+        {/* Subjects Assigned */}
+        <Card className="gap-0 py-2 border shadow-none group hover:border-primary/20 transition-all duration-300">
+          <CardHeader className="px-3 flex flex-row items-center justify-between pb-0">
+            <CardTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Subjects Assigned</CardTitle>
+            <div className="h-8 w-8 rounded-lg bg-amber-50 dark:bg-amber-950/30 flex items-center justify-center text-amber-600">
+              <BookOpen className="h-4 w-4" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{subjectAssignments?.length || 0}</div>
-            <p className="text-xs text-muted-foreground">Subjects this term</p>
+          <CardContent className="px-3 pt-1">
+            <div className="text-xl font-bold">{subjectAssignments?.length || 0}</div>
+            <p className="text-[10px] text-muted-foreground font-medium mt-1">Subjects taught this term</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Score</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+        {/* Average Score */}
+        <Card className="gap-0 py-2 border shadow-none group hover:border-primary/20 transition-all duration-300">
+          <CardHeader className="px-3 flex flex-row items-center justify-between pb-0">
+            <CardTitle className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Average Score</CardTitle>
+            <div className="h-8 w-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-center text-emerald-600">
+              <TrendingUp className="h-4 w-4" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{averageScore}%</div>
-            <p className="text-xs text-muted-foreground">Recent class average</p>
+          <CardContent className="px-3 pt-1">
+            <div className="text-xl font-bold">{averageScore}%</div>
+            <p className="text-[10px] text-muted-foreground font-medium mt-1">Recent class average</p>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>My Classes</CardTitle>
-            <CardDescription>Classes assigned to you this term</CardDescription>
+        {/* My Classes */}
+        <Card className="shadow-none border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-950 rounded-2xl overflow-hidden">
+          <CardHeader className="pb-3 border-b">
+            <CardTitle className="text-sm font-bold uppercase tracking-wider">My Classes</CardTitle>
+            <CardDescription className="text-xs">Classes assigned to you this term</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
+          <CardContent className="p-4">
+            <div className="space-y-2.5">
               {assignedClasses.length > 0 ? (
                 assignedClasses.map((classItem: any) => {
                   const assignment = classAssignments?.find((a) => a.classes?.id === classItem.id)
                   return (
                     <Link key={classItem.id} href={`/classes/${classItem.id}`}>
-                      <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent transition-colors cursor-pointer">
+                      <div className="flex items-center justify-between p-3 rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors cursor-pointer group">
                         <div className="flex items-center gap-3">
-                          <BookOpen className="h-5 w-5 text-muted-foreground" />
+                          <BookOpen className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                           <div>
-                            <p className="font-medium">{classItem.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {classItem.sections?.name}
+                            <p className="text-xs font-bold text-foreground">{classItem.name}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[10px] text-muted-foreground font-semibold">
+                                {classItem.sections?.name}
+                              </span>
                               {assignment?.is_class_teacher && (
-                                <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                                <Badge className="bg-primary/10 text-primary hover:bg-primary/10 text-[9px] h-4 py-0 font-bold border-none">
                                   Class Teacher
-                                </span>
+                                </Badge>
                               )}
-                            </p>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -239,35 +284,36 @@ export default async function TeacherDashboardPage() {
                   )
                 })
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">No classes assigned yet</p>
+                <p className="text-xs text-muted-foreground text-center py-6">No classes assigned yet</p>
               )}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common tasks and shortcuts</CardDescription>
+        {/* Quick Actions */}
+        <Card className="shadow-none border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-950 rounded-2xl overflow-hidden">
+          <CardHeader className="pb-3 border-b">
+            <CardTitle className="text-sm font-bold uppercase tracking-wider">Quick Actions</CardTitle>
+            <CardDescription className="text-xs">Common tasks and shortcuts</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid gap-3">
+          <CardContent className="p-4">
+            <div className="grid gap-2.5">
               <Link href="/teacher/results">
-                <div className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent transition-colors cursor-pointer">
-                  <ClipboardCheck className="h-5 w-5 text-primary" />
+                <div className="flex items-center gap-3 p-3 rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors cursor-pointer group">
+                  <ClipboardCheck className="h-5 w-5 text-primary group-hover:scale-105 transition-transform" />
                   <div>
-                    <p className="font-medium">Class Results & Scores</p>
-                    <p className="text-xs text-muted-foreground">Manage and entry assessment scores</p>
+                    <p className="text-xs font-bold text-foreground">Class Results & Scores</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Manage and entry assessment scores</p>
                   </div>
                 </div>
               </Link>
 
               <Link href="/teacher/attendance">
-                <div className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent transition-colors cursor-pointer">
-                  <Users className="h-5 w-5 text-primary" />
+                <div className="flex items-center gap-3 p-3 rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors cursor-pointer group">
+                  <Users className="h-5 w-5 text-primary group-hover:scale-105 transition-transform" />
                   <div>
-                    <p className="font-medium">Class Attendance</p>
-                    <p className="text-xs text-muted-foreground">Mark daily student attendance</p>
+                    <p className="text-xs font-bold text-foreground">Class Attendance</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Mark daily student attendance</p>
                   </div>
                 </div>
               </Link>
@@ -276,37 +322,38 @@ export default async function TeacherDashboardPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-          <CardDescription>Your latest score entries</CardDescription>
+      {/* Recent Activity */}
+      <Card className="shadow-none border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-950 rounded-2xl overflow-hidden">
+        <CardHeader className="pb-3 border-b">
+          <CardTitle className="text-sm font-bold uppercase tracking-wider">Recent Activity</CardTitle>
+          <CardDescription className="text-xs">Your latest score entries</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
+        <CardContent className="p-4">
+          <div className="space-y-2.5">
             {recentActivities && recentActivities.length > 0 ? (
               recentActivities.map((activity: any) => (
-                <div key={activity.id} className="flex items-center justify-between p-3 rounded-lg border">
+                <div key={activity.id} className="flex items-center justify-between p-3 rounded-xl border border-zinc-200/60 dark:border-zinc-800/60">
                   <div className="flex items-center gap-3">
                     <ClipboardCheck className="h-4 w-4 text-muted-foreground" />
                     <div>
-                      <p className="text-sm font-medium">
+                      <p className="text-xs font-bold text-foreground">
                         Score entered for {activity.students?.first_name} {activity.students?.last_name}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
                         {activity.assessments?.subjects?.name} - {activity.assessments?.classes?.name}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold">{activity.score}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs font-bold text-foreground">{activity.score}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
                       {new Date(activity.created_at).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">No recent activities</p>
+              <p className="text-xs text-muted-foreground text-center py-6">No recent activities</p>
             )}
           </div>
         </CardContent>

@@ -10,7 +10,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { Loader2, AlertTriangle } from "lucide-react"
 
 interface DeleteTeacherDialogProps {
@@ -22,7 +22,6 @@ interface DeleteTeacherDialogProps {
 }
 
 export function DeleteTeacherDialog({ teacherId, teacher, open, onOpenChange, onSuccess }: DeleteTeacherDialogProps) {
-  const { toast } = useToast()
   const [loading, setLoading] = useState(false)
 
   const handleDelete = async () => {
@@ -40,18 +39,16 @@ export function DeleteTeacherDialog({ teacherId, teacher, open, onOpenChange, on
         throw new Error(error.error || "Failed to delete teacher")
       }
 
-      toast({
-        title: "Success",
-        description: "Teacher deleted successfully",
+      const name = [teacher?.first_name, teacher?.last_name].filter(Boolean).join(" ") || "Staff member"
+      toast.success("Deleted Successfully", {
+        description: `${name} has been removed.`,
       })
 
       onSuccess(teacherId)
       onOpenChange(false)
     } catch (error: any) {
-      toast({
-        title: "Error",
+      toast.error("Delete Failed", {
         description: error.message,
-        variant: "destructive",
       })
     } finally {
       setLoading(false)
