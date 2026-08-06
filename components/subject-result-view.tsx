@@ -1129,13 +1129,20 @@ export function SubjectResultView({
     }
   }
 
-  // Global Ctrl + S / Cmd + S Keyboard Shortcut for Saving Scores
+  // Global Ctrl + S / Cmd + S Keyboard Shortcut & Escape Key handling
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
         e.preventDefault()
         if (isEditing && !isSaving) {
           handleBatchSave()
+        }
+      }
+
+      if (e.key === "Escape" || e.key === "Esc") {
+        if (isEditing) {
+          e.preventDefault()
+          setIsEditing(false)
         }
       }
     }

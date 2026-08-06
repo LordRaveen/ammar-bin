@@ -43,6 +43,7 @@ import { assignSubjectTeacher, removeSubjectTeacher } from "@/app/(dashboard)/cl
 import { cn } from "@/lib/utils"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ClassSubjectsChecklistModal } from "./class-subjects-checklist-modal"
+import { toast } from "sonner"
 
 interface Class {
   id: string
@@ -205,19 +206,20 @@ export function ClassesClientPage({
   const handleSaveClassDetails = async () => {
     if (!selectedClass) return
     if (!editName.trim()) {
-      alert("Class name is required")
+      toast.error("Class name is required")
       return
     }
     if (!editSectionId) {
-      alert("Section is required")
+      toast.error("Section is required")
       return
     }
     if (editCapacity <= 0) {
-      alert("Capacity must be greater than 0")
+      toast.error("Capacity must be greater than 0")
       return
     }
 
     setIsSaving(true)
+    const toastId = toast.loading("Saving changes...")
     try {
       const result = await updateClass(
         selectedClass.id,
@@ -228,15 +230,16 @@ export function ClassesClientPage({
       )
 
       if (result.error) {
-        alert(result.error)
+        toast.error(result.error, { id: toastId })
         return
       }
 
+      toast.success("Class updated successfully", { id: toastId })
       setIsSidepanelOpen(false)
       router.refresh()
     } catch (err) {
       console.error("[v0] Error updating class details:", err)
-      alert("Failed to update class details")
+      toast.error("Failed to update class details", { id: toastId })
     } finally {
       setIsSaving(false)
     }
@@ -244,19 +247,25 @@ export function ClassesClientPage({
 
   const handleConfirmDelete = async () => {
     if (!selectedClass) return
+    const classId = selectedClass.id
+    const className = selectedClass.name
+
+    setDeleteConfirmOpen(false)
+    setIsSidepanelOpen(false)
+
+    const toastId = toast.loading(`Deleting class "${className}"...`)
     setIsDeleting(true)
     try {
-      const result = await deleteClass(selectedClass.id)
+      const result = await deleteClass(classId)
       if (result.error) {
-        alert(result.error)
+        toast.error(result.error, { id: toastId })
         return
       }
-      setDeleteConfirmOpen(false)
-      setIsSidepanelOpen(false)
+      toast.success(`Class "${className}" deleted successfully`, { id: toastId })
       router.refresh()
     } catch (err) {
       console.error("[v0] Error deleting class:", err)
-      alert("Failed to delete class")
+      toast.error("Failed to delete class", { id: toastId })
     } finally {
       setIsDeleting(false)
     }
@@ -986,13 +995,10 @@ export function ClassesClientPage({
             </AlertDialogCancel>
             <AlertDialogAction
               disabled={isDeleting}
-              onClick={(e) => {
-                e.preventDefault()
-                handleConfirmDelete()
-              }}
+              onClick={handleConfirmDelete}
               className="h-9 text-xs font-bold bg-red-650 hover:bg-red-700 text-white border-none"
             >
-              {isDeleting ? "Deleting..." : "Delete Class"}
+              Delete Class
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
