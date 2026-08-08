@@ -164,7 +164,7 @@ export async function addStaff(formData: FormData) {
     // Upsert into teachers table if role is teacher
     if (role === "teacher") {
       try {
-        await adminClient.from("teachers").upsert(
+        const { error: teacherError } = await adminClient.from("teachers").upsert(
           {
             user_id: userId,
             staff_id: profile.staff_id,
@@ -181,9 +181,13 @@ export async function addStaff(formData: FormData) {
             employment_date: employmentDate,
             employment_type: profile.employment_type,
             status: profile.status,
+            role: "teacher", // Explicitly set lowercase role
           },
           { onConflict: "email" }
         )
+        if (teacherError) {
+          devLog.error("Failed to upsert teacher record during addStaff:", teacherError.message)
+        }
       } catch (e) {
         devLog.error("Error upserting into teachers table:", e)
       }

@@ -121,25 +121,36 @@ export default function SignInPage() {
       let userRole = "admin"
 
       try {
-        // Check if user is a teacher/staff
-        const { data: teacherData, error: teacherError } = await supabase
-          .from("teachers")
+        // Check user_profiles table first as it is the canonical staff/user directory
+        const { data: profileData, error: profileError } = await supabase
+          .from("user_profiles")
           .select("role")
           .eq("user_id", signInData.user.id)
           .maybeSingle()
 
-        if (!teacherError && teacherData) {
-          userRole = teacherData.role
+        if (!profileError && profileData) {
+          userRole = profileData.role
         } else {
-          // Check if user is a guardian/parent
-          const { data: guardianData, error: guardianError } = await supabase
-            .from("guardians")
-            .select("id")
+          // Fallback to teachers table check for legacy records
+          const { data: teacherData, error: teacherError } = await supabase
+            .from("teachers")
+            .select("role")
             .eq("user_id", signInData.user.id)
             .maybeSingle()
 
-          if (!guardianError && guardianData) {
-            userRole = "parent"
+          if (!teacherError && teacherData) {
+            userRole = teacherData.role
+          } else {
+            // Check if user is a guardian/parent
+            const { data: guardianData, error: guardianError } = await supabase
+              .from("guardians")
+              .select("id")
+              .eq("user_id", signInData.user.id)
+              .maybeSingle()
+
+            if (!guardianError && guardianData) {
+              userRole = "parent"
+            }
           }
         }
       } catch (roleError) {

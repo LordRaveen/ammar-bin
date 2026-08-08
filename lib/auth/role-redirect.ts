@@ -2,7 +2,7 @@
  * Get the appropriate dashboard URL based on user role
  */
 export function getRoleDashboardUrl(role: string): string {
-  switch (role) {
+  switch (role?.toLowerCase()) {
     case "teacher":
       return "/teacher-dashboard"
     case "cashier":
@@ -22,26 +22,28 @@ export function getRoleDashboardUrl(role: string): string {
  * Check if the current user has admin privileges
  */
 export function isAdmin(role: string): boolean {
-  return role === "super_admin" || role === "admin"
+  const r = role?.toLowerCase()
+  return r === "super_admin" || r === "admin"
 }
 
 /**
  * Check if the current user is a teacher
  */
 export function isTeacher(role: string): boolean {
-  return role === "teacher"
+  return role?.toLowerCase() === "teacher"
 }
 
 /**
  * Check if the current user is a cashier or accountant
  */
 export function isCashierOrAccountant(role: string): boolean {
-  return role === "cashier" || role === "accountant"
+  const r = role?.toLowerCase()
+  return r === "cashier" || r === "accountant"
 }
 
 /**
  * Check if the current user is a parent
  */
 export function isParent(role: string): boolean {
-  return role === "parent"
+  return role?.toLowerCase() === "parent"
 }

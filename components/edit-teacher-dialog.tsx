@@ -64,7 +64,7 @@ export function EditTeacherDialog({ teacherId, open, onOpenChange, onSuccess }: 
         specialization: teacher.specialization || "",
         employment_date: teacher.employment_date || "",
         employment_type: teacher.employment_type || "",
-        role: teacher.role || "",
+        role: teacher.role?.toLowerCase() || "",
         status: teacher.status || "Active",
       })
     } catch (error) {
@@ -282,15 +282,18 @@ export function EditTeacherDialog({ teacherId, open, onOpenChange, onSuccess }: 
 
               <div className="space-y-2">
                 <Label htmlFor="role">Staff Role</Label>
-                <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
+                <Select 
+                  value={formData.role?.toLowerCase()} 
+                  onValueChange={(value) => setFormData({ ...formData, role: value.toLowerCase() })}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Teacher">Teacher</SelectItem>
-                    <SelectItem value="Administrator">Administrator</SelectItem>
-                    <SelectItem value="Accountant">Accountant</SelectItem>
-                    <SelectItem value="Cashier">Cashier</SelectItem>
+                    <SelectItem value="teacher">Teacher</SelectItem>
+                    <SelectItem value="admin">Administrator</SelectItem>
+                    <SelectItem value="accountant">Accountant</SelectItem>
+                    <SelectItem value="cashier">Cashier</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

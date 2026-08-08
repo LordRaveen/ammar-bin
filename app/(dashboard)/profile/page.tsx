@@ -73,38 +73,48 @@ export default function ProfilePage() {
 
       const userRole = profile?.role || authUser.user_metadata?.role || "admin"
 
-      if (["teacher", "admin", "super_admin", "accountant"].includes(userRole)) {
-        // Fetch teacher / staff details
-        const { data: teacher, error: teacherError } = await supabase
-          .from("teachers")
-          .select(`
-            *,
-            teacher_class_assignments(
-              class:classes(
-                id,
-                name,
-                section:sections(name)
-              )
-            )
-          `)
+      if (["teacher", "admin", "super_admin", "accountant", "cashier", "principal"].includes(userRole)) {
+        // Fetch profile details from canonical user_profiles
+        const { data: profile, error: profileError } = await supabase
+          .from("user_profiles")
+          .select("*")
           .eq("user_id", authUser.id)
           .maybeSingle()
 
-        if (teacher) {
-          setProfileDetails({ ...teacher, role: userRole })
+        if (profileError) throw profileError
+
+        if (profile) {
+          setProfileDetails({ ...profile, role: userRole })
           setFormData({
-            firstName: teacher.first_name || "",
-            lastName: teacher.last_name || "",
-            phone: teacher.phone || "",
+            firstName: profile.first_name || "",
+            lastName: profile.last_name || "",
+            phone: profile.phone || "",
             occupation: "",
             relationship: "",
-            gender: teacher.gender || "",
+            gender: profile.gender || "",
           })
 
-          // Extract classes
-          if (teacher.teacher_class_assignments) {
-            const classes = teacher.teacher_class_assignments.map((tca: any) => tca.class).filter(Boolean)
-            setAssignedClasses(classes)
+          // If role is teacher, also query teachers table for class assignments
+          if (userRole === "teacher") {
+            const { data: teacher } = await supabase
+              .from("teachers")
+              .select(`
+                id,
+                teacher_class_assignments(
+                  class:classes(
+                    id,
+                    name,
+                    section:sections(name)
+                  )
+                )
+              `)
+              .eq("email", profile.email)
+              .maybeSingle()
+
+            if (teacher && teacher.teacher_class_assignments) {
+              const classes = teacher.teacher_class_assignments.map((tca: any) => tca.class).filter(Boolean)
+              setAssignedClasses(classes)
+            }
           }
         }
       } else if (userRole === "parent") {
@@ -170,8 +180,8 @@ export default function ProfilePage() {
 
     setUpdating(true)
     try {
-      const isStaff = ["teacher", "admin", "super_admin", "accountant"].includes(profileDetails.role)
-      const table = isStaff ? "teachers" : "guardians"
+      const roleLower = profileDetails.role?.toLowerCase()
+      const isStaff = ["teacher", "admin", "super_admin", "accountant", "cashier", "principal"].includes(roleLower)
 
       const updatePayload: any = {
         first_name: formData.firstName,
@@ -179,17 +189,42 @@ export default function ProfilePage() {
         phone: formData.phone,
       }
 
-      if (!isStaff) {
+      if (isStaff) {
+        // Update user_profiles
+        const { error: profileError } = await supabase
+          .from("user_profiles")
+          .update(updatePayload)
+          .eq("user_id", user.id)
+
+        if (profileError) throw profileError
+
+        // Also update teachers if they are a teacher
+        if (roleLower === "teacher") {
+          const { error: teacherError } = await supabase
+            .from("teachers")
+            .update(updatePayload)
+            .eq("user_id", user.id)
+
+          if (teacherError) {
+            // Fallback by email if user_id link is not yet established
+            await supabase
+              .from("teachers")
+              .update(updatePayload)
+              .eq("email", profileDetails.email)
+          }
+        }
+      } else {
+        // Guardian update
         updatePayload.occupation = formData.occupation
         updatePayload.relationship = formData.relationship
+        
+        const { error } = await supabase
+          .from("guardians")
+          .update(updatePayload)
+          .eq("user_id", user.id)
+
+        if (error) throw error
       }
-
-      const { error } = await supabase
-        .from(table)
-        .update(updatePayload)
-        .eq("user_id", user.id)
-
-      if (error) throw error
 
       toast.success("Profile updated successfully")
       loadUserProfile()

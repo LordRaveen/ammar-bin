@@ -72,6 +72,54 @@ export async function addTeacher(formData: FormData) {
       // In production, this should send an email instead of logging
     }
 
+    const role = (formData.get("role") as string || "teacher").toLowerCase();
+
+    if (createAccount && userId) {
+      // Create admin client with service role key
+      const adminClient = createAdminClient();
+      // Create user role
+      const userRole = (formData.get("user_role") as string || role).toLowerCase();
+      const { error: roleError } = await adminClient
+        .from("user_roles")
+        .upsert({
+          user_id: userId,
+          role: userRole,
+          is_active: true,
+        }, { onConflict: "user_id,role" });
+
+      if (roleError) {
+        devLog.error("Failed to create user role:", roleError);
+      }
+    }
+
+    // Upsert into user_profiles in parallel so profile and teachers table match
+    const adminClient = createAdminClient();
+    const { data: profile, error: profileError } = await adminClient
+      .from("user_profiles")
+      .upsert({
+        user_id: userId,
+        staff_id: staffId,
+        first_name: formData.get("first_name") as string,
+        middle_name: formData.get("middle_name") as string || null,
+        last_name: formData.get("last_name") as string,
+        email: email,
+        phone: formData.get("phone") as string,
+        gender: formData.get("gender") as string,
+        date_of_birth: formData.get("date_of_birth") as string || null,
+        address: formData.get("address") as string || null,
+        qualification: formData.get("qualification") as string || null,
+        specialization: formData.get("specialization") as string || null,
+        employment_type: formData.get("employment_type") as string || "Full-time",
+        role: role,
+        status: 'Active',
+      }, { onConflict: "email" })
+      .select()
+      .single();
+
+    if (profileError) {
+      devLog.error("Failed to upsert user_profile during addTeacher:", profileError.message);
+    }
+
     const teacherData = {
       user_id: userId,
       staff_id: staffId,
@@ -87,7 +135,7 @@ export async function addTeacher(formData: FormData) {
       specialization: formData.get("specialization") as string || null,
       employment_date: formData.get("employment_date") as string || new Date().toISOString().split('T')[0],
       employment_type: formData.get("employment_type") as string,
-      role: formData.get("role") as string,
+      role: role,
       status: 'Active',
     };
 
@@ -108,6 +156,7 @@ export async function addTeacher(formData: FormData) {
     devLog.info("Teacher created successfully:", teacher.staff_id);
     
     revalidatePath("/teachers");
+    revalidatePath("/users");
     return { success: true, teacher };
   } catch (error) {
     devLog.error("Error in addTeacher:", error);

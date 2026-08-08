@@ -17,14 +17,24 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 async function main() {
   console.log("=== COMPARING user_profiles VS teachers ===");
 
-  const { data: profiles } = await supabase
+  const { data: profiles, error: pError } = await supabase
     .from('user_profiles')
     .select('*')
     .eq('role', 'teacher');
 
-  const { data: teachers } = await supabase
+  if (pError) {
+    console.error("Failed to query user_profiles:", pError.message);
+    process.exit(1);
+  }
+
+  const { data: teachers, error: tError } = await supabase
     .from('teachers')
     .select('*');
+
+  if (tError) {
+    console.error("Failed to query teachers:", tError.message);
+    process.exit(1);
+  }
 
   console.log(`Found ${profiles.length} teachers in user_profiles`);
   console.log(`Found ${teachers.length} teachers in teachers table`);
@@ -68,7 +78,7 @@ async function main() {
         employment_date: p.employment_date || new Date().toISOString().split('T')[0],
         employment_type: p.employment_type || 'Full-time',
         status: p.status || 'Active',
-        role: 'Teacher',
+        role: 'teacher',
       };
       
       const { data: inserted, error } = await supabase
