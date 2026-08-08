@@ -1,5 +1,6 @@
 import { requireAuth } from "@/lib/auth/get-user"
 import { createServerClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { GraduationCap, Users, ClipboardCheck, TrendingUp, BookOpen } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -12,14 +13,82 @@ export default async function TeacherDashboardPage() {
   const supabase = await createServerClient()
 
   // Get teacher record
-  const { data: teacher } = await supabase
+  let { data: teacher } = await supabase
     .from("teachers")
     .select("id, first_name, last_name")
     .eq("user_id", user.id)
-    .single()
+    .maybeSingle()
+
+  // Self-healing: if teacher is not found in teachers table, but user is a teacher in user_profiles
+  if (!teacher) {
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("*")
+      .eq("user_id", user.id)
+      .maybeSingle()
+
+    if (profile && profile.role?.toLowerCase() === "teacher") {
+      const adminClient = createAdminClient()
+
+      // Try to find if teacher already exists by email
+      const { data: existingTeacherByEmail } = await adminClient
+        .from("teachers")
+        .select("id")
+        .eq("email", profile.email)
+        .maybeSingle()
+
+      if (existingTeacherByEmail) {
+        // Link existing teacher record to the user_id
+        const { data: updatedTeacher } = await adminClient
+          .from("teachers")
+          .update({ user_id: user.id })
+          .eq("id", existingTeacherByEmail.id)
+          .select("id, first_name, last_name")
+          .maybeSingle()
+
+        if (updatedTeacher) {
+          teacher = updatedTeacher
+        }
+      } else {
+        // Insert new teacher record
+        const { data: newTeacher } = await adminClient
+          .from("teachers")
+          .insert({
+            user_id: user.id,
+            staff_id: profile.staff_id,
+            first_name: profile.first_name,
+            middle_name: profile.middle_name,
+            last_name: profile.last_name,
+            email: profile.email,
+            phone: profile.phone,
+            gender: profile.gender,
+            date_of_birth: profile.date_of_birth,
+            address: profile.address,
+            qualification: profile.qualification,
+            specialization: profile.specialization,
+            employment_type: profile.employment_type,
+            status: profile.status || "Active",
+          })
+          .select("id, first_name, last_name")
+          .maybeSingle()
+
+        if (newTeacher) {
+          teacher = newTeacher
+        }
+      }
+    }
+  }
 
   if (!teacher) {
-    return <div>Teacher record not found</div>
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] p-6 text-center">
+        <GraduationCap className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
+        <h2 className="text-lg font-bold">Teacher Profile Not Synchronized</h2>
+        <p className="text-xs text-muted-foreground max-w-[360px] mt-1">
+          Your user account is active, but your teacher directory record is not fully set up. Please ask the administrator to verify your profile details.
+        </p>
+      </div>
+    )
   }
 
   // Get active session and term
@@ -46,7 +115,7 @@ export default async function TeacherDashboardPage() {
       )
     `)
     .eq("teacher_id", teacher.id)
-    .eq("session_id", activeSession?.id)
+    .eq("session_id", activeSession?.id || null)
 
   const classAssignments = classAssignmentsData as any[] | null
   const assignedClasses = classAssignments?.map((a) => a.classes).filter(Boolean) || []
@@ -78,21 +147,21 @@ export default async function TeacherDashboardPage() {
       )
     `)
     .eq("teacher_id", teacher.id)
-    .eq("session_id", activeSession?.id)
+    .eq("session_id", activeSession?.id || null)
 
   const subjectAssignments = subjectAssignmentsData as any[] | null
 
   // Calculate pending assessments (subjects where scores haven't been entered)
   let pendingAssessments = 0
-  if (subjectAssignments && subjectAssignments.length > 0) {
+  if (subjectAssignments && subjectAssignments.length > 0 && activeSession?.id && activeTerm?.id) {
     for (const assignment of subjectAssignments) {
       const { count } = await supabase
         .from("assessments")
         .select("*", { count: "exact", head: true })
         .eq("class_id", assignment.classes?.id)
         .eq("subject_id", assignment.subjects?.id)
-        .eq("session_id", activeSession?.id)
-        .eq("term_id", activeTerm?.id)
+        .eq("session_id", activeSession.id)
+        .eq("term_id", activeTerm.id)
 
       // This is a simplified count - would need to check if scores are entered
       pendingAssessments += count || 0

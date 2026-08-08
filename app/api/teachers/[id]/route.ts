@@ -6,9 +6,26 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params
     const supabase = await createServerClient()
 
-    const { data: teacher, error } = await supabase.from("teachers").select("*").eq("id", id).single()
+    // 1. Try to find the record in user_profiles by ID
+    let { data: profile } = await supabase.from("user_profiles").select("*").eq("id", id).maybeSingle()
+    let teacher = null
 
-    if (error) throw error
+    if (profile) {
+      // If it exists in user_profiles, check if a teacher record also exists by email
+      const { data: tData } = await supabase.from("teachers").select("*").eq("email", profile.email).maybeSingle()
+      teacher = tData ? { ...profile, ...tData, id: tData.id } : profile
+    } else {
+      // If not in user_profiles by ID, try teachers table by ID
+      const { data: tData } = await supabase.from("teachers").select("*").eq("id", id).maybeSingle()
+      if (tData) {
+        const { data: uProfile } = await supabase.from("user_profiles").select("*").eq("email", tData.email).maybeSingle()
+        teacher = uProfile ? { ...uProfile, ...tData, id: tData.id } : tData
+      }
+    }
+
+    if (!teacher) {
+      return NextResponse.json({ error: "Staff/Teacher record not found" }, { status: 404 })
+    }
 
     return NextResponse.json(teacher)
   } catch (error: any) {

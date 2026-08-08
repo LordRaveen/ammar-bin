@@ -57,32 +57,23 @@ export function TeacherDetailsSheet({ teacherId, open, onOpenChange }: TeacherDe
     try {
       const [
         { data: sessionData },
-        { data: teacherData, error: teacherError },
+        { data: initialProfileData, error: profileError },
         { data: classesData, error: classesError },
         { data: teachersData },
         { data: enrollmentsData },
       ] = await Promise.all([
         supabase.from("sessions").select("id").eq("is_active", true).maybeSingle(),
         supabase
-          .from("teachers")
-          .select(`
-            *,
-            teacher_class_assignments(
-              class:classes(
-                id,
-                name,
-                section:sections(name)
-              )
-            )
-          `)
+          .from("user_profiles")
+          .select("*")
           .eq("id", teacherId)
-          .single(),
+          .maybeSingle(), // Use maybeSingle to prevent PGRST116 error if teacherId is a teachers.id
         supabase
           .from("classes")
           .select("id, name, class_teacher_id, section_id, section:sections(name)")
           .eq("is_active", true)
           .order("name"),
-        supabase.from("teachers").select("id, user_id, first_name, last_name"),
+        supabase.from("teachers").select("id, user_id, first_name, last_name, email"),
         supabase.from("student_enrollments").select("class_id").eq("is_active", true),
       ])
 
@@ -129,9 +120,77 @@ export function TeacherDetailsSheet({ teacherId, open, onOpenChange }: TeacherDe
 
       setAllClasses(enriched)
 
-      if (!teacherError && teacherData) {
-        setTeacher(teacherData)
+      let profileData = initialProfileData
+      let teacherAssignments: any[] = []
+      let actualTeacherId = teacherId
+
+      if (!profileData) {
+        // If not found in user_profiles by ID, it means teacherId is a teachers.id (clicked from Teachers Directory)
+        const { data: tData } = await supabase
+          .from("teachers")
+          .select(`
+            *,
+            teacher_class_assignments(
+              class:classes(
+                id,
+                name,
+                section:sections(name)
+              )
+            )
+          `)
+          .eq("id", teacherId)
+          .maybeSingle()
+
+        if (!tData) {
+          throw new Error("Staff/Teacher record not found")
+        }
+
+        const { data: uProfile } = await supabase
+          .from("user_profiles")
+          .select("*")
+          .eq("email", tData.email)
+          .maybeSingle()
+
+        profileData = uProfile || {
+          ...tData,
+          role: "teacher" // Fallback role if user profile is missing
+        }
+        actualTeacherId = tData.id
+        teacherAssignments = tData.teacher_class_assignments || []
+      } else {
+        // teacherId is a user_profiles.id (clicked from Staff Directory)
+        actualTeacherId = profileData.id
+        
+        if (profileData.role?.toLowerCase() === "teacher") {
+          const { data: tData } = await supabase
+            .from("teachers")
+            .select(`
+              id,
+              teacher_class_assignments(
+                class:classes(
+                  id,
+                  name,
+                  section:sections(name)
+                )
+              )
+            `)
+            .eq("email", profileData.email)
+            .maybeSingle()
+
+          if (tData) {
+            actualTeacherId = tData.id
+            teacherAssignments = tData.teacher_class_assignments || []
+          }
+        }
       }
+
+      setTeacher({
+        ...profileData,
+        id: actualTeacherId,
+        teacher_class_assignments: teacherAssignments,
+        // Map date_of_joining to employment_date or fallback to created_at
+        date_of_joining: profileData.employment_date || profileData.created_at,
+      })
     } catch (err) {
       console.error("Error fetching teacher details:", err)
       toast.error("Failed to load teacher information")
@@ -342,83 +401,86 @@ export function TeacherDetailsSheet({ teacherId, open, onOpenChange }: TeacherDe
                 </div>
               </div>
 
-              <Separator className="bg-zinc-100 dark:bg-zinc-900" />
-
               {/* Assigned Classes */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Assigned Classes ({teacher.teacher_class_assignments?.length || 0})
-                  </h3>
-                  <Button
-                    onClick={() => {
-                      setSelectedClassId(null)
-                      setSearchQuery("")
-                      setActiveTab("all")
-                      setStatusFilter("all")
-                      setAssignClassModalOpen(true)
-                    }}
-                    size="sm"
-                    className="h-8 gap-1.5 text-xs font-semibold"
-                  >
-                    <GraduationCap className="h-3.5 w-3.5" />
-                    Assign Class
-                  </Button>
-                </div>
+              {teacher.role?.toLowerCase() === "teacher" && (
+                <>
+                  <Separator className="bg-zinc-100 dark:bg-zinc-900" />
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        Assigned Classes ({teacher.teacher_class_assignments?.length || 0})
+                      </h3>
+                      <Button
+                        onClick={() => {
+                          setSelectedClassId(null)
+                          setSearchQuery("")
+                          setActiveTab("all")
+                          setStatusFilter("all")
+                          setAssignClassModalOpen(true)
+                        }}
+                        size="sm"
+                        className="h-8 gap-1.5 text-xs font-semibold"
+                      >
+                        <GraduationCap className="h-3.5 w-3.5" />
+                        Assign Class
+                      </Button>
+                    </div>
 
-                {teacher.teacher_class_assignments && teacher.teacher_class_assignments.length > 0 ? (
-                  <div className="space-y-2">
-                    {teacher.teacher_class_assignments.map((assignment: any) => {
-                      const cls = assignment.class
-                      if (!cls) return null
-                      const isDeleting = unassigningId === cls.id
+                    {teacher.teacher_class_assignments && teacher.teacher_class_assignments.length > 0 ? (
+                      <div className="space-y-2">
+                        {teacher.teacher_class_assignments.map((assignment: any) => {
+                          const cls = assignment.class
+                          if (!cls) return null
+                          const isDeleting = unassigningId === cls.id
 
-                      return (
-                        <div
-                          key={cls.id}
-                          className="flex items-center justify-between p-3 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/50 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-xs">
-                              {cls.name?.[0] || "C"}
-                            </div>
-                            <div>
-                              <p className="font-semibold text-sm">
-                                {cls.name}
-                                {cls.section?.name && (
-                                  <span className="text-xs font-normal text-muted-foreground ml-1.5">
-                                    ({cls.section.name})
-                                  </span>
+                          return (
+                            <div
+                              key={cls.id}
+                              className="flex items-center justify-between p-3 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-900/50 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-xs">
+                                  {cls.name?.[0] || "C"}
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-sm">
+                                    {cls.name}
+                                    {cls.section?.name && (
+                                      <span className="text-xs font-normal text-muted-foreground ml-1.5">
+                                        ({cls.section.name})
+                                      </span>
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={isDeleting}
+                                onClick={() => handleUnassign(cls.id, cls.name)}
+                                className="h-8 px-2.5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 gap-1.5 transition-colors"
+                              >
+                                {isDeleting ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-3.5 w-3.5" />
                                 )}
-                              </p>
+                                <span>Unassign</span>
+                              </Button>
                             </div>
-                          </div>
-
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={isDeleting}
-                            onClick={() => handleUnassign(cls.id, cls.name)}
-                            className="h-8 px-2.5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 gap-1.5 transition-colors"
-                          >
-                            {isDeleting ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-3.5 w-3.5" />
-                            )}
-                            <span>Unassign</span>
-                          </Button>
-                        </div>
-                      )
-                    })}
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 px-4 border border-dashed rounded-xl border-zinc-200 dark:border-zinc-800">
+                        <AlertCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-50" />
+                        <p className="text-xs font-medium text-muted-foreground">No classes assigned to this teacher yet.</p>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="text-center py-8 px-4 border border-dashed rounded-xl border-zinc-200 dark:border-zinc-800">
-                    <AlertCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-50" />
-                    <p className="text-xs font-medium text-muted-foreground">No classes assigned to this teacher yet.</p>
-                  </div>
-                )}
-              </div>
+                </>
+              )}
             </div>
           ) : null}
         </SheetContent>
