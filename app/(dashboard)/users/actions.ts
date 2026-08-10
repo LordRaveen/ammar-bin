@@ -96,7 +96,7 @@ export async function addStaff(formData: FormData) {
             role: role,
             is_active: true,
           },
-          { onConflict: "user_id,role" }
+          { onConflict: "user_id" }
         )
       }
     }

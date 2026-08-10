@@ -34,6 +34,7 @@ import { InvoiceDetailsDrawer } from "@/components/finance/invoice-details-drawe
 import { EditStudentModal } from "@/components/edit-student-modal"
 import { RemoveGuardianDialog } from "@/components/remove-guardian-dialog"
 import { SelectGuardianModal } from "@/components/select-guardian-modal"
+import { removeEnrollment } from "@/app/(dashboard)/students/actions"
 
 interface StudentDetailsSheetProps {
   studentId: string | null
@@ -72,6 +73,29 @@ export function StudentDetailsSheet({
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null)
   const [invoiceDetailsOpen, setInvoiceDetailsOpen] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+
+  const [removingEnrollmentId, setRemovingEnrollmentId] = useState<string | null>(null)
+  const [removingEnrollment, setRemovingEnrollment] = useState(false)
+
+  const handleRemoveEnrollment = async () => {
+    if (!removingEnrollmentId) return
+    setRemovingEnrollment(true)
+    try {
+      const res = await removeEnrollment(removingEnrollmentId)
+      if (res.success) {
+        toast.success("Enrollment removed successfully")
+        setRemovingEnrollmentId(null)
+        setRefreshTrigger((prev) => prev + 1)
+        router.refresh()
+      } else {
+        toast.error(res.error || "Failed to remove enrollment")
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to remove enrollment")
+    } finally {
+      setRemovingEnrollment(false)
+    }
+  }
 
   const handleLinkGuardian = async (data: any) => {
     if (!studentId) return
@@ -421,6 +445,7 @@ export function StudentDetailsSheet({
                               <TableHead className="h-8">Class</TableHead>
                               <TableHead className="h-8">Shift</TableHead>
                               <TableHead className="h-8">Status</TableHead>
+                              <TableHead className="h-8 text-right">Actions</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -441,6 +466,19 @@ export function StudentDetailsSheet({
                                   >
                                     {enrollment.is_active ? "Active" : "Past"}
                                   </Badge>
+                                </TableCell>
+                                <TableCell className="py-2 text-right">
+                                  {(userRole === "admin" || userRole === "super_admin") && (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => setRemovingEnrollmentId(enrollment.id)}
+                                      className="h-6 w-6 rounded-md hover:bg-red-500/10 text-destructive hover:text-destructive"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -591,6 +629,28 @@ export function StudentDetailsSheet({
           onOpenChange={(open) => !open && setEditStudent(null)}
           guardians={guardians}
         />
+      )}
+
+      {removingEnrollmentId && (
+        <Dialog open={!!removingEnrollmentId} onOpenChange={(open) => !open && setRemovingEnrollmentId(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Remove Enrollment</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to remove this enrollment record? This will delete the student's association with this class/term.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <Button type="button" variant="outline" onClick={() => setRemovingEnrollmentId(null)} disabled={removingEnrollment}>
+                Cancel
+              </Button>
+              <Button type="button" variant="destructive" onClick={handleRemoveEnrollment} disabled={removingEnrollment}>
+                {removingEnrollment && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                Remove Enrollment
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </>
   )

@@ -85,7 +85,7 @@ export async function addTeacher(formData: FormData) {
           user_id: userId,
           role: userRole,
           is_active: true,
-        }, { onConflict: "user_id,role" });
+        }, { onConflict: "user_id" });
 
       if (roleError) {
         devLog.error("Failed to create user role:", roleError);

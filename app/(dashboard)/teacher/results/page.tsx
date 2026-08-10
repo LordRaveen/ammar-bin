@@ -25,7 +25,7 @@ export default async function TeacherResultsPage({
   if (!teacher) {
     return (
       <div className="p-6">
-        <Card className="max-w-md mx-auto text-center py-8">
+        <Card className="max-w-md mx-auto border-0 shadow-0 text-center py-8">
           <CardContent className="space-y-3">
             <AlertCircle className="h-10 w-10 text-amber-500 mx-auto" />
             <h2 className="text-base font-bold">Teacher Profile Not Found</h2>

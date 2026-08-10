@@ -14,6 +14,8 @@ import { DeleteTeacherDialog } from "@/components/delete-teacher-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AddStaffModal } from "@/components/add-staff-modal"
 import { cn } from "@/lib/utils"
+import { createClient } from "@/lib/supabase/client"
+import { toast } from "sonner"
 
 interface UsersClientPageProps {
   initialUsers: any[]
@@ -92,6 +94,79 @@ export function UsersClientPage({ initialUsers, totalCount }: UsersClientPagePro
   const handleUserDeleted = (userId: string) => {
     setUsers((prev) => prev.filter((u) => u.id !== userId))
     setDeleteUserId(null)
+  }
+
+  const handleBulkStatusChange = async (newStatus: "Active" | "Inactive") => {
+    const selectedIds = Object.keys(rowSelection).filter((id) => rowSelection[id])
+    if (selectedIds.length === 0) return
+
+    const toastId = toast.loading(`Updating ${selectedIds.length} staff accounts...`)
+    const supabase = createClient()
+
+    try {
+      // 1. Get the emails of all selected profiles
+      const { data: profiles, error: pError } = await supabase
+        .from("user_profiles")
+        .select("email, user_id")
+        .in("id", selectedIds)
+
+      if (pError) throw pError
+
+      const emails = profiles.map((p) => p.email).filter(Boolean)
+
+      // 2. Update user_profiles
+      const { error: upError } = await supabase
+        .from("user_profiles")
+        .update({ status: newStatus })
+        .in("id", selectedIds)
+
+      if (upError) throw upError
+
+      // 3. Update teachers
+      if (emails.length > 0) {
+        await supabase
+          .from("teachers")
+          .update({ status: newStatus })
+          .in("email", emails)
+      }
+
+      toast.success(`Marked ${selectedIds.length} staff as ${newStatus}`, { id: toastId })
+      setRowSelection({})
+      window.location.reload()
+    } catch (err: any) {
+      toast.error(err.message || "Bulk update failed", { id: toastId })
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    const selectedIds = Object.keys(rowSelection).filter((id) => rowSelection[id])
+    if (selectedIds.length === 0) return
+
+    if (!confirm(`Are you sure you want to delete ${selectedIds.length} selected staff members? This cannot be undone.`)) {
+      return
+    }
+
+    const toastId = toast.loading(`Deleting ${selectedIds.length} staff members...`)
+
+    try {
+      for (const id of selectedIds) {
+        const response = await fetch("/api/teachers/delete", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ teacherId: id }),
+        })
+         if (!response.ok) {
+           const err = await response.json()
+           throw new Error(err.error || "Failed to delete staff member")
+         }
+      }
+
+      toast.success(`Deleted ${selectedIds.length} staff members successfully`, { id: toastId })
+      setRowSelection({})
+      window.location.reload()
+    } catch (err: any) {
+      toast.error(err.message || "Bulk deletion failed", { id: toastId })
+    }
   }
 
   const handleSelectAll = (checked: boolean) => {
@@ -199,6 +274,43 @@ export function UsersClientPage({ initialUsers, totalCount }: UsersClientPagePro
         {/* Main Content Area */}
         <Card className="shadow-none border">
           <CardContent className="p-3.5 space-y-3">
+            {/* Bulk Actions Banner */}
+            {selectedCount > 0 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 text-emerald-950 dark:text-emerald-100 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-emerald-600 text-white font-bold h-5 px-1.5">{selectedCount}</Badge>
+                  <span className="text-xs font-semibold">staff selected</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBulkStatusChange("Active")}
+                    className="h-8 text-xs font-semibold gap-1.5 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-emerald-600 hover:text-emerald-700"
+                  >
+                    Activate Selected
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleBulkStatusChange("Inactive")}
+                    className="h-8 text-xs font-semibold gap-1.5 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-amber-600 hover:text-amber-700"
+                  >
+                    Deactivate Selected
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleBulkDelete}
+                    className="h-8 text-xs font-semibold gap-1.5 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Delete Selected
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Filter & Search Bar */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
               {/* Role Segmented Filter */}

@@ -332,12 +332,41 @@ export async function enrollStudent(arg1: any, arg2?: any, arg3?: any, arg4?: an
 
     const enrollmentType = student?.enrollment_type || "islamiyya"
 
-    // Set previous enrollments in this session to inactive
-    await adminClient
-      .from("student_enrollments")
-      .update({ is_active: false })
-      .eq("student_id", studentId)
-      .eq("session_id", sessionId)
+    // Set previous enrollments of the same section in this session to inactive
+    const classIdsToCheck = [classId, tahfeezClassId].filter(Boolean) as string[]
+    
+    if (classIdsToCheck.length > 0) {
+      // 1. Fetch sections of the classes being enrolled into
+      const { data: classesWithSections } = await adminClient
+        .from("classes")
+        .select("id, section_id")
+        .in("id", classIdsToCheck)
+
+      const sectionIdsToDeactivate = classesWithSections?.map(c => c.section_id).filter(Boolean) || []
+
+      if (sectionIdsToDeactivate.length > 0) {
+        // 2. Fetch active enrollments for this student in this session
+        const { data: activeEnrollments } = await adminClient
+          .from("student_enrollments")
+          .select("id, class_id, classes(section_id)")
+          .eq("student_id", studentId)
+          .eq("session_id", sessionId)
+          .eq("is_active", true)
+
+        // 3. Filter enrollments that belong to the target sections
+        const enrollmentIdsToDeactivate = activeEnrollments
+          ?.filter((e: any) => e.classes && sectionIdsToDeactivate.includes(e.classes.section_id))
+          .map((e: any) => e.id) || []
+
+        if (enrollmentIdsToDeactivate.length > 0) {
+          // 4. Set only those enrollments to inactive
+          await adminClient
+            .from("student_enrollments")
+            .update({ is_active: false })
+            .in("id", enrollmentIdsToDeactivate)
+        }
+      }
+    }
 
     const enrollmentsToUpsert = []
 
@@ -381,6 +410,23 @@ export async function enrollStudent(arg1: any, arg2?: any, arg3?: any, arg4?: an
       if (error) throw error
     }
 
+    revalidatePath("/students")
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function removeEnrollment(enrollmentId: string) {
+  try {
+    await requireAdmin()
+    const adminClient = createAdminClient()
+    const { error } = await adminClient
+      .from("student_enrollments")
+      .delete()
+      .eq("id", enrollmentId)
+
+    if (error) throw error
     revalidatePath("/students")
     return { success: true }
   } catch (error: any) {

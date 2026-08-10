@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
-import { Loader2, Mail, Phone, MapPin, Briefcase, Calendar, Users, Search, Trash2, GraduationCap, CheckCircle2, UserCheck, AlertCircle, Lock } from "lucide-react"
+import { Loader2, Mail, Phone, MapPin, Briefcase, Calendar, Users, Search, Trash2, GraduationCap, CheckCircle2, UserCheck, AlertCircle, Lock, Shield, UserX, Pencil } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
@@ -15,6 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner"
 import { assignClassTeacher, unassignClassTeacher } from "@/app/(dashboard)/classes/[id]/actions"
 import { cn } from "@/lib/utils"
+import { EditTeacherDialog } from "@/components/edit-teacher-dialog"
+import { DeleteTeacherDialog } from "@/components/delete-teacher-dialog"
 
 interface TeacherDetailsSheetProps {
   teacherId: string | null
@@ -44,6 +46,73 @@ export function TeacherDetailsSheet({ teacherId, open, onOpenChange }: TeacherDe
   const [statusFilter, setStatusFilter] = useState<"all" | "unassigned" | "assigned">("all")
   const [assigning, setAssigning] = useState(false)
   const [unassigningId, setUnassigningId] = useState<string | null>(null)
+  
+  const [editModalOpen, setEditModalOpen] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+
+  const handleSendPasswordReset = async () => {
+    if (!teacher?.email) return
+    setActionLoading("reset")
+    const supabase = createClient()
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(teacher.email, {
+        redirectTo: `${window.location.origin}/auth/update-password`,
+      })
+      if (error) throw error
+      toast.success("Password reset email sent successfully!")
+    } catch (err: any) {
+      toast.error(err.message || "Failed to send reset link")
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleToggleStatus = async () => {
+    if (!teacher) return
+    const newStatus = teacher.status === "Active" ? "Inactive" : "Active"
+    setActionLoading("status")
+    try {
+      const response = await fetch("/api/teachers/update", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          teacherId: teacher.id,
+          first_name: teacher.first_name,
+          middle_name: teacher.middle_name || "",
+          last_name: teacher.last_name,
+          email: teacher.email,
+          phone: teacher.phone,
+          date_of_birth: teacher.date_of_birth || "",
+          gender: teacher.gender || "",
+          address: teacher.address || "",
+          qualification: teacher.qualification || "",
+          specialization: teacher.specialization || "",
+          employment_date: teacher.employment_date || "",
+          employment_type: teacher.employment_type || "",
+          role: teacher.role,
+          status: newStatus 
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to update status")
+      }
+
+      toast.success(`Staff member marked as ${newStatus}`)
+      fetchTeacherAndClasses()
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update status")
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleDeletedSuccess = () => {
+    onOpenChange(false)
+    window.location.reload()
+  }
 
   const fetchTeacherAndClasses = async () => {
     if (!teacherId || !open) {
@@ -297,7 +366,7 @@ export function TeacherDetailsSheet({ teacherId, open, onOpenChange }: TeacherDe
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto p-0 border-l border-zinc-200 dark:border-zinc-800 bg-white dark:bg-black [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
+        <SheetContent className="w-full sm:max-w-lg overflow-y-auto p-0 border-l border-zinc-200 dark:border-zinc-800 bg-white dark:bg-black [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
           <SheetHeader className="px-6 pt-6 pb-4 border-b border-zinc-100 dark:border-zinc-900">
             <SheetTitle className="text-xl font-bold flex items-center gap-2">
               <UserCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
@@ -333,6 +402,69 @@ export function TeacherDetailsSheet({ teacherId, open, onOpenChange }: TeacherDe
                   <Badge variant="outline" className="font-medium">
                     {teacher.role}
                   </Badge>
+                </div>
+              </div>
+
+              {/* Account Actions Section */}
+              <div className="bg-zinc-50 dark:bg-zinc-900/40 p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                  <Shield className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                  Account Actions
+                </h3>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSendPasswordReset}
+                    disabled={!!actionLoading}
+                    className="h-9 text-xs font-semibold gap-1.5 border-zinc-200 dark:border-zinc-800"
+                  >
+                    {actionLoading === "reset" ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Lock className="h-3.5 w-3.5 text-blue-500" />
+                    )}
+                    Reset Pass
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleToggleStatus}
+                    disabled={!!actionLoading}
+                    className="h-9 text-xs font-semibold gap-1.5 border-zinc-200 dark:border-zinc-800"
+                  >
+                    {actionLoading === "status" ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : teacher.status === "Active" ? (
+                      <UserX className="h-3.5 w-3.5 text-amber-500" />
+                    ) : (
+                      <UserCheck className="h-3.5 w-3.5 text-emerald-500" />
+                    )}
+                    {teacher.status === "Active" ? "Deactivate" : "Activate"}
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEditModalOpen(true)}
+                    disabled={!!actionLoading}
+                    className="h-9 text-xs font-semibold gap-1.5 border-zinc-200 dark:border-zinc-800"
+                  >
+                    <Pencil className="h-3.5 w-3.5 text-emerald-500" />
+                    Edit Profile
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDeleteConfirmOpen(true)}
+                    disabled={!!actionLoading}
+                    className="h-9 text-xs font-semibold gap-1.5 border-zinc-200 dark:border-zinc-800 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                    Delete Staff
+                  </Button>
                 </div>
               </div>
 
@@ -693,6 +825,28 @@ export function TeacherDetailsSheet({ teacherId, open, onOpenChange }: TeacherDe
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      )}
+
+      {teacher && (
+        <>
+          <EditTeacherDialog
+            teacherId={teacher.id}
+            open={editModalOpen}
+            onOpenChange={setEditModalOpen}
+            onSuccess={() => {
+              fetchTeacherAndClasses()
+              window.location.reload()
+            }}
+          />
+
+          <DeleteTeacherDialog
+            teacherId={teacher.id}
+            teacher={teacher}
+            open={deleteConfirmOpen}
+            onOpenChange={setDeleteConfirmOpen}
+            onSuccess={handleDeletedSuccess}
+          />
+        </>
       )}
     </>
   )
