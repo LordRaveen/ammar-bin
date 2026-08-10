@@ -81,6 +81,11 @@ const getNavigationByRole = (role: UserRole) => {
       icon: IconCoin,
     },
     {
+      title: "Security & Audit",
+      url: "/security",
+      icon: IconShield,
+    },
+    {
       title: "Settings",
       url: "/settings",
       icon: IconSettings,

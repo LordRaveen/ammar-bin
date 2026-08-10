@@ -35,6 +35,7 @@ import { EditStudentModal } from "@/components/edit-student-modal"
 import { RemoveGuardianDialog } from "@/components/remove-guardian-dialog"
 import { SelectGuardianModal } from "@/components/select-guardian-modal"
 import { removeEnrollment } from "@/app/(dashboard)/students/actions"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 interface StudentDetailsSheetProps {
   studentId: string | null
@@ -440,26 +441,26 @@ export function StudentDetailsSheet({
                         <Table>
                           <TableHeader className="bg-zinc-50/50 dark:bg-zinc-900/50">
                             <TableRow className="border-b border-zinc-150 dark:border-zinc-850 text-[10px] font-bold uppercase tracking-wider">
-                              <TableHead className="h-8">Session</TableHead>
+                              <TableHead className="h-8 w-20">Session</TableHead>
                               <TableHead className="h-8">Term</TableHead>
-                              <TableHead className="h-8">Class</TableHead>
-                              <TableHead className="h-8">Shift</TableHead>
-                              <TableHead className="h-8">Status</TableHead>
-                              <TableHead className="h-8 text-right">Actions</TableHead>
+                              <TableHead className="h-8 w-20">Class</TableHead>
+                              <TableHead className="h-8 w-20">Shift</TableHead>
+                              <TableHead className="h-8 w-16">Status</TableHead>
+                              <TableHead className="h-8 w-8 text-right"></TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {student.student_enrollments.map((enrollment: any, idx: number) => (
                               <TableRow key={enrollment.id || `hist-${idx}`} className="border-b border-zinc-150 dark:border-zinc-850 hover:bg-zinc-50/30 dark:hover:bg-zinc-900/20 text-xs">
-                                <TableCell className="py-2 font-mono">{enrollment.session?.name}</TableCell>
+                                <TableCell className="py-2 font-mono w-20">{enrollment.session?.name}</TableCell>
                                 <TableCell className="py-2 font-semibold">{enrollment.term?.name}</TableCell>
-                                <TableCell className="py-2 font-bold">{enrollment.class?.name}</TableCell>
-                                <TableCell className="py-2 font-semibold">
+                                <TableCell className="py-2 font-bold w-20">{enrollment.class?.name}</TableCell>
+                                <TableCell className="py-2 font-semibold w-20">
                                   <Badge variant="outline" className="text-[9px] py-0 h-4">
                                     {enrollment.class?.section?.name || "—"}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="py-2">
+                                <TableCell className="py-2 w-16">
                                   <Badge
                                     variant={enrollment.is_active ? "default" : "secondary"}
                                     className="text-[9px] py-0 h-4"
@@ -467,7 +468,7 @@ export function StudentDetailsSheet({
                                     {enrollment.is_active ? "Active" : "Past"}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="py-2 text-right">
+                                <TableCell className="py-2 text-right w-8">
                                   {(userRole === "admin" || userRole === "super_admin") && (
                                     <Button
                                       type="button"

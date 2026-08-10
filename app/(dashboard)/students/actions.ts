@@ -421,12 +421,47 @@ export async function removeEnrollment(enrollmentId: string) {
   try {
     await requireAdmin()
     const adminClient = createAdminClient()
+
+    // 1. Fetch details of the enrollment to be deleted
+    const { data: enrollmentToDelete } = await adminClient
+      .from("student_enrollments")
+      .select("student_id, session_id, is_active")
+      .eq("id", enrollmentId)
+      .maybeSingle()
+
+    if (!enrollmentToDelete) {
+      return { success: false, error: "Enrollment not found." }
+    }
+
+    // 2. Delete the enrollment record
     const { error } = await adminClient
       .from("student_enrollments")
       .delete()
       .eq("id", enrollmentId)
 
     if (error) throw error
+
+    // 3. Fallback logic: if the deleted enrollment was active, check if other enrollments exist in the same session
+    if (enrollmentToDelete.is_active) {
+      const { data: otherEnrollments } = await adminClient
+        .from("student_enrollments")
+        .select("id, is_active")
+        .eq("student_id", enrollmentToDelete.student_id)
+        .eq("session_id", enrollmentToDelete.session_id)
+        .order("created_at", { ascending: false })
+
+      if (otherEnrollments && otherEnrollments.length > 0) {
+        const hasActive = otherEnrollments.some((e: any) => e.is_active)
+        if (!hasActive) {
+          // Reactivate the most recent inactive enrollment
+          await adminClient
+            .from("student_enrollments")
+            .update({ is_active: true })
+            .eq("id", otherEnrollments[0].id)
+        }
+      }
+    }
+
     revalidatePath("/students")
     return { success: true }
   } catch (error: any) {
