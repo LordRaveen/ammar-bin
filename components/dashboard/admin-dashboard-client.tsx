@@ -104,10 +104,10 @@ export function AdminDashboardClient({
 					<div className="flex items-center gap-2">
 						<h1 className="text-2xl font-bold tracking-tight font-mono">Command Center</h1>
 					</div>
-					<p className="text-muted-foreground flex items-center gap-2 font-mono">
+					<p className="text-muted-foreground text-xs sm:text-sm font-mono mt-1">
 						Welcome back, <span className="text-foreground font-semibold">{user.role === "super_admin" ? "Super Admin" : "Principal Admin"}</span>
-						<span className="h-1 w-1 rounded-full bg-slate-300" />
-						{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+						<span className="hidden sm:inline-block h-1.5 w-1.5 rounded-full bg-slate-300 mx-2 align-middle" />
+						<span className="block sm:inline mt-0.5 sm:mt-0 text-muted-foreground/85">{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
 					</p>
 				</div>
 
@@ -133,31 +133,31 @@ export function AdminDashboardClient({
 			{activeSession && activeTerm && (
 				<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 					<Card className="md:col-span-3 border-1 border-emerald-700 shadow-none bg-gradient-to-r from-slate-900 to-slate-800 dark:from-slate-950 dark:to-slate-900 text-white overflow-hidden relative">
-						<div className="absolute top-0 right-0 p-6 opacity-4">
+						<div className="absolute top-0 right-0 p-6 opacity-4 hidden sm:block">
 							<GraduationCap className="h-32 w-32" />
 						</div>
-						<CardContent className="py-2 px-6 relative">
+						<CardContent className="py-4 px-4 sm:px-6 relative">
 							<div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-								<div className="space-y-4">
+								<div className="space-y-3 sm:space-y-4">
 									<div className="flex items-center gap-2">
-										<Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 font-bold">CURRENT SESSION</Badge>
+										<Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 font-bold text-[10px] sm:text-xs">CURRENT SESSION</Badge>
 										<div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
 									</div>
 									<div>
-										<h2 className="text-2xl font-extrabold">{activeSession.name}</h2>
-										<p className="text-slate-400 font-medium text-md mt-1">{activeTerm.name}</p>
+										<h2 className="text-xl sm:text-2xl font-extrabold">{activeSession.name}</h2>
+										<p className="text-slate-400 font-medium text-sm mt-0.5 sm:mt-1">{activeTerm.name}</p>
 									</div>
 								</div>
 
-								<div className="grid grid-cols-2 md:flex items-center gap-8 text-right">
+								<div className="grid grid-cols-1 sm:grid-cols-2 md:flex items-center gap-4 sm:gap-8 text-left sm:text-right">
 									<div className="space-y-1">
-										<p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Session Ends</p>
-										<p className="text-lg font-bold">{new Date(activeTerm.end_date || activeSession.end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+										<p className="text-[10px] sm:text-xs text-slate-500 uppercase font-bold tracking-wider">Session Ends</p>
+										<p className="text-sm sm:text-lg font-bold">{new Date(activeTerm.end_date || activeSession.end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
 									</div>
-									<div className="space-y-1 border-l border-slate-700 pl-8">
-										<p className="text-xs text-slate-500 uppercase font-bold tracking-wider">Term Progress</p>
-										<div className="flex items-center gap-3">
-											<span className="text-lg font-bold">{termProgress}%</span>
+									<div className="space-y-1 border-t border-slate-700/60 pt-3 sm:border-t-0 sm:pt-0 sm:border-l sm:border-slate-700 sm:pl-8">
+										<p className="text-[10px] sm:text-xs text-slate-500 uppercase font-bold tracking-wider">Term Progress</p>
+										<div className="flex items-center gap-3 justify-start sm:justify-end">
+											<span className="text-sm sm:text-lg font-bold">{termProgress}%</span>
 											<div className="w-24 bg-slate-600 h-1.5 rounded-full overflow-hidden">
 												<div
 													className="bg-emerald-500 h-full transition-all duration-1000"

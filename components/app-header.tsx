@@ -1,6 +1,6 @@
 "use client"
 
-import { IconMenu2, IconMoon, IconSun } from "@tabler/icons-react"
+import { IconLayoutSidebar, IconMoon, IconSun } from "@tabler/icons-react"
 import { useSidebar } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -17,6 +17,7 @@ import { useTheme } from "next-themes"
 import React from "react"
 import { NotificationsPopover } from "@/components/notifications-popover"
 import { CommandMenu } from "@/components/command-menu"
+import { cn } from "@/lib/utils"
 
 function generateBreadcrumbs(pathname: string, labels: Record<string, string>) {
   const segments = pathname.split("/").filter(Boolean)
@@ -75,7 +76,7 @@ export function AppHeader({ paymentMode = "test" }: AppHeaderProps) {
   return (
     <header className="bg-background sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b px-4">
       <Button variant="ghost" size="icon" onClick={toggleSidebar}>
-        <IconMenu2 className="h-5 w-5" />
+        <IconLayoutSidebar className="h-5 w-5" />
         <span className="sr-only">Toggle Sidebar</span>
       </Button>
 
@@ -106,11 +107,15 @@ export function AppHeader({ paymentMode = "test" }: AppHeaderProps) {
         {/* Payment Mode Indicator */}
         <Badge
           variant={paymentMode === "live" ? "default" : "outline"}
-          className={paymentMode === "live"
-            ? "bg-emerald-500 hover:bg-emerald-600 text-white font-black uppercase text-[10px] tracking-widest px-3 py-1 rounded-full animate-pulse"
-            : "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800 font-bold uppercase text-[10px] tracking-widest px-3 py-1 rounded-full"}
+          className={cn(
+            "rounded-full font-black uppercase text-[10px] tracking-widest px-2 sm:px-3 py-1",
+            paymentMode === "live"
+              ? "bg-emerald-500 hover:bg-emerald-600 text-white animate-pulse"
+              : "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800 font-bold"
+          )}
         >
-          {paymentMode === "live" ? "Live Mode" : "Test Mode"}
+          <span className="hidden sm:inline">{paymentMode === "live" ? "Live Mode" : "Test Mode"}</span>
+          <span className="inline sm:hidden font-extrabold text-[12px]">{paymentMode === "live" ? "●" : "!"}</span>
         </Badge>
 
         {/* Theme Toggle */}
