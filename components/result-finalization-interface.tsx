@@ -204,6 +204,8 @@ export function ResultFinalizationInterface({
   )
   const [classDropdownOpen, setClassDropdownOpen] = useState(false)
   const [viewMode, setViewMode] = useState<"student" | "subject" | "class_info">("student")
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false)
+  const [mobileDetailType, setMobileDetailType] = useState<"student" | "subject" | null>(null)
   const [classSubjectsList, setClassSubjectsList] = useState<any[]>(subjects || [])
   const [refreshKey, setRefreshKey] = useState(0)
 
@@ -2093,30 +2095,30 @@ export function ResultFinalizationInterface({
 
   return (
     <>
-      <div className="flex h-full flex-col gap-4 p-4 print:hidden">
+      <div className="flex h-full flex-col gap-4 p-4 print:hidden w-full max-w-full overflow-x-hidden">
       {/* Header */}
       {(showTitle || showSelectors) && (
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full max-w-full">
           {showTitle && (
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2.5 max-w-full">
               {/* Vercel-style Class Switcher */}
-              <div className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-2 max-w-full">
                 <Popover open={classDropdownOpen} onOpenChange={setClassDropdownOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="ghost"
-                      className="h-auto p-1.5 -ml-1.5 hover:bg-accent/80 hover:text-accent-foreground flex items-center gap-2 text-left rounded-lg transition-colors group"
+                      className="h-auto p-1.5 -ml-1.5 hover:bg-accent/80 hover:text-accent-foreground flex items-center gap-2 text-left rounded-lg transition-colors group max-w-full min-w-0"
                     >
-                      <div className="flex items-center gap-2">
-                        <h1 className="text-lg font-bold tracking-tight text-foreground group-hover:text-primary transition-colors">
+                      <div className="flex items-center gap-2 truncate min-w-0">
+                        <h1 className="text-lg font-bold tracking-tight text-foreground group-hover:text-primary transition-colors truncate">
                           {activeClassObj?.name || "Select Class"}
                         </h1>
                         {activeClassObj?.section?.name && (
-                          <span className="text-xs font-semibold text-muted-foreground">
+                          <span className="text-xs font-semibold text-muted-foreground shrink-0">
                             ({activeClassObj.section.name})
                           </span>
                         )}
-                        <ChevronsUpDown className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors ml-0.5" />
+                        <ChevronsUpDown className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors ml-0.5 shrink-0" />
                       </div>
                     </Button>
                   </PopoverTrigger>
@@ -2150,9 +2152,9 @@ export function ResultFinalizationInterface({
                     </Command>
                   </PopoverContent>
                 </Popover>
- 
+
                 {/* View Mode Switcher */}
-                <div className="flex h-7 items-center rounded-lg border bg-muted/40 p-0.5 gap-0.5">
+                <div className="flex h-7 items-center rounded-lg border bg-muted/40 p-0.5 gap-0.5 shrink-0">
                   <button
                     type="button"
                     onClick={() => setViewMode("student")}
@@ -2162,9 +2164,10 @@ export function ResultFinalizationInterface({
                         ? "bg-background shadow-2xs text-foreground"
                         : "text-muted-foreground hover:text-foreground"
                     )}
+                    title="Student View"
                   >
                     <User className="h-3 w-3" />
-                    <span>Student View</span>
+                    <span className="hidden sm:inline">Student View</span>
                   </button>
                   <button
                     type="button"
@@ -2175,9 +2178,10 @@ export function ResultFinalizationInterface({
                         ? "bg-background shadow-2xs text-foreground"
                         : "text-muted-foreground hover:text-foreground"
                     )}
+                    title="Subject View"
                   >
                     <BookOpen className="h-3 w-3" />
-                    <span>Subject View</span>
+                    <span className="hidden sm:inline">Subject View</span>
                   </button>
                   <button
                     type="button"
@@ -2188,23 +2192,26 @@ export function ResultFinalizationInterface({
                         ? "bg-background shadow-2xs text-foreground"
                         : "text-muted-foreground hover:text-foreground"
                     )}
+                    title="Class Info"
                   >
                     <SlidersHorizontal className="h-3 w-3" />
-                    <span>Class Info</span>
+                    <span className="hidden sm:inline">Class Info</span>
                   </button>
                 </div>
               </div>
             </div>
           )}
           {showSelectors && (
-            <SessionTermSelector
-              sessions={sessions}
-              terms={terms}
-              selectedSessionId={sessionId}
-              selectedTermId={termId}
-              updateUrlOnSelect={true}
-              size="sm"
-            />
+            <div className="shrink-0 max-w-full overflow-x-auto">
+              <SessionTermSelector
+                sessions={sessions}
+                terms={terms}
+                selectedSessionId={sessionId}
+                selectedTermId={termId}
+                updateUrlOnSelect={true}
+                size="sm"
+              />
+            </div>
           )}
         </div>
       )}
@@ -2230,9 +2237,9 @@ export function ResultFinalizationInterface({
       {/* Student View Container (Kept in DOM) */}
       <div className={cn("flex flex-col gap-4 flex-1", viewMode === "student" ? "flex" : "hidden")}>
         {/* Completion Stats Grid (4 Lightly Color-Coded KPIs) */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 lg:mx-0 lg:px-0 lg:grid lg:grid-cols-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {/* Scores Completion - Subtle Blue */}
-        <Card className="py-0 shadow-none bg-blue-500/5 dark:bg-blue-950/20 border-blue-500/20 dark:border-blue-500/30 text-blue-950 dark:text-blue-100">
+        <Card className="py-0 shadow-none bg-blue-500/5 dark:bg-blue-950/20 border-blue-500/20 dark:border-blue-500/30 text-blue-950 dark:text-blue-100 min-w-[130px] lg:min-w-0 shrink-0 lg:shrink">
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -2252,7 +2259,7 @@ export function ResultFinalizationInterface({
         </Card>
 
         {/* Skills Completion - Subtle Purple */}
-        <Card className="py-0 shadow-none bg-purple-500/5 dark:bg-purple-950/20 border-purple-500/20 dark:border-purple-500/30 text-purple-950 dark:text-purple-100">
+        <Card className="py-0 shadow-none bg-purple-500/5 dark:bg-purple-950/20 border-purple-500/20 dark:border-purple-500/30 text-purple-950 dark:text-purple-100 min-w-[130px] lg:min-w-0 shrink-0 lg:shrink">
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -2272,7 +2279,7 @@ export function ResultFinalizationInterface({
         </Card>
 
         {/* Attendance Completion - Subtle Emerald */}
-        <Card className="py-0 shadow-none bg-emerald-500/5 dark:bg-emerald-950/20 border-emerald-500/20 dark:border-emerald-500/30 text-emerald-950 dark:text-emerald-100">
+        <Card className="py-0 shadow-none bg-emerald-500/5 dark:bg-emerald-950/20 border-emerald-500/20 dark:border-emerald-500/30 text-emerald-950 dark:text-emerald-100 min-w-[130px] lg:min-w-0 shrink-0 lg:shrink">
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -2292,7 +2299,7 @@ export function ResultFinalizationInterface({
         </Card>
 
         {/* Remarks Completion - Subtle Amber */}
-        <Card className="py-0 shadow-none bg-amber-500/5 dark:bg-amber-950/20 border-amber-500/20 dark:border-amber-500/30 text-amber-950 dark:text-amber-100">
+        <Card className="py-0 shadow-none bg-amber-500/5 dark:bg-amber-950/20 border-amber-500/20 dark:border-amber-500/30 text-amber-950 dark:text-amber-100 min-w-[130px] lg:min-w-0 shrink-0 lg:shrink">
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -2315,7 +2322,7 @@ export function ResultFinalizationInterface({
       {/* Main Content */}
       <div className="flex flex-1 gap-4 overflow-hidden">
         {/* Students List */}
-        <Card className="w-[280px] sm:w-[320px] py-0 shadow-none border-zinc-200/80 dark:border-zinc-800/80">
+        <Card className="w-full lg:w-[320px] py-0 shadow-none border-zinc-200/80 dark:border-zinc-800/80 shrink-0">
           <CardContent className="flex h-full flex-col gap-2.5 p-3">
             {/* Sidebar Title & Filter Button Popover */}
             <div className="flex items-center justify-between">
@@ -2462,7 +2469,11 @@ export function ResultFinalizationInterface({
                   return (
                     <button
                       key={student.id}
-                      onClick={() => setSelectedStudent(student)}
+                      onClick={() => {
+                        setSelectedStudent(student)
+                        setMobileDetailOpen(true)
+                        setMobileDetailType("student")
+                      }}
                       className={cn(
                         "flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-accent/60 relative",
                         isSelected && "bg-accent/80 font-semibold border-l-4 border-l-primary"
@@ -2499,8 +2510,8 @@ export function ResultFinalizationInterface({
           </CardContent>
         </Card>
 
-        {/* Student Details */}
-        <Card className="flex-1 py-0 shadow-none border-zinc-200/80 dark:border-zinc-800/80">
+        {/* Student Details (Desktop) */}
+        <Card className="hidden lg:block flex-1 py-0 shadow-none border-zinc-200/80 dark:border-zinc-800/80">
           <CardContent className="h-full overflow-y-auto p-4">
             {selectedStudent ? (
               <div className="space-y-4">
@@ -3021,18 +3032,239 @@ export function ResultFinalizationInterface({
           </CardContent>
         </Card>
       </div>
+
+      {/* Mobile Full-Screen Student Detail Slide-Over Overlay */}
+      {mobileDetailOpen && mobileDetailType === "student" && (
+        <div className="fixed inset-0 z-50 bg-background flex flex-col lg:hidden overflow-hidden animate-in slide-in-from-right duration-200">
+          <div className="flex items-center justify-between p-3 border-b bg-card shrink-0 gap-2 shadow-xs w-full max-w-full overflow-hidden">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setMobileDetailOpen(false)}
+              className="h-8 px-2 text-xs font-bold gap-1 text-muted-foreground hover:text-foreground shrink-0"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Back
+            </Button>
+            <div className="flex items-center gap-2 flex-1 min-w-0 justify-center overflow-hidden">
+              {selectedStudent && (
+                <Avatar className="h-6 w-6 border shrink-0">
+                  <AvatarImage src={selectedStudent.photo_url || "/placeholder.svg"} />
+                  <AvatarFallback className="text-[10px] font-bold">
+                    {selectedStudent.first_name[0]}{selectedStudent.last_name[0]}
+                  </AvatarFallback>
+                </Avatar>
+              )}
+              <span className="text-xs font-bold truncate min-w-0">
+                {selectedStudent ? `${selectedStudent.first_name} ${selectedStudent.last_name}` : "Student Details"}
+              </span>
+            </div>
+            <Button onClick={handleSave} disabled={loading} size="sm" className="h-8 px-3 text-xs font-bold shrink-0">
+              {loading ? "Saving..." : "Save"}
+            </Button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-3.5 space-y-4 w-full max-w-full">
+            {selectedStudent ? (
+              <div className="space-y-4 w-full max-w-full overflow-x-hidden">
+                {/* Top Stats Row */}
+                <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none max-w-full">
+                  <Card className="min-w-[110px] flex-1 py-0 shadow-none bg-zinc-50/50 dark:bg-zinc-900/10 border-zinc-200/80 dark:border-zinc-800/80 shrink-0">
+                    <CardContent className="p-2.5">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Total Score</p>
+                      <p className="text-xs font-bold mt-0.5 whitespace-nowrap">{totalScore}/{maxScore}</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="min-w-[100px] flex-1 py-0 shadow-none bg-zinc-50/50 dark:bg-zinc-900/10 border-zinc-200/80 dark:border-zinc-800/80 shrink-0">
+                    <CardContent className="p-2.5">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Avg. Score</p>
+                      <p className="text-xs font-bold mt-0.5 whitespace-nowrap">{averageScore.toFixed(0)}%</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="min-w-[90px] flex-1 py-0 shadow-none bg-zinc-50/50 dark:bg-zinc-900/10 border-zinc-200/80 dark:border-zinc-800/80 shrink-0">
+                    <CardContent className="p-2.5">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Grade</p>
+                      <p className="text-xs font-bold mt-0.5 whitespace-nowrap">{grade}</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Scores Table */}
+                <div className="w-full max-w-full overflow-hidden">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground">Scores Breakdown</h4>
+                  </div>
+                  <div className="w-full rounded-lg border border-zinc-200/80 dark:border-zinc-800/80 bg-background overflow-hidden">
+                    <table className="w-full table-fixed border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b bg-muted/40 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                          <th className="border-r py-2 px-2 text-left w-[32%]">Subject</th>
+                          <th className="border-r py-2 px-1 text-center w-[13%]">CA1</th>
+                          <th className="border-r py-2 px-1 text-center w-[13%]">CA2</th>
+                          <th className="border-r py-2 px-1 text-center w-[14%]">Exam</th>
+                          <th className="border-r py-2 px-1 text-center w-[14%]">Total</th>
+                          <th className="py-2 px-1 text-center w-[14%]">Grade</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {scores.map((score, index) => (
+                          <tr key={index} className="border-b last:border-0 hover:bg-muted/20 text-xs">
+                            <td className="border-r py-2 px-2 font-semibold truncate text-[11px]">{score.subject_name}</td>
+                            <td className="border-r py-2 px-1 text-center text-muted-foreground font-mono text-[11px]">{score.ca1 ?? "-"}</td>
+                            <td className="border-r py-2 px-1 text-center text-muted-foreground font-mono text-[11px]">{score.ca2 ?? "-"}</td>
+                            <td className="border-r py-2 px-1 text-center text-muted-foreground font-mono text-[11px]">{score.exam ?? "-"}</td>
+                            <td className="border-r py-2 px-1 text-center font-bold font-mono text-[11px]">{score.total ?? "—"}</td>
+                            <td className="py-2 px-1 text-center font-bold text-[11px]">{score.grade || "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Behavioral & Psychomotor Skills */}
+                <div className="border-t border-border/40 pt-3 space-y-3 w-full max-w-full overflow-hidden">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground">Behavioral Skills (1 - 5)</h4>
+                  <div className="space-y-2">
+                    <h5 className="text-[11px] font-bold text-foreground">Affective Skills</h5>
+                    <div className="rounded-lg border border-border/60 divide-y divide-border/40 bg-background overflow-hidden">
+                      {affectiveSkills.map((skill) => (
+                        <div key={skill.skill_name} className="flex items-center justify-between px-2.5 py-1.5 text-xs gap-2">
+                          <span className="font-medium text-foreground text-[11px] truncate flex-1 min-w-0">{skill.skill_name}</span>
+                          <div className="flex items-center gap-1 shrink-0">
+                            {[1, 2, 3, 4, 5].map((val) => (
+                              <button
+                                key={val}
+                                type="button"
+                                onClick={() => handleSkillRatingChange("Affective", skill.skill_name, val)}
+                                className={cn(
+                                  "h-5 w-5 rounded text-[10px] font-bold flex items-center justify-center transition-all",
+                                  skill.rating === val
+                                    ? "bg-primary text-primary-foreground font-black shadow-2xs"
+                                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                                )}
+                              >
+                                {val}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h5 className="text-[11px] font-bold text-foreground">Psychomotor Skills</h5>
+                    <div className="rounded-lg border border-border/60 divide-y divide-border/40 bg-background overflow-hidden">
+                      {psychomotorSkills.map((skill) => (
+                        <div key={skill.skill_name} className="flex items-center justify-between px-2.5 py-1.5 text-xs gap-2">
+                          <span className="font-medium text-foreground text-[11px] truncate flex-1 min-w-0">{skill.skill_name}</span>
+                          <div className="flex items-center gap-1 shrink-0">
+                            {[1, 2, 3, 4, 5].map((val) => (
+                              <button
+                                key={val}
+                                type="button"
+                                onClick={() => handleSkillRatingChange("Psychomotor", skill.skill_name, val)}
+                                className={cn(
+                                  "h-5 w-5 rounded text-[10px] font-bold flex items-center justify-center transition-all",
+                                  skill.rating === val
+                                    ? "bg-primary text-primary-foreground font-black shadow-2xs"
+                                    : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                                )}
+                              >
+                                {val}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Attendance Summary */}
+                <div className="border-t border-border/40 pt-3 w-full max-w-full overflow-hidden">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground">Attendance Track</h4>
+                    {(parseInt(attendanceTotal, 10) || 0) > 0 && (
+                      <span className="text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400">
+                        {(((parseInt(attendancePresent, 10) || 0) / (parseInt(attendanceTotal, 10) || 1)) * 100).toFixed(1)}% Present
+                      </span>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase text-muted-foreground block mb-1">Days Present</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={attendancePresent}
+                        onChange={(e) => setAttendancePresent(e.target.value)}
+                        className="h-8 text-xs font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold uppercase text-muted-foreground block mb-1">Total School Days</label>
+                      <Input
+                        type="number"
+                        min="1"
+                        placeholder="0"
+                        value={attendanceTotal}
+                        onChange={(e) => setAttendanceTotal(e.target.value)}
+                        className="h-8 text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Remarks */}
+                <div className="border-t border-border/40 pt-3 space-y-3 w-full max-w-full overflow-hidden">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-foreground">Teacher Remarks</label>
+                    <Textarea
+                      placeholder="Enter class teacher remarks..."
+                      value={teacherRemarks}
+                      onChange={(e) => setTeacherRemarks(e.target.value)}
+                      rows={2}
+                      className="text-xs min-h-[40px] resize-y"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-foreground">Principal Remarks</label>
+                    <Textarea
+                      placeholder="Enter principal remarks..."
+                      value={principalRemarks}
+                      onChange={(e) => setPrincipalRemarks(e.target.value)}
+                      rows={2}
+                      className="text-xs min-h-[40px] resize-y"
+                    />
+                  </div>
+                </div>
+
+                {/* Mobile Bottom Save Button */}
+                <div className="pt-2">
+                  <Button onClick={handleSave} disabled={loading} size="sm" className="w-full h-9 font-bold">
+                    {loading ? "Saving Evaluation..." : "Save Evaluation"}
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
       </div>
 
       {/* Class Info Container */}
       <div className={cn("flex-1 overflow-hidden", viewMode === "class_info" ? "block" : "hidden")}>
-        <div className="flex h-full gap-4 overflow-hidden">
+        <div className="flex flex-col lg:flex-row h-full gap-4 overflow-hidden">
           {/* Sidebar */}
-          <Card className="w-[200px] py-0 shadow-none border-zinc-200/80 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-900/30">
-            <CardContent className="flex flex-col gap-1 p-2">
+          <Card className="w-full lg:w-[200px] shrink-0 py-0 shadow-none border-zinc-200/80 dark:border-zinc-800/80 bg-slate-50/50 dark:bg-zinc-900/30">
+            <CardContent className="flex flex-row lg:flex-col gap-1 p-2 overflow-x-auto [&::-webkit-scrollbar]:hidden">
               <button
                 onClick={() => setActiveInfoTab("students")}
                 className={cn(
-                  "flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg transition-colors text-left w-full",
+                  "flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg transition-colors text-left whitespace-nowrap shrink-0 lg:w-full",
                   activeInfoTab === "students"
                     ? "bg-primary text-primary-foreground font-black"
                     : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
@@ -3044,7 +3276,7 @@ export function ResultFinalizationInterface({
               <button
                 onClick={() => setActiveInfoTab("subjects")}
                 className={cn(
-                  "flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg transition-colors text-left w-full",
+                  "flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg transition-colors text-left whitespace-nowrap shrink-0 lg:w-full",
                   activeInfoTab === "subjects"
                     ? "bg-primary text-primary-foreground font-black"
                     : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
@@ -3056,7 +3288,7 @@ export function ResultFinalizationInterface({
               <button
                 onClick={() => setActiveInfoTab("teachers")}
                 className={cn(
-                  "flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg transition-colors text-left w-full",
+                  "flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg transition-colors text-left whitespace-nowrap shrink-0 lg:w-full",
                   activeInfoTab === "teachers"
                     ? "bg-primary text-primary-foreground font-black"
                     : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
@@ -3068,7 +3300,7 @@ export function ResultFinalizationInterface({
               <button
                 onClick={() => setActiveInfoTab("settings")}
                 className={cn(
-                  "flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg transition-colors text-left w-full",
+                  "flex items-center gap-2.5 px-3 py-2 text-xs font-bold rounded-lg transition-colors text-left whitespace-nowrap shrink-0 lg:w-full",
                   activeInfoTab === "settings"
                     ? "bg-primary text-primary-foreground font-black"
                     : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"

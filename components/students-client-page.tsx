@@ -312,8 +312,8 @@ export function StudentsClientPage({
         </div>
 
         {/* KPI Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-          <div className="p-3 rounded-xl border bg-card text-card-foreground shadow-sm flex items-center justify-between">
+        <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="p-3 rounded-xl border bg-card text-card-foreground shadow-sm flex items-center justify-between min-w-[150px] sm:min-w-0 shrink-0 sm:shrink">
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block">
                 Total Students
@@ -323,7 +323,7 @@ export function StudentsClientPage({
             <Users className="h-5 w-5 text-muted-foreground/40" />
           </div>
 
-          <div className="p-3 rounded-xl border bg-emerald-500/5 border-emerald-500/20 text-emerald-950 dark:text-emerald-100 flex items-center justify-between">
+          <div className="p-3 rounded-xl border bg-emerald-500/5 border-emerald-500/20 text-emerald-950 dark:text-emerald-100 flex items-center justify-between min-w-[150px] sm:min-w-0 shrink-0 sm:shrink">
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">
                 Enrolled
@@ -333,7 +333,7 @@ export function StudentsClientPage({
             <GraduationCap className="h-5 w-5 text-emerald-500/40" />
           </div>
 
-          <div className="p-3 rounded-xl border bg-blue-500/5 border-blue-500/20 text-blue-950 dark:text-blue-100 flex items-center justify-between">
+          <div className="p-3 rounded-xl border bg-blue-500/5 border-blue-500/20 text-blue-950 dark:text-blue-100 flex items-center justify-between min-w-[150px] sm:min-w-0 shrink-0 sm:shrink">
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block">
                 Male
@@ -343,7 +343,7 @@ export function StudentsClientPage({
             <UserCheck className="h-5 w-5 text-blue-500/40" />
           </div>
 
-          <div className="p-3 rounded-xl border bg-purple-500/5 border-purple-500/20 text-purple-950 dark:text-purple-100 flex items-center justify-between">
+          <div className="p-3 rounded-xl border bg-purple-500/5 border-purple-500/20 text-purple-950 dark:text-purple-100 flex items-center justify-between min-w-[150px] sm:min-w-0 shrink-0 sm:shrink">
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-purple-600 dark:text-purple-400 block">
                 Female
@@ -353,7 +353,7 @@ export function StudentsClientPage({
             <UserCheck className="h-5 w-5 text-purple-500/40" />
           </div>
 
-          <div className="p-3 rounded-xl border bg-sky-500/5 border-sky-500/20 text-sky-950 dark:text-sky-100 flex items-center justify-between">
+          <div className="p-3 rounded-xl border bg-sky-500/5 border-sky-500/20 text-sky-950 dark:text-sky-100 flex items-center justify-between min-w-[150px] sm:min-w-0 shrink-0 sm:shrink">
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-sky-600 dark:text-sky-400 block">
                 Active Status
@@ -868,7 +868,7 @@ export function StudentsClientPage({
                 {/* Pagination Bar */}
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1 text-xs">
                   <div className="flex items-center gap-3 text-muted-foreground">
-                    <span>
+                    <span className="hidden sm:inline">
                       Showing {startIndex + 1} to {Math.min(endIndex, filteredStudents.length)} of{" "}
                       {filteredStudents.length} students
                     </span>

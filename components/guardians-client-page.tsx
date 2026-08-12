@@ -168,7 +168,7 @@ export function GuardiansClientPage({ initialGuardians, initialSearch = "" }: Gu
     return (
       <div className="flex items-center justify-between gap-4 mt-6 px-2">
         <div className="flex items-center gap-4">
-          <span className="text-sm text-muted-foreground whitespace-nowrap">
+          <span className="text-sm text-muted-foreground whitespace-nowrap hidden sm:inline">
             Showing {filteredGuardians.length === 0 ? 0 : startIndex + 1} to{" "}
             {Math.min(endIndex, filteredGuardians.length)} of {filteredGuardians.length} guardians
           </span>
@@ -240,8 +240,8 @@ export function GuardiansClientPage({ initialGuardians, initialSearch = "" }: Gu
         </div>
 
         {/* KPI Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <div className="p-3 rounded-xl border bg-card text-card-foreground shadow-sm flex items-center justify-between">
+        <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="p-3 rounded-xl border bg-card text-card-foreground shadow-sm flex items-center justify-between min-w-[150px] sm:min-w-0 shrink-0 sm:shrink">
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block">
                 Total Guardians
@@ -251,7 +251,7 @@ export function GuardiansClientPage({ initialGuardians, initialSearch = "" }: Gu
             <Users className="h-5 w-5 text-muted-foreground/40" />
           </div>
 
-          <div className="p-3 rounded-xl border bg-emerald-500/5 border-emerald-500/20 text-emerald-950 dark:text-emerald-100 flex items-center justify-between">
+          <div className="p-3 rounded-xl border bg-emerald-500/5 border-emerald-500/20 text-emerald-950 dark:text-emerald-100 flex items-center justify-between min-w-[150px] sm:min-w-0 shrink-0 sm:shrink">
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">
                 Portal Active
@@ -261,7 +261,7 @@ export function GuardiansClientPage({ initialGuardians, initialSearch = "" }: Gu
             <UserCheck className="h-5 w-5 text-emerald-500/40" />
           </div>
 
-          <div className="p-3 rounded-xl border bg-zinc-500/5 border-zinc-500/20 text-zinc-950 dark:text-zinc-100 flex items-center justify-between">
+          <div className="p-3 rounded-xl border bg-zinc-500/5 border-zinc-500/20 text-zinc-950 dark:text-zinc-100 flex items-center justify-between min-w-[150px] sm:min-w-0 shrink-0 sm:shrink">
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-zinc-650 dark:text-zinc-400 block">
                 Portal Inactive
@@ -271,7 +271,7 @@ export function GuardiansClientPage({ initialGuardians, initialSearch = "" }: Gu
             <UserX className="h-5 w-5 text-zinc-500/40" />
           </div>
 
-          <div className="p-3 rounded-xl border bg-purple-500/5 border-purple-500/20 text-purple-950 dark:text-purple-100 flex items-center justify-between">
+          <div className="p-3 rounded-xl border bg-purple-500/5 border-purple-500/20 text-purple-950 dark:text-purple-100 flex items-center justify-between min-w-[150px] sm:min-w-0 shrink-0 sm:shrink">
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-purple-600 dark:text-purple-400 block">
                 Student Links

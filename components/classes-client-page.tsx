@@ -350,9 +350,9 @@ export function ClassesClientPage({
       </div>
 
       {/* Strategic KPI Row (4 Cards) */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="flex gap-4 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {/* Total Classes Card - uses IconBuilding */}
-        <Card className="border shadow-none bg-white dark:bg-zinc-950 overflow-hidden relative group">
+        <Card className="border shadow-none bg-white dark:bg-zinc-950 overflow-hidden relative group min-w-[200px] sm:min-w-0 shrink-0 sm:shrink">
           <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
             <IconBuilding size={48} />
           </div>
@@ -369,7 +369,7 @@ export function ClassesClientPage({
         </Card>
 
         {/* Total Capacity Card */}
-        <Card className="border shadow-none bg-white dark:bg-zinc-950 overflow-hidden relative group">
+        <Card className="border shadow-none bg-white dark:bg-zinc-950 overflow-hidden relative group min-w-[200px] sm:min-w-0 shrink-0 sm:shrink">
           <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:scale-110 transition-transform">
             <IconSchool size={48} />
           </div>
@@ -387,7 +387,7 @@ export function ClassesClientPage({
         </Card>
 
         {/* Student Load Card */}
-        <Card className="border shadow-none bg-white dark:bg-zinc-950 overflow-hidden relative group">
+        <Card className="border shadow-none bg-white dark:bg-zinc-950 overflow-hidden relative group min-w-[200px] sm:min-w-0 shrink-0 sm:shrink">
           <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
             <IconUsers size={48} />
           </div>
@@ -405,7 +405,7 @@ export function ClassesClientPage({
         </Card>
 
         {/* Teacher Coverage Card */}
-        <Card className="border shadow-none bg-white dark:bg-zinc-950 overflow-hidden relative group">
+        <Card className="border shadow-none bg-white dark:bg-zinc-950 overflow-hidden relative group min-w-[200px] sm:min-w-0 shrink-0 sm:shrink">
           <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
             <IconUserCheck size={48} />
           </div>

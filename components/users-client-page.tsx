@@ -229,8 +229,8 @@ export function UsersClientPage({ initialUsers, totalCount }: UsersClientPagePro
         </div>
 
         {/* Compact KPI Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-          <div className="p-3 rounded-xl border bg-card text-card-foreground shadow-sm flex items-center justify-between">
+        <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="p-3 rounded-xl border bg-card text-card-foreground shadow-sm flex items-center justify-between min-w-[150px] sm:min-w-0 shrink-0 sm:shrink">
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block">Total Staff</span>
               <p className="text-xl font-bold mt-0.5">{totalStaff}</p>
@@ -238,7 +238,7 @@ export function UsersClientPage({ initialUsers, totalCount }: UsersClientPagePro
             <Users className="h-5 w-5 text-muted-foreground/40" />
           </div>
 
-          <div className="p-3 rounded-xl border bg-emerald-500/5 border-emerald-500/20 text-emerald-950 dark:text-emerald-100 flex items-center justify-between">
+          <div className="p-3 rounded-xl border bg-emerald-500/5 border-emerald-500/20 text-emerald-950 dark:text-emerald-100 flex items-center justify-between min-w-[150px] sm:min-w-0 shrink-0 sm:shrink">
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">Teachers</span>
               <p className="text-xl font-bold mt-0.5 text-emerald-700 dark:text-emerald-300">{teacherCount}</p>
@@ -246,7 +246,7 @@ export function UsersClientPage({ initialUsers, totalCount }: UsersClientPagePro
             <GraduationCap className="h-5 w-5 text-emerald-500/40" />
           </div>
 
-          <div className="p-3 rounded-xl border bg-purple-500/5 border-purple-500/20 text-purple-950 dark:text-purple-100 flex items-center justify-between">
+          <div className="p-3 rounded-xl border bg-purple-500/5 border-purple-500/20 text-purple-950 dark:text-purple-100 flex items-center justify-between min-w-[150px] sm:min-w-0 shrink-0 sm:shrink">
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-purple-600 dark:text-purple-400 block">Admins</span>
               <p className="text-xl font-bold mt-0.5 text-purple-700 dark:text-purple-300">{adminCount}</p>
@@ -254,7 +254,7 @@ export function UsersClientPage({ initialUsers, totalCount }: UsersClientPagePro
             <Shield className="h-5 w-5 text-purple-500/40" />
           </div>
 
-          <div className="p-3 rounded-xl border bg-amber-500/5 border-amber-500/20 text-amber-950 dark:text-amber-100 flex items-center justify-between">
+          <div className="p-3 rounded-xl border bg-amber-500/5 border-amber-500/20 text-amber-950 dark:text-amber-100 flex items-center justify-between min-w-[150px] sm:min-w-0 shrink-0 sm:shrink">
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 block">Finance</span>
               <p className="text-xl font-bold mt-0.5 text-amber-700 dark:text-amber-300">{financeCount}</p>
@@ -262,7 +262,7 @@ export function UsersClientPage({ initialUsers, totalCount }: UsersClientPagePro
             <Wallet className="h-5 w-5 text-amber-500/40" />
           </div>
 
-          <div className="p-3 rounded-xl border bg-blue-500/5 border-blue-500/20 text-blue-950 dark:text-blue-100 flex items-center justify-between">
+          <div className="p-3 rounded-xl border bg-blue-500/5 border-blue-500/20 text-blue-950 dark:text-blue-100 flex items-center justify-between min-w-[150px] sm:min-w-0 shrink-0 sm:shrink">
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block">Active Accounts</span>
               <p className="text-xl font-bold mt-0.5 text-blue-700 dark:text-blue-300">{activeCount}</p>
@@ -439,7 +439,7 @@ export function UsersClientPage({ initialUsers, totalCount }: UsersClientPagePro
                 {/* Pagination */}
                 <div className="flex items-center justify-between gap-4 pt-2 text-xs">
                   <div className="flex items-center gap-3">
-                    <span className="text-muted-foreground whitespace-nowrap">
+                    <span className="text-muted-foreground whitespace-nowrap hidden sm:inline">
                       Showing {filteredUsers.length === 0 ? 0 : startIndex + 1} to {Math.min(endIndex, filteredUsers.length)} of{" "}
                       {filteredUsers.length} staff
                     </span>

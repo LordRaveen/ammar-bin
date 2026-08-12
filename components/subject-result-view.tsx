@@ -1154,9 +1154,9 @@ export function SubjectResultView({
   return (
     <div className="flex flex-col gap-4">
       {/* Top KPI Cards Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+      <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {/* Completed */}
-        <Card className="py-0 shadow-none bg-blue-500/5 dark:bg-blue-950/20 border-blue-500/20 text-blue-950 dark:text-blue-100">
+        <Card className="py-0 shadow-none bg-blue-500/5 dark:bg-blue-950/20 border-blue-500/20 text-blue-950 dark:text-blue-100 min-w-[120px] sm:min-w-0 shrink-0 sm:shrink">
           <CardContent className="p-3">
             <span className="text-[10px] font-black uppercase tracking-wider text-blue-600/80 dark:text-blue-400/80 block">Completed</span>
             <div className="flex items-baseline justify-between mt-1">
@@ -1167,7 +1167,7 @@ export function SubjectResultView({
         </Card>
 
         {/* Class Average */}
-        <Card className="py-0 shadow-none bg-emerald-500/5 dark:bg-emerald-950/20 border-emerald-500/20 text-emerald-950 dark:text-emerald-100">
+        <Card className="py-0 shadow-none bg-emerald-500/5 dark:bg-emerald-950/20 border-emerald-500/20 text-emerald-950 dark:text-emerald-100 min-w-[120px] sm:min-w-0 shrink-0 sm:shrink">
           <CardContent className="p-3">
             <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600/80 dark:text-emerald-400/80 block">Class Average</span>
             <div className="flex items-baseline justify-between mt-1">
@@ -1178,7 +1178,7 @@ export function SubjectResultView({
         </Card>
 
         {/* Highest Score */}
-        <Card className="py-0 shadow-none bg-purple-500/5 dark:bg-purple-950/20 border-purple-500/20 text-purple-950 dark:text-purple-100">
+        <Card className="py-0 shadow-none bg-purple-500/5 dark:bg-purple-950/20 border-purple-500/20 text-purple-950 dark:text-purple-100 min-w-[120px] sm:min-w-0 shrink-0 sm:shrink">
           <CardContent className="p-3">
             <span className="text-[10px] font-black uppercase tracking-wider text-purple-600/80 dark:text-purple-400/80 block">Highest Score</span>
             <div className="flex items-baseline justify-between mt-1">
@@ -1189,7 +1189,7 @@ export function SubjectResultView({
         </Card>
 
         {/* Lowest Score */}
-        <Card className="py-0 shadow-none bg-amber-500/5 dark:bg-amber-950/20 border-amber-500/20 text-amber-950 dark:text-amber-100">
+        <Card className="py-0 shadow-none bg-amber-500/5 dark:bg-amber-950/20 border-amber-500/20 text-amber-950 dark:text-amber-100 min-w-[120px] sm:min-w-0 shrink-0 sm:shrink">
           <CardContent className="p-3">
             <span className="text-[10px] font-black uppercase tracking-wider text-amber-600/80 dark:text-amber-400/80 block">Lowest Score</span>
             <div className="flex items-baseline justify-between mt-1">
@@ -1200,7 +1200,7 @@ export function SubjectResultView({
         </Card>
 
         {/* Pass Rate */}
-        <Card className="py-0 shadow-none bg-sky-500/5 dark:bg-sky-950/20 border-sky-500/20 text-sky-950 dark:text-sky-100">
+        <Card className="py-0 shadow-none bg-indigo-500/5 dark:bg-indigo-950/20 border-indigo-500/20 text-indigo-950 dark:text-indigo-100 min-w-[120px] sm:min-w-0 shrink-0 sm:shrink">
           <CardContent className="p-3">
             <span className="text-[10px] font-black uppercase tracking-wider text-sky-600/80 dark:text-sky-400/80 block">Pass Rate</span>
             <div className="flex items-baseline justify-between mt-1">
@@ -1213,10 +1213,10 @@ export function SubjectResultView({
         </Card>
       </div>
 
-      {/* Main Content Layout (Subject Sidebar + Excel Score Sheet Table) */}
-      <div className="flex flex-col md:flex-row gap-4">
-        {/* Left Subjects List Sidebar */}
-        <Card className="w-full md:w-[260px] shrink-0 py-0 shadow-none border">
+      {/* Main Content Layout */}
+      <div className="flex flex-col lg:flex-row gap-4">
+        {/* Left Sidebar: Subject Selection List */}
+        <Card className="w-full lg:w-[240px] shrink-0 py-0 shadow-none border-zinc-200/80 dark:border-zinc-800/80">
           <CardContent className="p-3 space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Class Subjects</span>
@@ -1234,7 +1234,7 @@ export function SubjectResultView({
               />
             </div>
 
-            <div className="space-y-1 max-h-[420px] overflow-y-auto pr-0.5 scrollbar-thin">
+            <div className="flex flex-row lg:flex-col gap-1 max-h-[420px] overflow-x-auto lg:overflow-y-auto pr-0.5 scrollbar-thin [&::-webkit-scrollbar]:hidden">
               {filteredSubjects.length > 0 ? (
                 filteredSubjects.map((subj) => {
                   const isSelected = subj.id === selectedSubjectId
@@ -1246,7 +1246,7 @@ export function SubjectResultView({
                       type="button"
                       onClick={() => handleSelectSubject(subj.id)}
                       className={cn(
-                        "w-full text-left p-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-between border gap-1.5",
+                        "w-full text-left p-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-between border gap-1.5 whitespace-nowrap shrink-0 lg:w-full",
                         isSelected
                           ? "bg-primary text-primary-foreground border-primary shadow-xs font-bold"
                           : "bg-background hover:bg-muted/60 text-foreground border-transparent"

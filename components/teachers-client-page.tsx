@@ -425,8 +425,8 @@ export function TeachersClientPage({
         {/* TAB 1: DIRECTORY */}
         <TabsContent value="directory" className="flex-1 overflow-y-auto space-y-3 pr-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-zinc-300 dark:[&::-webkit-scrollbar-thumb]:bg-zinc-800 [&::-webkit-scrollbar-thumb]:rounded-full">
           {/* KPI Cards Row */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-            <div className="p-3 rounded-xl border bg-card text-card-foreground shadow-xs flex items-center justify-between">
+          <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="p-3 rounded-xl border bg-card text-card-foreground shadow-xs flex items-center justify-between min-w-[150px] sm:min-w-0 shrink-0 sm:shrink">
               <div>
                 <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block">Total Teachers</span>
                 <p className="text-xl font-bold mt-0.5">{totalTeachersCount}</p>
@@ -434,7 +434,7 @@ export function TeachersClientPage({
               <GraduationCap className="h-5 w-5 text-muted-foreground/40" />
             </div>
 
-            <div className="p-3 rounded-xl border bg-emerald-500/5 border-emerald-500/20 text-emerald-950 dark:text-emerald-100 flex items-center justify-between">
+            <div className="p-3 rounded-xl border bg-emerald-500/5 border-emerald-500/20 text-emerald-950 dark:text-emerald-100 flex items-center justify-between min-w-[150px] sm:min-w-0 shrink-0 sm:shrink">
               <div>
                 <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">Active</span>
                 <p className="text-xl font-bold mt-0.5 text-emerald-700 dark:text-emerald-300">{activeCount}</p>
@@ -442,7 +442,7 @@ export function TeachersClientPage({
               <CheckCircle2 className="h-5 w-5 text-emerald-500/40" />
             </div>
 
-            <div className="p-3 rounded-xl border bg-amber-500/5 border-amber-500/20 text-amber-950 dark:text-amber-100 flex items-center justify-between">
+            <div className="p-3 rounded-xl border bg-amber-500/5 border-amber-500/20 text-amber-950 dark:text-amber-100 flex items-center justify-between min-w-[150px] sm:min-w-0 shrink-0 sm:shrink">
               <div>
                 <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 block">On Leave</span>
                 <p className="text-xl font-bold mt-0.5 text-amber-700 dark:text-amber-300">{leaveCount}</p>
@@ -450,7 +450,7 @@ export function TeachersClientPage({
               <CalendarRange className="h-5 w-5 text-amber-500/40" />
             </div>
 
-            <div className="p-3 rounded-xl border bg-zinc-500/5 border-zinc-500/20 text-zinc-950 dark:text-zinc-100 flex items-center justify-between">
+            <div className="p-3 rounded-xl border bg-zinc-500/5 border-zinc-500/20 text-zinc-950 dark:text-zinc-100 flex items-center justify-between min-w-[150px] sm:min-w-0 shrink-0 sm:shrink">
               <div>
                 <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground block">Inactive</span>
                 <p className="text-xl font-bold mt-0.5 text-muted-foreground">{inactiveCount}</p>
@@ -560,7 +560,7 @@ export function TeachersClientPage({
                   {/* Pagination */}
                   <div className="flex items-center justify-between gap-4 pt-2 text-xs">
                     <div className="flex items-center gap-3">
-                      <span className="text-muted-foreground whitespace-nowrap">
+                      <span className="text-muted-foreground whitespace-nowrap hidden sm:inline">
                         Showing {filteredTeachers.length === 0 ? 0 : startIndex + 1} to {Math.min(endIndex, filteredTeachers.length)} of{" "}
                         {filteredTeachers.length} teachers
                       </span>
@@ -586,7 +586,7 @@ export function TeachersClientPage({
                         onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                         disabled={currentPage === 1}
                       >
-                        <ChevronLeft className="h-3.5 w-3.5 mr-1" /> Prev
+                        <ChevronLeft className="h-3.5 w-3.5 sm:mr-1" /> <span className="hidden sm:inline">Prev</span>
                       </Button>
                       <span className="text-muted-foreground min-w-[60px] text-center">
                         Page {currentPage} of {totalPages}
@@ -598,7 +598,7 @@ export function TeachersClientPage({
                         onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                         disabled={currentPage === totalPages}
                       >
-                        Next <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                        <span className="hidden sm:inline">Next</span> <ChevronRight className="h-3.5 w-3.5 sm:ml-1" />
                       </Button>
                     </div>
                   </div>

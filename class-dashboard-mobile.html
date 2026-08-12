@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Class 2 — Ammar Bin Yasir Institute</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0a0a0e;
+    --bg-raised: #131318;
+    --bg-card: #16161d;
+    --bg-hover: #1d1d25;
+    --border: #26262f;
+    --border-soft: #1c1c24;
+    --text: #eceef2;
+    --text-dim: #8d8d9a;
+    --text-faint: #5c5c68;
+
+    --blue: #5b8def;
+    --blue-bg: rgba(91,141,239,0.12);
+    --purple: #a78bfa;
+    --purple-bg: rgba(167,139,250,0.12);
+    --green: #34d399;
+    --green-bg: rgba(52,211,153,0.12);
+    --orange: #f0a860;
+    --orange-bg: rgba(240,168,96,0.12);
+    --red: #f16a6a;
+
+    --radius-sm: 8px;
+    --radius: 12px;
+    --radius-lg: 18px;
+
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  *{ margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ height:100%; }
+  body{
+    font-family:var(--font);
+    background:#000;
+    color:var(--text);
+    -webkit-font-smoothing:antialiased;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+  }
+
+  /* ===== Device frame (desktop preview only) ===== */
+  .device{
+    width:100%;
+    max-width:430px;
+    height:100vh;
+    max-height:932px;
+    background:var(--bg);
+    position:relative;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+  }
+  @media (min-width:520px){
+    body{ padding:40px 0; }
+    .device{
+      height:880px;
+      border-radius:44px;
+      border:10px solid #1a1a1a;
+      box-shadow:0 40px 80px -20px rgba(0,0,0,0.8), 0 0 0 1px #2a2a2a;
+    }
+    .notch{
+      position:absolute; top:10px; left:50%; transform:translateX(-50%);
+      width:120px; height:26px; background:#1a1a1a; border-radius:16px; z-index:200;
+    }
+  }
+
+  /* ===== Top bar ===== */
+  .topbar{
+    flex-shrink:0;
+    display:flex; align-items:center; gap:12px;
+    padding:14px 16px 12px;
+    background:var(--bg);
+    position:relative; z-index:20;
+  }
+  .icon-btn{
+    width:36px; height:36px; border-radius:10px;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--bg-card); border:1px solid var(--border-soft);
+    color:var(--text-dim);
+    flex-shrink:0;
+  }
+  .icon-btn svg{ width:18px; height:18px; }
+  .brand{ display:flex; align-items:center; gap:9px; flex:1; min-width:0; }
+  .brand-mark{
+    width:30px; height:30px; border-radius:8px;
+    background:linear-gradient(135deg, var(--blue), #3a5fc4);
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:13px; flex-shrink:0;
+  }
+  .brand-text{ min-width:0; }
+  .brand-text .name{ font-size:13px; font-weight:700; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .brand-text .sub{ font-size:10.5px; color:var(--text-faint); }
+  .topbar-actions{ display:flex; gap:8px; align-items:center; flex-shrink:0; }
+  .badge-test{
+    font-size:9.5px; font-weight:700; letter-spacing:.04em;
+    color:var(--orange); border:1px solid rgba(240,168,96,0.4);
+    background:var(--orange-bg); padding:5px 8px; border-radius:20px;
+  }
+  .dot-indicator{ position:relative; }
+  .dot-indicator::after{
+    content:''; position:absolute; top:6px; right:6px; width:7px; height:7px;
+    background:var(--red); border-radius:50%; border:2px solid var(--bg);
+  }
+
+  /* ===== Context bar: breadcrumb + term ===== */
+  .context-bar{
+    flex-shrink:0;
+    padding:2px 16px 14px;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  .crumb{
+    font-size:11px; color:var(--text-faint); display:flex; align-items:center; gap:5px;
+    overflow:hidden; white-space:nowrap;
+  }
+  .crumb b{ color:var(--text-dim); font-weight:600; }
+  .term-pill{
+    display:flex; align-items:center; gap:6px;
+    background:var(--bg-card); border:1px solid var(--border);
+    padding:7px 10px; border-radius:20px;
+    font-size:11.5px; font-weight:600; color:var(--text);
+    flex-shrink:0;
+  }
+  .term-pill .status-dot{ width:6px; height:6px; border-radius:50%; background:var(--green); }
+  .term-pill svg{ width:13px; height:13px; color:var(--text-faint); margin-left:2px; }
+
+  .page-title{
+    padding:0 16px 14px;
+    font-size:22px; font-weight:800; letter-spacing:-0.02em;
+  }
+  .page-title span{ font-weight:500; color:var(--text-faint); font-size:15px; }
+
+  /* ===== Segmented tabs ===== */
+  .segmented{
+    margin:0 16px 16px;
+    background:var(--bg-card);
+    border:1px solid var(--border-soft);
+    border-radius:12px;
+    padding:4px;
+    display:flex;
+    position:relative;
+    flex-shrink:0;
+  }
+  .segmented .thumb{
+    position:absolute; top:4px; bottom:4px; left:4px;
+    width:calc((100% - 8px)/3);
+    background:var(--bg-hover);
+    border:1px solid var(--border);
+    border-radius:9px;
+    transition:transform .28s cubic-bezier(.4,0,.2,1);
+    z-index:0;
+  }
+  .segmented button{
+    flex:1; position:relative; z-index:1;
+    background:none; border:none; color:var(--text-faint);
+    font-family:var(--font); font-size:12.5px; font-weight:600;
+    padding:9px 4px; border-radius:9px; cursor:pointer;
+    transition:color .2s;
+  }
+  .segmented button.active{ color:var(--text); }
+
+  /* ===== KPI carousel ===== */
+  .kpi-scroll{
+    display:flex; gap:10px; overflow-x:auto; padding:0 16px 18px;
+    flex-shrink:0; scrollbar-width:none;
+  }
+  .kpi-scroll::-webkit-scrollbar{ display:none; }
+  .kpi-card{
+    flex:0 0 auto; width:132px;
+    background:var(--bg-card); border:1px solid var(--border-soft);
+    border-radius:var(--radius); padding:12px 13px;
+    scroll-snap-align:start;
+  }
+  .kpi-scroll{ scroll-snap-type:x proximity; }
+  .kpi-card .lbl{ font-size:9.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; margin-bottom:8px; display:flex; align-items:center; gap:5px; }
+  .kpi-card .val{ font-size:22px; font-weight:800; font-family:var(--mono); letter-spacing:-0.02em; }
+  .kpi-card .frac{ font-size:10.5px; color:var(--text-faint); font-weight:500; margin-top:2px; }
+  .kpi-card.blue .lbl{ color:var(--blue); }
+  .kpi-card.purple .lbl{ color:var(--purple); }
+  .kpi-card.green .lbl{ color:var(--green); }
+  .kpi-card.orange .lbl{ color:var(--orange); }
+
+  /* ===== Screen stack ===== */
+  .stack{ position:relative; flex:1; overflow:hidden; }
+  .screen{
+    position:absolute; inset:0;
+    overflow-y:auto;
+    background:var(--bg);
+    transform:translateX(0);
+    transition:transform .3s cubic-bezier(.4,0,.2,1);
+    -webkit-overflow-scrolling:touch;
+  }
+  .screen.slide-in{ transform:translateX(100%); }
+  .screen.slide-out-left{ transform:translateX(-28%); filter:brightness(0.6); }
+  .screen::-webkit-scrollbar{ display:none; }
+
+  .detail-header{
+    display:flex; align-items:center; gap:10px;
+    padding:14px 16px; position:sticky; top:0;
+    background:rgba(10,10,14,0.9); backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--border-soft); z-index:5;
+  }
+  .back-btn{
+    width:32px; height:32px; border-radius:9px; flex-shrink:0;
+    background:var(--bg-card); border:1px solid var(--border-soft);
+    display:flex; align-items:center; justify-content:center; color:var(--text);
+  }
+  .back-btn svg{ width:16px; height:16px; }
+  .detail-header h2{ font-size:15px; font-weight:700; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  /* ===== Search ===== */
+  .search-wrap{ padding:0 16px 12px; }
+  .search-box{
+    display:flex; align-items:center; gap:8px;
+    background:var(--bg-card); border:1px solid var(--border-soft);
+    border-radius:10px; padding:9px 12px;
+  }
+  .search-box svg{ width:15px; height:15px; color:var(--text-faint); flex-shrink:0; }
+  .search-box input{
+    background:none; border:none; outline:none; color:var(--text);
+    font-family:var(--font); font-size:13px; width:100%;
+  }
+  .search-box input::placeholder{ color:var(--text-faint); }
+
+  .list-count{ padding:0 16px 10px; font-size:11.5px; color:var(--text-faint); font-weight:600; }
+
+  /* ===== Row list ===== */
+  .rows{ padding:0 16px 20px; display:flex; flex-direction:column; gap:8px; }
+  .row-card{
+    display:flex; align-items:center; gap:11px;
+    background:var(--bg-card); border:1px solid var(--border-soft);
+    border-radius:var(--radius); padding:11px 12px;
+  }
+  .avatar{
+    width:38px; height:38px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:700; color:var(--bg);
+  }
+  .row-main{ flex:1; min-width:0; }
+  .row-main .t1{ font-size:13.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row-main .t2{ font-size:11px; color:var(--text-faint); font-family:var(--mono); margin-top:1px; }
+  .row-trail{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
+  .status-chip{
+    font-size:9.5px; font-weight:700; padding:3px 8px; border-radius:20px;
+    background:var(--green-bg); color:var(--green); text-transform:uppercase; letter-spacing:.03em;
+  }
+  .chev{ width:15px; height:15px; color:var(--text-faint); flex-shrink:0; }
+  .kebab-btn{
+    width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+    color:var(--text-faint); flex-shrink:0; background:none; border:none;
+  }
+  .kebab-btn svg{ width:16px; height:16px; }
+  .completion-mini{ font-size:10px; font-family:var(--mono); font-weight:600; color:var(--text-dim); }
+
+  /* ===== Student detail ===== */
+  .profile-hero{ padding:20px 16px 6px; display:flex; align-items:center; gap:13px; }
+  .profile-hero .avatar{ width:52px; height:52px; font-size:16px; }
+  .profile-hero h3{ font-size:17px; font-weight:800; }
+  .profile-hero p{ font-size:11.5px; color:var(--text-faint); font-family:var(--mono); margin-top:2px; }
+
+  .stat-row{ display:flex; gap:8px; padding:16px 16px 6px; }
+  .stat-box{
+    flex:1; background:var(--bg-card); border:1px solid var(--border-soft);
+    border-radius:var(--radius-sm); padding:10px 8px; text-align:center;
+  }
+  .stat-box .v{ font-size:16px; font-weight:800; font-family:var(--mono); }
+  .stat-box .l{ font-size:9px; color:var(--text-faint); font-weight:700; letter-spacing:.04em; text-transform:uppercase; margin-top:3px; }
+  .stat-box.accent .v{ color:var(--green); }
+
+  .section-label{
+    padding:18px 16px 10px; font-size:12px; font-weight:700; color:var(--text-dim);
+    text-transform:uppercase; letter-spacing:.05em; display:flex; align-items:center; justify-content:space-between;
+  }
+  .section-label .hint{ font-size:10px; color:var(--text-faint); font-weight:500; text-transform:none; letter-spacing:0; }
+
+  .subject-cards{ padding:0 16px 20px; display:flex; flex-direction:column; gap:9px; }
+  .subject-card{
+    background:var(--bg-card); border:1px solid var(--border-soft); border-radius:var(--radius); padding:13px;
+  }
+  .subject-card .sc-top{ display:flex; align-items:center; justify-content:between; justify-content:space-between; margin-bottom:11px; }
+  .subject-card .sc-name{ font-size:13.5px; font-weight:700; }
+  .grade-pill{
+    font-size:11px; font-weight:800; font-family:var(--mono); padding:3px 9px; border-radius:7px;
+  }
+  .grade-pill.ap{ background:var(--green-bg); color:var(--green); }
+  .grade-pill.bp{ background:var(--blue-bg); color:var(--blue); }
+  .sc-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:9px; }
+  .sc-cell{ background:var(--bg-raised); border-radius:8px; padding:8px 6px; text-align:center; }
+  .sc-cell .n{ font-size:14px; font-weight:700; font-family:var(--mono); }
+  .sc-cell .k{ font-size:8.5px; color:var(--text-faint); font-weight:700; letter-spacing:.04em; text-transform:uppercase; margin-top:2px; }
+  .sc-foot{ display:flex; align-items:center; justify-content:space-between; padding-top:9px; border-top:1px solid var(--border-soft); }
+  .sc-foot .total{ font-size:12px; color:var(--text-dim); }
+  .sc-foot .total b{ color:var(--text); font-family:var(--mono); font-size:14px; }
+  .sc-foot .remark{ font-size:10.5px; color:var(--green); font-weight:600; }
+
+  /* ===== Subject score sheet (per-student cards) ===== */
+  .sheet-meta{ padding:14px 16px 4px; display:flex; gap:8px; }
+  .meta-pill{
+    font-size:10.5px; font-weight:700; padding:5px 10px; border-radius:20px;
+    background:var(--bg-card); border:1px solid var(--border-soft); color:var(--text-dim);
+  }
+  .meta-pill.hi{ color:var(--purple); border-color:rgba(167,139,250,0.3); }
+
+  .student-score-cards{ padding:10px 16px 20px; display:flex; flex-direction:column; gap:9px; }
+  .sscard{ background:var(--bg-card); border:1px solid var(--border-soft); border-radius:var(--radius); padding:12px; }
+  .sscard.pending{ opacity:0.55; }
+  .sscard .sst-top{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .sscard .rank{ font-family:var(--mono); font-size:11px; color:var(--text-faint); width:16px; flex-shrink:0; }
+  .sscard .name{ font-size:13px; font-weight:600; flex:1; }
+
+  /* ===== Class info sub-tabs ===== */
+  .subtabs{
+    display:flex; gap:6px; padding:14px 16px 4px; overflow-x:auto; scrollbar-width:none;
+  }
+  .subtabs::-webkit-scrollbar{ display:none; }
+  .subtab-btn{
+    flex-shrink:0; font-size:12px; font-weight:600; padding:7px 13px; border-radius:20px;
+    background:var(--bg-card); border:1px solid var(--border-soft); color:var(--text-faint);
+  }
+  .subtab-btn.active{ background:var(--text); color:var(--bg); border-color:var(--text); }
+
+  .add-btn-row{ padding:12px 16px 4px; }
+  .add-btn{
+    width:100%; padding:11px; border-radius:10px; background:var(--blue);
+    color:#fff; font-family:var(--font); font-weight:700; font-size:13px;
+    border:none; display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .add-btn svg{ width:15px; height:15px; }
+
+  /* ===== Overlays: backdrop ===== */
+  .backdrop{
+    position:absolute; inset:0; background:rgba(0,0,0,0.55);
+    opacity:0; pointer-events:none; transition:opacity .25s; z-index:30;
+    backdrop-filter:blur(2px);
+  }
+  .backdrop.show{ opacity:1; pointer-events:auto; }
+
+  /* ===== Drawer ===== */
+  .drawer{
+    position:absolute; top:0; bottom:0; left:0; width:78%; max-width:300px;
+    background:var(--bg-raised); border-right:1px solid var(--border);
+    transform:translateX(-100%); transition:transform .3s cubic-bezier(.4,0,.2,1);
+    z-index:40; display:flex; flex-direction:column;
+  }
+  .drawer.open{ transform:translateX(0); }
+  .drawer-head{ display:flex; align-items:center; gap:10px; padding:20px 16px 16px; border-bottom:1px solid var(--border-soft); }
+  .drawer-nav{ padding:12px 10px; display:flex; flex-direction:column; gap:2px; flex:1; overflow-y:auto; }
+  .drawer-item{
+    display:flex; align-items:center; gap:11px; padding:10px 12px; border-radius:10px;
+    font-size:13.5px; font-weight:600; color:var(--text-dim);
+  }
+  .drawer-item svg{ width:17px; height:17px; flex-shrink:0; }
+  .drawer-item.active{ background:var(--bg-card); color:var(--text); }
+  .drawer-foot{
+    padding:14px 16px; border-top:1px solid var(--border-soft);
+    display:flex; align-items:center; gap:10px;
+  }
+  .drawer-foot .avatar{ width:32px; height:32px; font-size:11px; }
+  .drawer-foot .u1{ font-size:12.5px; font-weight:700; }
+  .drawer-foot .u2{ font-size:10.5px; color:var(--text-faint); }
+
+  /* ===== Bottom sheet ===== */
+  .sheet{
+    position:absolute; left:0; right:0; bottom:0;
+    background:var(--bg-raised); border-top:1px solid var(--border);
+    border-radius:20px 20px 0 0;
+    transform:translateY(100%); transition:transform .32s cubic-bezier(.4,0,.2,1);
+    z-index:41; padding:10px 16px 22px;
+  }
+  .sheet.open{ transform:translateY(0); }
+  .sheet-handle{ width:36px; height:4px; background:var(--border); border-radius:3px; margin:2px auto 14px; }
+  .sheet-title{ font-size:14.5px; font-weight:700; margin-bottom:14px; }
+  .sheet-group{ margin-bottom:16px; }
+  .sheet-group-label{ font-size:10.5px; font-weight:700; color:var(--text-faint); text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px; }
+  .sheet-opt-list{ display:flex; flex-direction:column; gap:6px; }
+  .sheet-opt{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:11px 13px; border-radius:10px; background:var(--bg-card); border:1px solid var(--border-soft);
+    font-size:13px; font-weight:600;
+  }
+  .sheet-opt.selected{ border-color:var(--blue); background:var(--blue-bg); color:var(--blue); }
+  .sheet-opt .tag-active{ font-size:9.5px; color:var(--green); font-weight:700; }
+  .sheet-close{
+    width:100%; margin-top:6px; padding:12px; border-radius:10px; background:var(--bg-card);
+    border:1px solid var(--border-soft); color:var(--text); font-weight:700; font-size:13px; font-family:var(--font);
+  }
+
+  /* ===== Action sheet (kebab menu) ===== */
+  .action-sheet{
+    position:absolute; left:0; right:0; bottom:0;
+    background:var(--bg-raised); border-top:1px solid var(--border);
+    border-radius:20px 20px 0 0;
+    transform:translateY(100%); transition:transform .3s cubic-bezier(.4,0,.2,1);
+    z-index:41; padding:8px 12px 22px;
+  }
+  .action-sheet.open{ transform:translateY(0); }
+  .action-sheet .name-row{ padding:12px 8px 14px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--border-soft); margin-bottom:6px; }
+  .action-item{
+    display:flex; align-items:center; gap:12px; padding:13px 10px; border-radius:10px; font-size:13.5px; font-weight:600;
+  }
+  .action-item svg{ width:17px; height:17px; }
+  .action-item.danger{ color:var(--red); }
+
+  .hidden{ display:none !important; }
+</style>
+</head>
+<body>
+
+<div class="device">
+  <div class="notch"></div>
+
+  <!-- ============ TOP BAR ============ -->
+  <div class="topbar">
+    <button class="icon-btn" id="openDrawer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <div class="brand">
+      <div class="brand-mark">A</div>
+      <div class="brand-text">
+        <div class="name">Ammar Bin Yasir</div>
+        <div class="sub">Institute</div>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <span class="badge-test">TEST</span>
+      <button class="icon-btn dot-indicator">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ============ CONTEXT BAR ============ -->
+  <div class="context-bar">
+    <div class="crumb">Classes <span>›</span> <b>Class 2</b></div>
+    <button class="term-pill" id="openTermSheet">
+      <span class="status-dot"></span>
+      2026/27 · Term 1
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+  </div>
+
+  <div class="page-title">Class 2 <span>Islamiyya</span></div>
+
+  <!-- ============ SEGMENTED TABS ============ -->
+  <div class="segmented">
+    <div class="thumb" id="segThumb"></div>
+    <button class="active" data-tab="student">Student</button>
+    <button data-tab="subject">Subject</button>
+    <button data-tab="info">Class Info</button>
+  </div>
+
+  <!-- ============ KPI CAROUSEL ============ -->
+  <div class="kpi-scroll">
+    <div class="kpi-card blue">
+      <div class="lbl">Scores</div>
+      <div class="val">33%</div>
+      <div class="frac">2 of 6 done</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="lbl">Skills</div>
+      <div class="val">17%</div>
+      <div class="frac">1 of 6 done</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="lbl">Attendance</div>
+      <div class="val">17%</div>
+      <div class="frac">1 of 6 done</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="lbl">Remarks</div>
+      <div class="val">17%</div>
+      <div class="frac">1 of 6 done</div>
+    </div>
+  </div>
+
+  <!-- ============ SCREEN STACK ============ -->
+  <div class="stack" id="stack">
+
+    <!-- ---- SCREEN: Student list ---- -->
+    <div class="screen" id="screen-student" data-panel="student">
+      <div class="search-wrap">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input placeholder="Search students…">
+        </div>
+      </div>
+      <div class="list-count">6 students · tap to view scoresheet</div>
+      <div class="rows" id="studentRows"></div>
+    </div>
+
+    <!-- ---- SCREEN: Subject list ---- -->
+    <div class="screen slide-in" id="screen-subject" data-panel="subject">
+      <div class="search-wrap">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input placeholder="Search subject…">
+        </div>
+      </div>
+      <div class="list-count">5 subjects · tap to view score sheet</div>
+      <div class="rows" id="subjectRows"></div>
+    </div>
+
+    <!-- ---- SCREEN: Class Info ---- -->
+    <div class="screen slide-in" id="screen-info" data-panel="info">
+      <div class="subtabs" id="infoSubtabs">
+        <button class="subtab-btn active" data-sub="students">Students</button>
+        <button class="subtab-btn" data-sub="subjects">Subjects</button>
+        <button class="subtab-btn" data-sub="teachers">Teachers</button>
+        <button class="subtab-btn" data-sub="settings">Settings</button>
+      </div>
+      <div class="list-count" style="padding-top:12px;">6 student(s) enrolled</div>
+      <div class="add-btn-row">
+        <button class="add-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Add Student
+        </button>
+      </div>
+      <div class="rows" id="enrolledRows"></div>
+    </div>
+
+    <!-- ---- SCREEN: Student detail (slides over) ---- -->
+    <div class="screen slide-in" id="screen-student-detail">
+      <div class="detail-header">
+        <button class="back-btn" data-close="student-detail">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <h2 id="sdName">Student</h2>
+      </div>
+      <div class="profile-hero">
+        <div class="avatar" id="sdAvatar" style="background:var(--blue);">KK</div>
+        <div>
+          <h3 id="sdName2">Kabir Kabir</h3>
+          <p id="sdId">ABYI/ISL/25/041</p>
+        </div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-box"><div class="v" id="sdTotal">458/500</div><div class="l">Total</div></div>
+        <div class="stat-box accent"><div class="v" id="sdAvg">92%</div><div class="l">Average</div></div>
+        <div class="stat-box"><div class="v" id="sdGrade">A</div><div class="l">Grade</div></div>
+      </div>
+      <div class="section-label">Scores <span class="hint">right‑click on desktop to clear</span></div>
+      <div class="subject-cards" id="subjectCards"></div>
+    </div>
+
+    <!-- ---- SCREEN: Subject detail / score sheet (slides over) ---- -->
+    <div class="screen slide-in" id="screen-subject-detail">
+      <div class="detail-header">
+        <button class="back-btn" data-close="subject-detail">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <h2 id="subjName">Azkar — Score Sheet</h2>
+      </div>
+      <div class="sheet-meta">
+        <span class="meta-pill">Avg <b style="color:var(--text)">97</b></span>
+        <span class="meta-pill hi">High 99 · Kabir</span>
+        <span class="meta-pill">Pass 100%</span>
+      </div>
+      <div class="student-score-cards" id="studentScoreCards"></div>
+    </div>
+
+  </div>
+
+  <!-- ============ DRAWER ============ -->
+  <div class="backdrop" id="drawerBackdrop"></div>
+  <div class="drawer" id="drawer">
+    <div class="drawer-head">
+      <div class="brand-mark">A</div>
+      <div class="brand-text">
+        <div class="name">Ammar Bin Yasir</div>
+        <div class="sub">Institute</div>
+      </div>
+    </div>
+    <div class="drawer-nav">
+      <div class="drawer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</div>
+      <div class="drawer-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 17l9 4 9-4M3 12l9 4 9-4"/></svg>Classes</div>
+      <div class="drawer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>Students</div>
+      <div class="drawer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Staff &amp; Users</div>
+      <div class="drawer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5-10-5z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/></svg>Teachers</div>
+      <div class="drawer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Guardians</div>
+      <div class="drawer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Finance</div>
+      <div class="drawer-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings</div>
+    </div>
+    <div class="drawer-foot">
+      <div class="avatar" style="background:var(--red);">CO</div>
+      <div>
+        <div class="u1">Courage Okaka</div>
+        <div class="u2">courageokaka9@gmail.com</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ TERM BOTTOM SHEET ============ -->
+  <div class="backdrop" id="termBackdrop"></div>
+  <div class="sheet" id="termSheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Select academic period</div>
+    <div class="sheet-group">
+      <div class="sheet-group-label">Session</div>
+      <div class="sheet-opt-list">
+        <div class="sheet-opt selected">2026/2027 <span class="tag-active">Active</span></div>
+        <div class="sheet-opt">2025/2026</div>
+      </div>
+    </div>
+    <div class="sheet-group">
+      <div class="sheet-group-label">Term</div>
+      <div class="sheet-opt-list">
+        <div class="sheet-opt selected">First Term <span class="tag-active">Active</span></div>
+        <div class="sheet-opt">Second Term</div>
+        <div class="sheet-opt">Third Term</div>
+      </div>
+    </div>
+    <button class="sheet-close" id="closeTermSheet">Done</button>
+  </div>
+
+  <!-- ============ ROW ACTION SHEET ============ -->
+  <div class="backdrop" id="actionBackdrop"></div>
+  <div class="action-sheet" id="actionSheet">
+    <div class="sheet-handle"></div>
+    <div class="name-row">
+      <div class="avatar" id="asAvatar" style="background:var(--purple);">HA</div>
+      <div>
+        <div style="font-size:13.5px;font-weight:700;" id="asName">Halima Abusufyan</div>
+        <div style="font-size:11px;color:var(--text-faint);font-family:var(--mono);" id="asId">ABYI/ISL/25/039</div>
+      </div>
+    </div>
+    <div class="action-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit student</div>
+    <div class="action-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>View scoresheet</div>
+    <div class="action-item danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/></svg>Remove student</div>
+  </div>
+
+</div>
+
+<script>
+// ================= DATA =================
+const students = [
+  { id:'ABYI/ISL/25/041', name:'Kabir Kabir', gender:'M', total:'458/500', avg:'92%', grade:'A',
+    scores:[
+      {subject:'Azkar', ca1:20, ca2:19, exam:60, total:99, grade:'A+', remark:'Outstanding'},
+      {subject:'Fiqhul Amaly', ca1:18, ca2:12, exam:55, total:85, grade:'B+', remark:'Very Good'},
+      {subject:'English Language', ca1:17, ca2:14, exam:58, total:89, grade:'B+', remark:'Very Good'},
+      {subject:'Arabic', ca1:31, ca2:'-', exam:56, total:87, grade:'B+', remark:'Very Good'},
+      {subject:"AlQur'an", ca1:40, ca2:'-', exam:58, total:98, grade:'A+', remark:'Outstanding'},
+    ]},
+  { id:'ABYI/ISL/25/039', name:'Halima Abusufyan', gender:'F', total:'—', avg:'—', grade:'—', scores:[] },
+  { id:'ABYI/ISL/25/043', name:'Usman Aminci', gender:'M', total:'—', avg:'—', grade:'—', scores:[] },
+  { id:'ABYI/ISL/26/040', name:"Hauwa'u Saeed", gender:'F', total:'—', avg:'—', grade:'—', scores:[] },
+  { id:'ABYI/ISL/25/042', name:'Mukhtar Bello', gender:'M', total:'—', avg:'—', grade:'—', scores:[] },
+  { id:'ABYI/ISL/25/038', name:'Fatima Isah', gender:'F', total:'—', avg:'—', grade:'—', scores:[] },
+];
+
+const subjects = [
+  { code:'AZK', name:'Azkar', completed:'2/6', avg:97, high:99, low:95, pass:'100%',
+    rows:[
+      {name:'Kabir Kabir', ca1:20, ca2:19, exam:60, total:99, grade:'A+', pending:false},
+      {name:'Halima Abusufyan', ca1:18, ca2:20, exam:57, total:95, grade:'A+', pending:false},
+      {name:'Usman Aminci', pending:true},
+      {name:"Hauwa'u Saeed", pending:true},
+      {name:'Mukhtar Bello', pending:true},
+      {name:'Fatima Isah', pending:true},
+    ]},
+  { code:'FQA', name:'Fiqhul Amaly', completed:'1/6', avg:85, high:85, low:85, pass:'100%', rows:[] },
+  { code:'ENGL', name:'English Language', completed:'1/6', avg:89, high:89, low:89, pass:'100%', rows:[] },
+  { code:'ARBC', name:'Arabic', completed:'1/6', avg:87, high:87, low:87, pass:'100%', rows:[] },
+  { code:'QUR', name:"AlQur'an", completed:'1/6', avg:98, high:98, low:98, pass:'100%', rows:[] },
+];
+
+const colors = ['#5b8def','#a78bfa','#34d399','#f0a860','#f16a6a','#4dd0e1'];
+const initials = n => n.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+
+// ================= RENDER: student list =================
+const studentRowsEl = document.getElementById('studentRows');
+students.forEach((s,i)=>{
+  const div = document.createElement('div');
+  div.className = 'row-card';
+  div.innerHTML = `
+    <div class="avatar" style="background:${colors[i%colors.length]}">${initials(s.name)}</div>
+    <div class="row-main">
+      <div class="t1">${s.name}</div>
+      <div class="t2">${s.id}</div>
+    </div>
+    <div class="row-trail">
+      <div class="completion-mini">${s.total}</div>
+      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+    </div>`;
+  div.addEventListener('click', ()=>openStudent(s,i));
+  studentRowsEl.appendChild(div);
+});
+
+// ================= RENDER: subject list =================
+const subjectRowsEl = document.getElementById('subjectRows');
+subjects.forEach((sub,i)=>{
+  const div = document.createElement('div');
+  div.className = 'row-card';
+  div.innerHTML = `
+    <div class="avatar" style="background:${colors[(i+2)%colors.length]}">${sub.code.slice(0,2)}</div>
+    <div class="row-main">
+      <div class="t1">${sub.name}</div>
+      <div class="t2">Avg ${sub.avg} · High ${sub.high}</div>
+    </div>
+    <div class="row-trail">
+      <div class="completion-mini">${sub.completed}</div>
+      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+    </div>`;
+  div.addEventListener('click', ()=>openSubject(sub));
+  subjectRowsEl.appendChild(div);
+});
+
+// ================= RENDER: enrolled (class info) =================
+const enrolledRowsEl = document.getElementById('enrolledRows');
+students.forEach((s,i)=>{
+  const div = document.createElement('div');
+  div.className = 'row-card';
+  div.innerHTML = `
+    <div class="avatar" style="background:${colors[i%colors.length]}">${initials(s.name)}</div>
+    <div class="row-main">
+      <div class="t1">${s.name}</div>
+      <div class="t2">${s.id}</div>
+    </div>
+    <div class="row-trail">
+      <span class="status-chip">Active</span>
+      <button class="kebab-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button>
+    </div>`;
+  div.querySelector('.kebab-btn').addEventListener('click', (e)=>{ e.stopPropagation(); openAction(s,i); });
+  enrolledRowsEl.appendChild(div);
+});
+
+// ================= Student detail =================
+function openStudent(s, i){
+  document.getElementById('sdName').textContent = s.name;
+  document.getElementById('sdName2').textContent = s.name;
+  document.getElementById('sdId').textContent = s.id;
+  const av = document.getElementById('sdAvatar');
+  av.textContent = initials(s.name);
+  av.style.background = colors[i%colors.length];
+  document.getElementById('sdTotal').textContent = s.total;
+  document.getElementById('sdAvg').textContent = s.avg;
+  document.getElementById('sdGrade').textContent = s.grade;
+
+  const wrap = document.getElementById('subjectCards');
+  wrap.innerHTML = '';
+  if(s.scores.length === 0){
+    wrap.innerHTML = `<div style="text-align:center;padding:30px 10px;color:var(--text-faint);font-size:12.5px;">No scores recorded yet for this student.</div>`;
+  } else {
+    s.scores.forEach(sc=>{
+      const gradeClass = sc.grade === 'A+' ? 'ap' : 'bp';
+      const card = document.createElement('div');
+      card.className = 'subject-card';
+      card.innerHTML = `
+        <div class="sc-top">
+          <div class="sc-name">${sc.subject}</div>
+          <div class="grade-pill ${gradeClass}">${sc.grade}</div>
+        </div>
+        <div class="sc-grid">
+          <div class="sc-cell"><div class="n">${sc.ca1}</div><div class="k">CA 1</div></div>
+          <div class="sc-cell"><div class="n">${sc.ca2}</div><div class="k">CA 2</div></div>
+          <div class="sc-cell"><div class="n">${sc.exam}</div><div class="k">Exam</div></div>
+        </div>
+        <div class="sc-foot">
+          <div class="total">Total <b>${sc.total}</b>/100</div>
+          <div class="remark">${sc.remark}</div>
+        </div>`;
+      wrap.appendChild(card);
+    });
+  }
+  push('screen-student-detail');
+}
+
+// ================= Subject detail =================
+function openSubject(sub){
+  document.getElementById('subjName').textContent = sub.name + ' — Score Sheet';
+  const wrap = document.getElementById('studentScoreCards');
+  wrap.innerHTML = '';
+  sub.rows.forEach((r,i)=>{
+    const card = document.createElement('div');
+    if(r.pending){
+      card.className = 'sscard pending';
+      card.innerHTML = `
+        <div class="sst-top">
+          <div class="rank">${i+1}</div>
+          <div class="name">${r.name}</div>
+          <div class="completion-mini">Pending</div>
+        </div>`;
+    } else {
+      card.className = 'sscard';
+      const gradeClass = r.grade === 'A+' ? 'ap' : 'bp';
+      card.innerHTML = `
+        <div class="sst-top">
+          <div class="rank">${i+1}</div>
+          <div class="name">${r.name}</div>
+          <div class="grade-pill ${gradeClass}">${r.grade}</div>
+        </div>
+        <div class="sc-grid">
+          <div class="sc-cell"><div class="n">${r.ca1}</div><div class="k">CA 1</div></div>
+          <div class="sc-cell"><div class="n">${r.ca2}</div><div class="k">CA 2</div></div>
+          <div class="sc-cell"><div class="n">${r.exam}</div><div class="k">Exam</div></div>
+        </div>
+        <div class="sc-foot" style="border-top:none;padding-top:0;">
+          <div class="total">Total <b>${r.total}</b>/100</div>
+        </div>`;
+    }
+    wrap.appendChild(card);
+  });
+  push('screen-subject-detail');
+}
+
+// ================= Action sheet =================
+function openAction(s,i){
+  document.getElementById('asName').textContent = s.name;
+  document.getElementById('asId').textContent = s.id;
+  const av = document.getElementById('asAvatar');
+  av.textContent = initials(s.name);
+  av.style.background = colors[i%colors.length];
+  document.getElementById('actionSheet').classList.add('open');
+  document.getElementById('actionBackdrop').classList.add('show');
+}
+document.getElementById('actionBackdrop').addEventListener('click', ()=>{
+  document.getElementById('actionSheet').classList.remove('open');
+  document.getElementById('actionBackdrop').classList.remove('show');
+});
+
+// ================= Screen stack push/pop =================
+function push(id){
+  document.getElementById(id).classList.remove('slide-in');
+}
+document.querySelectorAll('[data-close]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.getElementById('screen-'+btn.dataset.close).classList.add('slide-in');
+  });
+});
+
+// ================= Segmented tabs =================
+const segBtns = document.querySelectorAll('.segmented button');
+const segThumb = document.getElementById('segThumb');
+const panels = { student:'screen-student', subject:'screen-subject', info:'screen-info' };
+segBtns.forEach((btn,idx)=>{
+  btn.addEventListener('click', ()=>{
+    segBtns.forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    segThumb.style.transform = `translateX(${idx*100}%)`;
+    Object.values(panels).forEach(pid=>document.getElementById(pid).classList.add('slide-in'));
+    document.getElementById(panels[btn.dataset.tab]).classList.remove('slide-in');
+  });
+});
+
+// ================= Class info subtabs =================
+document.querySelectorAll('.subtab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.subtab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// ================= Drawer =================
+document.getElementById('openDrawer').addEventListener('click', ()=>{
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawerBackdrop').classList.add('show');
+});
+document.getElementById('drawerBackdrop').addEventListener('click', ()=>{
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerBackdrop').classList.remove('show');
+});
+
+// ================= Term sheet =================
+document.getElementById('openTermSheet').addEventListener('click', ()=>{
+  document.getElementById('termSheet').classList.add('open');
+  document.getElementById('termBackdrop').classList.add('show');
+});
+function closeTermSheet(){
+  document.getElementById('termSheet').classList.remove('open');
+  document.getElementById('termBackdrop').classList.remove('show');
+}
+document.getElementById('closeTermSheet').addEventListener('click', closeTermSheet);
+document.getElementById('termBackdrop').addEventListener('click', closeTermSheet);
+document.querySelectorAll('.sheet-opt').forEach(opt=>{
+  opt.addEventListener('click', function(){
+    const siblings = this.parentElement.querySelectorAll('.sheet-opt');
+    siblings.forEach(s=>{ s.classList.remove('selected'); s.querySelector('.tag-active')?.remove(); });
+    this.classList.add('selected');
+  });
+});
+</script>
+</body>
+</html>

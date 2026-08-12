@@ -141,4 +141,12 @@ ammar-bin/
 
 ---
 
+## 🧠 Memory & Context Management
+
+- **Mem0 Integration**: We use `mem0` (via the configured `mem0-mcp` MCP server) as our long-term memory layer.
+- **Context Retrieval**: Query the memory store for developer preferences, context, or previous decisions when starting complex tasks.
+- **Memory Retention**: Add relevant context, decisions, and system patterns to the mem0 memory store during execution.
+
+---
+
 *Last updated: January 2026*
