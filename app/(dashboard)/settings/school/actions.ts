@@ -11,7 +11,7 @@ export async function updateSchoolSettings(formData: FormData) {
     const supabase = await createClient();
 
     const id = formData.get("id") as string;
-    const updateData = {
+    const updateData: Record<string, any> = {
       school_name: formData.get("school_name") as string,
       school_name_arabic: formData.get("school_name_arabic") as string,
       address: formData.get("address") as string,
@@ -20,6 +20,7 @@ export async function updateSchoolSettings(formData: FormData) {
       email: formData.get("email") as string,
       logo_url: (formData.get("logo_url") as string) || null,
       principal_name: (formData.get("principal_name") as string) || null,
+      principal_signature_url: (formData.get("principal_signature_url") as string) || null,
       student_id_prefix: formData.get("student_id_prefix") as string,
       staff_id_prefix: formData.get("staff_id_prefix") as string,
       number_of_terms: parseInt(formData.get("number_of_terms") as string),
@@ -38,6 +39,7 @@ export async function updateSchoolSettings(formData: FormData) {
     }
 
     revalidatePath("/settings/school");
+    revalidatePath("/settings");
     devLog.info("School settings updated successfully");
 
     return { success: true };

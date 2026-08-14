@@ -3433,10 +3433,9 @@ export function ResultFinalizationInterface({
         }
       `}</style>
 
-      {/* Hidden Print Container for Single & Batch Printing */}
       <div 
         ref={printContainerRef}
-        className="report-card-print-area bg-white text-black p-0 m-0 border-none shadow-none"
+        className="report-card-print-area bg-white dark:bg-white text-black dark:text-black p-0 m-0 border-none shadow-none"
         style={{ position: 'fixed', left: '-9999px', top: 0, zIndex: -1 }}
       >
         {printCardsData.map((card, idx) => (

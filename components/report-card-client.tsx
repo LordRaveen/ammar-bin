@@ -132,7 +132,7 @@ export function ReportCardClient({
                   Print Preview
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 border-none rounded-2xl bg-white text-black">
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 border-none rounded-2xl bg-white dark:bg-white text-black dark:text-black">
                 <DialogHeader className="p-6 border-b border-zinc-100 flex flex-row items-center justify-between gap-4">
                   <div>
                     <DialogTitle className="text-lg font-black uppercase">Report Card Preview</DialogTitle>
@@ -346,8 +346,7 @@ export function ReportCardClient({
         </div>
       </div>
 
-      {/* Printer-only view (fully hides main site elements and modal containers when printed) */}
-      <div className="hidden print:block bg-white text-black p-0 border-none m-0 shadow-none">
+      <div className="hidden print:block bg-white dark:bg-white text-black dark:text-black p-0 border-none m-0 shadow-none">
         <PrintableReportCard 
           student={student}
           session={session}

@@ -32,6 +32,8 @@ export interface SchoolSettings {
   phone_secondary: string;
   email: string;
   logo_url: string | null;
+  principal_name: string | null;
+  principal_signature_url: string | null;
   student_id_prefix: string;
   staff_id_prefix: string;
   number_of_terms: number;

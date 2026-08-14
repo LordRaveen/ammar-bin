@@ -237,22 +237,40 @@ export function PrintableReportCard({
           display: flex;
           flex-direction: column;
           box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+          position: relative;
+        }
+
+        /* ===== Watermark ===== */
+        .watermark-container {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          z-index: 0;
+          pointer-events: none;
+          opacity: 0.06;
+        }
+        .watermark-container img {
+          width: 500px;
+          height: 500px;
+          object-fit: contain;
         }
 
         /* ===== Header row ===== */
         .header-row {
           display: grid;
-          grid-template-columns: 190px 1fr 190px;
+          grid-template-columns: 190px 1fr 160px;
           align-items: center;
           gap: 14px;
           flex-shrink: 0;
+          position: relative;
+          z-index: 1;
         }
         .header-left { display:flex; align-items:center; justify-content: flex-start; }
+        .header-right { display:flex; align-items:center; justify-content: flex-end; padding-right: 15px; }
         .logo {
-          width: 58px;
-          height: 58px;
-          border: 2px solid #333;
-          border-radius: 50%;
+          width: 110px;
+          height: 110px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -263,32 +281,59 @@ export function PrintableReportCard({
         }
         .header-text-block { text-align: center; width: 100%; }
         .arabic-name {
-          font-size: 15px;
-          font-weight: 600;
+          font-family: 'Times New Roman', Times, serif;
+          font-size: 17px;
+          font-weight: 700;
           margin: 0;
-          color: #111827;
+          color: #000;
           text-align: center;
         }
         .school-name {
-          font-size: 21px;
-          font-weight: 800;
-          color: #2563eb;
+          font-family: 'Times New Roman', Times, serif;
+          font-size: 22px;
+          font-weight: 900;
+          color: #000;
           margin: 2px 0;
-          letter-spacing: 0.2px;
+          letter-spacing: 2.5px;
+          text-align: center;
+          text-transform: uppercase;
+        }
+        .address-line {
+          font-family: 'Times New Roman', Times, serif;
+          font-weight: 700;
+          font-size: 10px;
+          margin: 2px 0;
+          color: #000;
+          text-align: center;
+          text-decoration: underline;
+          font-style: italic;
+        }
+        .phone-line {
+          font-family: 'Times New Roman', Times, serif;
+          font-size: 12px;
+          font-weight: 900;
+          margin: 2px 0;
+          color: #000;
           text-align: center;
         }
-        .tagline {
-          font-weight: 500;
-          font-size: 10.5px;
-          margin: 1px 0;
-          color: #6b7280;
-          text-align: center;
+
+        /* Double divider line */
+        .header-divider {
+          flex-shrink: 0;
+          margin-top: 6px;
+          position: relative;
+          z-index: 1;
         }
-        .address, .contact {
-          font-size: 9px;
-          margin: 1px 0;
-          color: #6b7280;
-          text-align: center;
+        .header-divider .line-blue {
+          height: 2px;
+          background: #1e40af;
+          width: 100%;
+        }
+        .header-divider .line-orange {
+          height: 3px;
+          background: #c2610c;
+          width: 100%;
+          margin-top: 2px;
         }
 
         /* Single Term Dates Card */
@@ -328,6 +373,8 @@ export function PrintableReportCard({
           margin-top: 10px;
           overflow: hidden;
           flex-shrink: 0;
+          position: relative;
+          z-index: 1;
         }
         .info-col {
           padding: 8px 14px;
@@ -429,6 +476,8 @@ export function PrintableReportCard({
           flex-direction: column;
           min-height: 0;
           margin: 16px 0;
+          position: relative;
+          z-index: 1;
         }
         table.main-table {
           width: 100%;
@@ -512,6 +561,8 @@ export function PrintableReportCard({
           margin-top: 0;
           gap: 12px;
           flex-shrink: 0;
+          position: relative;
+          z-index: 1;
         }
         .psychomotor-block {
           flex: 1.2;
@@ -595,28 +646,99 @@ export function PrintableReportCard({
         .scale-row .s-label { color: #111827; font-weight: 700; }
         .scale-row .s-val { color: #6b7280; font-weight: 600; }
 
-        /* ===== Comments ===== */
-        .comments {
+        /* ===== Comments & Signature Section ===== */
+        .comments-signature-section {
           margin-top: 10px;
+          display: flex;
+          gap: 12px;
+          flex-shrink: 0;
+          position: relative;
+          z-index: 1;
+        }
+        .comments-container {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .comment-row-box {
+          flex: 1;
+          background: #f5f6f8;
+          border-radius: 10px;
+          padding: 8px 14px;
           font-size: 10.5px;
           line-height: 1.5;
-          border-radius: 10px;
-          padding: 9px 12px;
-          background: #f5f6f8;
           color: #111827;
-          flex-shrink: 0;
+          display: flex;
+          align-items: center;
         }
-        .comments strong { font-weight: 700; color: #111827; }
-        .comments div + div { margin-top: 3px; }
+        .comment-row-box strong {
+          font-weight: 700;
+          color: #111827;
+          margin-right: 5px;
+          white-space: nowrap;
+        }
+
+        .signatures-block {
+          flex-shrink: 0;
+          width: 250px;
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-end;
+          align-items: center;
+          padding: 10px 16px;
+          border-radius: 10px;
+          background: #f5f6f8;
+        }
+        .signature-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          width: 100%;
+          gap: 4px;
+        }
+        .signature-item img {
+          height: 50px;
+          width: auto;
+          max-width: 180px;
+          object-fit: contain;
+          margin-bottom: 2px;
+        }
+        .signature-line {
+          width: 100%;
+          border-top: 1px solid #6b7280;
+          padding-top: 4px;
+          text-align: center;
+          font-size: 10px;
+          font-weight: 700;
+          color: #111827;
+        }
 
         @page {
           size: A4 landscape;
-          margin: 6mm;
+          margin: 0mm;
         }
 
         @media print {
+          :root, html, body, .dark, [data-theme="dark"] {
+            color-scheme: light !important;
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            --background: oklch(1 0 0) !important;
+            --foreground: oklch(0.145 0 0) !important;
+            --card: oklch(1 0 0) !important;
+            --card-foreground: oklch(0.145 0 0) !important;
+            --popover: oklch(1 0 0) !important;
+            --popover-foreground: oklch(0.145 0 0) !important;
+            --border: oklch(0.922 0 0) !important;
+            --input: oklch(0.922 0 0) !important;
+          }
           html, body, .report-card-wrapper, [class*="print:block"] {
-            background: #fff !important;
+            background: #ffffff !important;
+            background-color: #ffffff !important;
             padding: 0 !important;
             margin: 0 !important;
             width: 100% !important;
@@ -628,52 +750,74 @@ export function PrintableReportCard({
             box-shadow: none !important;
             border-radius: 0 !important;
             width: 100% !important;
-            height: 194mm !important;
+            height: 100% !important;
             margin: 0 !important;
-            padding: 2mm 2mm !important;
+            padding: 8mm 12mm !important;
+            box-sizing: border-box !important;
             page-break-after: always !important;
             break-after: page !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
             display: flex !important;
             flex-direction: column !important;
+            background: #ffffff !important;
+            color: #000000 !important;
           }
           .report-card-page:last-child {
             page-break-after: auto !important;
             break-after: auto !important;
           }
+          .watermark-container {
+            opacity: 0.06 !important;
+            print-color-adjust: exact !important;
+            -webkit-print-color-adjust: exact !important;
+          }
         }
       `}</style>
 
       <div className="report-card-page">
+        {/* WATERMARK */}
+        {school?.logo_url && (
+          <div className="watermark-container">
+            <img src={school.logo_url} alt="" />
+          </div>
+        )}
+
         {/* HEADER */}
         <div className="header-row">
           <div className="header-left">
-            {school?.logo_url ? (
-              <img src={school.logo_url} alt="Logo" className="logo" style={{ objectFit: 'contain', border: 'none', borderRadius: '0' }} />
-            ) : (
-              <div className="logo">LOGO</div>
-            )}
+            <div className="term-dates-card">
+              <div className="term-date-item">
+                <span className="t-label">Term Ends</span>
+                <span className="t-val">{termEndDate}</span>
+              </div>
+              <div className="term-date-item">
+                <span className="t-label">Next Term Begins</span>
+                <span className="t-val">{nextTermBegins}</span>
+              </div>
+            </div>
           </div>
           <div className="header-text-block">
             <p className="arabic-name">{school?.school_name_arabic || "مدرسة الأمة الإبداعية الدولية"}</p>
             <p className="school-name">{school?.school_name || "CREATIVE UMMAH INTERNATIONAL SCHOOLS"}</p>
-            <p className="tagline">{school?.tagline || "...Learning, Attitude and Creativity"}</p>
-            <p className="address">{school?.address || "No. 10 Mai Unguwa Wada Road, off Kuriga Road, keke-A Millenium City Kaduna."}</p>
-            <p className="contact">
-              Tel: {school?.phone_primary || "08135582113"}{school?.phone_secondary ? `, ${school.phone_secondary}` : ""}{school?.email ? ` | Email: ${school.email}` : ""}
+            <p className="address-line">ADDRESS: {school?.address || "No. 10 Mai Unguwa Wada Road, off Kuriga Road, keke-A Millenium City Kaduna."}</p>
+            <p className="phone-line">
+              Phone Number: {school?.phone_primary || "08135582113"}{school?.phone_secondary ? `, ${school.phone_secondary}` : ""}
             </p>
           </div>
-          <div className="term-dates-card">
-            <div className="term-date-item">
-              <span className="t-label">Term Ends</span>
-              <span className="t-val">{termEndDate}</span>
-            </div>
-            <div className="term-date-item">
-              <span className="t-label">Next Term Begins</span>
-              <span className="t-val">{nextTermBegins}</span>
-            </div>
+          <div className="header-right">
+            {school?.logo_url ? (
+              <img src={school.logo_url} alt="Logo" className="logo" style={{ objectFit: 'contain', border: 'none', borderRadius: '0' }} />
+            ) : (
+              <div className="logo" style={{ border: '2px solid #333', borderRadius: '50%' }}>LOGO</div>
+            )}
           </div>
+        </div>
+
+        {/* DOUBLE DIVIDER LINE */}
+        <div className="header-divider">
+          <div className="line-blue"></div>
+          <div className="line-orange"></div>
         </div>
 
         {/* INFO BAR */}
@@ -881,13 +1025,27 @@ export function PrintableReportCard({
           </div>
         </div>
 
-        {/* REMARKS AND COMMENTS */}
-        <div className="comments">
-          <div><strong>Class teacher's comment:</strong> {teacherRemarkText}</div>
-          <div><strong>Head teacher's comment:</strong> {principalRemarkText}</div>
+        <div className="comments-signature-section">
+          <div className="comments-container">
+            <div className="comment-row-box">
+              <strong>Class teacher&apos;s comment:</strong> {teacherRemarkText}
+            </div>
+            <div className="comment-row-box">
+              <strong>Head teacher&apos;s comment:</strong> {principalRemarkText}
+            </div>
+          </div>
+          <div className="signatures-block">
+            <div className="signature-item">
+              {school?.principal_signature_url && (
+                <img src={school.principal_signature_url} alt="Principal Signature" />
+              )}
+              <div className="signature-line">Principal&apos;s Signature</div>
+            </div>
+          </div>
         </div>
 
       </div>
     </div>
   )
 }
+
