@@ -21,7 +21,11 @@ import {
   School, 
   Users, 
   BookOpen,
-  Lock
+  Lock,
+  Eye,
+  EyeOff,
+  AlertTriangle,
+  X
 } from "lucide-react"
 
 export default function ProfilePage() {
@@ -30,6 +34,8 @@ export default function ProfilePage() {
   const [updatingPassword, setUpdatingPassword] = useState(false)
   const [user, setUser] = useState<any>(null)
   const [profileDetails, setProfileDetails] = useState<any>(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   
   // Profile Form state
   const [formData, setFormData] = useState({
@@ -200,17 +206,20 @@ export default function ProfilePage() {
 
         // Also update teachers if they are a teacher
         if (roleLower === "teacher") {
-          const { error: teacherError } = await supabase
+          const { data: updateData, error: teacherError } = await supabase
             .from("teachers")
             .update(updatePayload)
             .eq("user_id", user.id)
+            .select("id")
 
-          if (teacherError) {
-            // Fallback by email if user_id link is not yet established
-            await supabase
+          if (teacherError || !updateData || updateData.length === 0) {
+            // Fallback by email if user_id link is not yet established or if update returned 0 rows
+            const { error: emailUpdateError } = await supabase
               .from("teachers")
               .update(updatePayload)
               .eq("email", profileDetails.email)
+
+            if (emailUpdateError) throw emailUpdateError
           }
         }
       } else {
@@ -238,8 +247,8 @@ export default function ProfilePage() {
 
   async function handleUpdatePassword(e: React.FormEvent) {
     e.preventDefault()
-    if (passwordForm.password.length < 8) {
-      toast.error("Password must be at least 8 characters long")
+    if (passwordForm.password.length < 6) {
+      toast.error("Password must be at least 6 characters long")
       return
     }
     if (passwordForm.password !== passwordForm.confirmPassword) {
@@ -445,34 +454,77 @@ export default function ProfilePage() {
                     <Label htmlFor="pass" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       New Password
                     </Label>
-                    <Input
-                      id="pass"
-                      type="password"
-                      required
-                      placeholder="Min. 8 characters"
-                      value={passwordForm.password}
-                      onChange={(e) => setPasswordForm({ ...passwordForm, password: e.target.value })}
-                      disabled={updatingPassword}
-                      className="bg-zinc-50/50 dark:bg-zinc-900/30 border-zinc-200/80 dark:border-zinc-800/80 h-10 text-xs font-medium rounded-xl"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="pass"
+                        type={showPassword ? "text" : "password"}
+                        required
+                        placeholder="Min. 6 characters"
+                        value={passwordForm.password}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, password: e.target.value })}
+                        disabled={updatingPassword}
+                        className="bg-zinc-50/50 dark:bg-zinc-900/30 border-zinc-200/80 dark:border-zinc-800/80 h-10 text-xs font-medium rounded-xl pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-1.5">
                     <Label htmlFor="confirmPass" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       Confirm New Password
                     </Label>
-                    <Input
-                      id="confirmPass"
-                      type="password"
-                      required
-                      placeholder="Re-enter password"
-                      value={passwordForm.confirmPassword}
-                      onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                      disabled={updatingPassword}
-                      className="bg-zinc-50/50 dark:bg-zinc-900/30 border-zinc-200/80 dark:border-zinc-800/80 h-10 text-xs font-medium rounded-xl"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="confirmPass"
+                        type={showConfirmPassword ? "text" : "password"}
+                        required
+                        placeholder="Re-enter password"
+                        value={passwordForm.confirmPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                        disabled={updatingPassword}
+                        className="bg-zinc-50/50 dark:bg-zinc-900/30 border-zinc-200/80 dark:border-zinc-800/80 h-10 text-xs font-medium rounded-xl pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                 </div>
+
+                {/* Password indicators */}
+                {(passwordForm.password || passwordForm.confirmPassword) && (
+                  <div className="space-y-1 text-xs">
+                    {passwordForm.password.length > 0 && passwordForm.password.length < 6 && (
+                      <div className="text-amber-500 flex items-center gap-1.5 font-semibold">
+                        <AlertTriangle className="h-3.5 w-3.5 animate-pulse" />
+                        <span>Minimum 6 characters required</span>
+                      </div>
+                    )}
+                    {passwordForm.password && passwordForm.confirmPassword && (
+                      passwordForm.password === passwordForm.confirmPassword ? (
+                        <div className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 font-semibold">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          <span>Passwords match</span>
+                        </div>
+                      ) : (
+                        <div className="text-red-500 flex items-center gap-1.5 font-semibold">
+                          <X className="h-3.5 w-3.5" />
+                          <span>Passwords do not match</span>
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
 
                 <div className="flex justify-end pt-2">
                   <Button

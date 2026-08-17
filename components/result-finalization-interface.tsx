@@ -227,6 +227,7 @@ export function ResultFinalizationInterface({
   const [showReassignTeacherModal, setShowReassignTeacherModal] = useState(false)
   const [tempSubjectForReassign, setTempSubjectForReassign] = useState<any>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false)
   const [isUpdatingSettings, setIsUpdatingSettings] = useState(false)
   const [settingsForm, setSettingsForm] = useState({
     name: classData?.name || "",
@@ -2027,17 +2028,10 @@ export function ResultFinalizationInterface({
                   <CardDescription className="text-[11px] text-destructive/80">Destructive administrative actions</CardDescription>
                 </CardHeader>
                 <CardContent className="p-5 space-y-4">
-                  <div className="flex items-center justify-between group cursor-pointer" onClick={() => {
-                    const classId = initialClassId || classData?.id
-                    toast.promise(updateClass(classId, { is_active: !classDetails?.is_active }), {
-                      loading: 'Processing...',
-                      success: 'Class state toggled',
-                      error: 'Failed to archive'
-                    })
-                  }}>
+                  <div className="flex items-center justify-between group cursor-pointer" onClick={() => setShowArchiveDialog(true)}>
                     <div>
-                      <p className="text-xs font-bold uppercase">Archive Class</p>
-                      <p className="text-[10px] text-muted-foreground italic">Temporarily disable access for this period</p>
+                      <p className="text-xs font-bold uppercase">{classDetails?.is_active ? "Archive Class" : "Unarchive Class"}</p>
+                      <p className="text-[10px] text-muted-foreground italic">{classDetails?.is_active ? "Temporarily disable access for this period" : "Restore active access for this period"}</p>
                     </div>
                     <Archive className="h-4 w-4 text-muted-foreground group-hover:text-amber-500 transition-colors" />
                   </div>
@@ -2053,6 +2047,43 @@ export function ResultFinalizationInterface({
               </Card>
             </div>
           </div>
+
+          {/* Archive Dialog */}
+          <AlertDialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
+            <AlertDialogContent className="border-none dark:bg-zinc-950 rounded-3xl p-8 shadow-2xl">
+              <AlertDialogHeader>
+                <div className="h-12 w-12 bg-amber-50 dark:bg-amber-900/20 rounded-2xl flex items-center justify-center mb-4">
+                  <Archive className="h-6 w-6 text-amber-600" />
+                </div>
+                <AlertDialogTitle className="text-lg font-bold uppercase">
+                  {classDetails?.is_active ? "Archive Class" : "Unarchive Class"}
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-xs font-medium">
+                  {classDetails?.is_active
+                    ? `Are you sure you want to archive "${classDetails?.name}"? This will temporarily hide it and disable student access for this period.`
+                    : `Are you sure you want to unarchive "${classDetails?.name}"? This will restore active access for this period.`}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="mt-6 gap-3">
+                <AlertDialogCancel className="h-10 border-none bg-slate-100 dark:bg-zinc-900 text-xs font-bold uppercase rounded-xl">Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={async () => {
+                    try {
+                      const classId = initialClassId || classData?.id
+                      await updateClass(classId, { is_active: !classDetails?.is_active })
+                      toast.success(classDetails?.is_active ? "Class archived" : "Class unarchived")
+                      router.refresh()
+                    } catch (err) {
+                      toast.error("Failed to update class state")
+                    }
+                  }}
+                  className="h-10 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold uppercase rounded-xl px-6"
+                >
+                  {classDetails?.is_active ? "Confirm Archive" : "Confirm Unarchive"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           {/* Delete Dialog */}
           <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

@@ -126,9 +126,18 @@ export function StudentsClientPage({
     return classes.filter((c) => c.section_id === filters.sectionId)
   }, [classes, filters.sectionId])
 
+  // Helper to get active session enrollments
+  const getActiveSessionEnrollments = (student: any) => {
+    if (!student.student_enrollments) return []
+    return student.student_enrollments.filter(
+      (e: any) => e.is_active && (!activeSession || e.session_id === activeSession.id)
+    )
+  }
+
   // KPI Calculations
   const totalStudents = students.length
-  const enrolledCount = students.filter((s) => s.student_enrollments?.some((e: any) => e.is_active)).length
+  const enrolledCount = students.filter((s) => getActiveSessionEnrollments(s).length > 0).length
+  const notEnrolledCount = totalStudents - enrolledCount
   const maleCount = students.filter((s) => s.gender?.toLowerCase() === "male").length
   const femaleCount = students.filter((s) => s.gender?.toLowerCase() === "female").length
   const activeCount = students.filter((s) => s.status === "Active").length
@@ -138,6 +147,7 @@ export function StudentsClientPage({
   const filteredStudents = useMemo(() => {
     return students.filter((student) => {
       const search = searchTerm.toLowerCase()
+      const currentEnrollments = getActiveSessionEnrollments(student)
 
       // Search
       const matchesSearch =
@@ -145,14 +155,14 @@ export function StudentsClientPage({
         student.first_name?.toLowerCase().includes(search) ||
         student.last_name?.toLowerCase().includes(search) ||
         student.student_id?.toLowerCase().includes(search) ||
-        student.student_enrollments?.some((e: any) => e.class?.name?.toLowerCase().includes(search))
+        currentEnrollments.some((e: any) => e.class?.name?.toLowerCase().includes(search))
 
       // Quick tab (all / enrolled / not-enrolled)
       let matchesTab = true
       if (filterTab === "enrolled") {
-        matchesTab = student.student_enrollments?.some((e: any) => e.is_active)
+        matchesTab = currentEnrollments.length > 0
       } else if (filterTab === "not-enrolled") {
-        matchesTab = !student.student_enrollments || !student.student_enrollments.some((e: any) => e.is_active)
+        matchesTab = currentEnrollments.length === 0
       }
 
       // Gender filter
@@ -166,21 +176,20 @@ export function StudentsClientPage({
       // Enrolled filter (from popover)
       let matchesEnrolled = true
       if (filters.enrolled === "enrolled") {
-        matchesEnrolled = student.student_enrollments?.some((e: any) => e.is_active)
+        matchesEnrolled = currentEnrollments.length > 0
       } else if (filters.enrolled === "not-enrolled") {
-        matchesEnrolled =
-          !student.student_enrollments || !student.student_enrollments.some((e: any) => e.is_active)
+        matchesEnrolled = currentEnrollments.length === 0
       }
 
-      // Section filter — find if ANY active enrollment matches the section
+      // Section filter — find if ANY active session enrollment matches the section
       const matchesSection =
         filters.sectionId === "all" ||
-        (student.student_enrollments?.some((e: any) => e.is_active && e.class?.section_id === filters.sectionId) ?? false)
+        currentEnrollments.some((e: any) => e.class?.section_id === filters.sectionId)
 
-      // Class filter — find if ANY active enrollment matches the class
+      // Class filter — find if ANY active session enrollment matches the class
       const matchesClass =
         filters.classId === "all" ||
-        (student.student_enrollments?.some((e: any) => e.is_active && e.class_id === filters.classId) ?? false)
+        currentEnrollments.some((e: any) => e.class_id === filters.classId)
 
       // Guardian filter
       const hasGuardian =
@@ -789,18 +798,16 @@ export function StudentsClientPage({
                               </Badge>
                             </TableCell>
                             <TableCell className="px-2 py-1 font-medium">
-                              {student.student_enrollments && student.student_enrollments.filter((e: any) => e.is_active).length > 0 ? (
+                              {getActiveSessionEnrollments(student).length > 0 ? (
                                 <div className="flex flex-wrap gap-1">
-                                  {student.student_enrollments
-                                    .filter((e: any) => e.is_active)
-                                    .map((ae: any) => (
-                                      <Badge key={ae.id} variant="outline" className="text-[10px] h-5 py-0 font-normal">
-                                        {ae.class?.name} ({ae.class?.section?.name?.[0] || ""})
-                                      </Badge>
-                                    ))}
+                                  {getActiveSessionEnrollments(student).map((ae: any) => (
+                                    <Badge key={ae.id} variant="outline" className="text-[10px] h-5 py-0 font-normal">
+                                      {ae.class?.name} ({ae.class?.section?.name?.[0] || ""})
+                                    </Badge>
+                                  ))}
                                 </div>
                               ) : (
-                                <span className="text-muted-foreground text-[11px] italic">Not Enrolled</span>
+                                <span className="text-amber-600/90 dark:text-amber-400/90 text-[11px] font-semibold italic">Not Enrolled</span>
                               )}
                             </TableCell>
                             <TableCell className="px-2 py-1">

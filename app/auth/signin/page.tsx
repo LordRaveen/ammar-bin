@@ -2,6 +2,7 @@
 
 import type React from "react"
 import Link from "next/link"
+import Image from "next/image"
 
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -240,8 +241,15 @@ export default function SignInPage() {
       <div className="w-full max-w-[420px] space-y-6">
         {/* Branding & Logo Header */}
         <div className="flex flex-col items-center text-center space-y-3">
-          <div className="h-12 w-12 rounded-2xl bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-zinc-50 dark:text-zinc-950 shadow-md">
-            <IconLock className="h-6 w-6 stroke-[1.5]" />
+          <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-md p-1.5 flex items-center justify-center overflow-hidden">
+            <Image
+              src="/school-logo.png"
+              alt="Ammar Bin Yasir Institute Logo"
+              width={80}
+              height={80}
+              className="h-full w-full object-contain"
+              priority
+            />
           </div>
           <div className="space-y-1">
             <h1 className="text-xl font-black tracking-tight uppercase text-foreground">

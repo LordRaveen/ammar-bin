@@ -21,6 +21,8 @@ export default async function StudentsPage({
         id,
         is_active,
         class_id,
+        session_id,
+        term_id,
         class:classes(id, name, section_id, section:sections(id, name))
       )
     `,
@@ -51,6 +53,8 @@ export default async function StudentsPage({
               id,
               is_active,
               class_id,
+              session_id,
+              term_id,
               class:classes(id, name, section_id, section:sections(id, name))
             )
           `,

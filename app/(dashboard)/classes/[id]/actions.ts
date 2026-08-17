@@ -749,3 +749,20 @@ export async function saveBatchSubjectScores(payload: {
 
   return { success: true, count: scoreRowsToUpsert.length }
 }
+
+export async function addStudentsToClass(studentIds: string[], classId: string, sessionId: string, termId: string) {
+  await requireAdmin()
+  const supabase = await createClient()
+
+  const records = studentIds.map((id) => ({
+    student_id: id,
+    class_id: classId,
+    session_id: sessionId,
+    term_id: termId,
+    is_active: true,
+  }))
+
+  const { error } = await supabase.from("student_enrollments").insert(records)
+
+  if (error) throw new Error(error.message)
+}

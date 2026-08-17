@@ -1,6 +1,7 @@
 "use client"
 
 import type * as React from "react"
+import Image from "next/image"
 import {
   IconBuildingBank,
   IconChartBar,
@@ -212,8 +213,14 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="lg" className="data-[slot=sidebar-menu-button]:!p-1.5">
               <a href="/dashboard">
-                <div className="bg-primary text-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                  <IconSchool className="size-4" />
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg overflow-hidden border border-zinc-200/50 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-0.5 shrink-0 shadow-xs">
+                  <Image
+                    src="/school-logo.png"
+                    alt="Ammar Bin Yasir Institute Logo"
+                    width={32}
+                    height={32}
+                    className="h-full w-full object-contain"
+                  />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">Ammar Bin Yasir</span>

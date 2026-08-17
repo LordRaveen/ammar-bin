@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -23,70 +24,72 @@ export default function ResetPasswordPage() {
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    const verifyResetToken = async () => {
+    async function checkSession() {
       try {
         const supabase = createClient()
-
-        const {
-          data: { session },
-          error: sessionError,
-        } = await supabase.auth.getSession()
-
-        if (sessionError || !session) {
-          const hashParams = new URLSearchParams(window.location.hash.substring(1))
-          const accessToken = hashParams.get("access_token")
-          const refreshToken = hashParams.get("refresh_token")
-          const type = hashParams.get("type")
-
-          if (type === "recovery" && accessToken) {
-            const { error: setSessionError } = await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken || "",
-            })
-
-            if (setSessionError) {
-              setError("Invalid or expired reset link. Please request a new one.")
-              setHasValidSession(false)
-            } else {
-              setHasValidSession(true)
-            }
-          } else {
-            setError("Invalid or expired reset link. Please request a new one.")
-            setHasValidSession(false)
-          }
-        } else {
+        
+        // 1. Check if Supabase already established a recovery session via code exchange
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
           setHasValidSession(true)
+          setIsCheckingSession(false)
+          return
+        }
+
+        // 2. Check if a code param is in the URL and exchange it
+        const code = searchParams.get("code")
+        if (code) {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+          if (!exchangeError) {
+            setHasValidSession(true)
+            setIsCheckingSession(false)
+            return
+          }
+        }
+
+        // 3. Fallback: listen for auth state changes (e.g. PASSWORD_RECOVERY event)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          if (event === "PASSWORD_RECOVERY" || session) {
+            setHasValidSession(true)
+          }
+        })
+
+        // Give it a brief window before showing invalid state
+        setTimeout(() => {
+          setIsCheckingSession(false)
+        }, 1500)
+
+        return () => {
+          subscription.unsubscribe()
         }
       } catch (err) {
-        console.error("[v0] Reset token verification error:", err)
-        setError("Failed to verify reset link. Please try again.")
-        setHasValidSession(false)
-      } finally {
+        console.error("Session verification error:", err)
         setIsCheckingSession(false)
       }
     }
 
-    verifyResetToken()
-  }, [])
+    checkSession()
+  }, [searchParams])
 
-  useEffect(() => {
-    if (password.length === 0) {
-      setPasswordStrength("weak")
-    } else if (password.length < 8) {
-      setPasswordStrength("weak")
-    } else if (password.length >= 8 && /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
-      setPasswordStrength("strong")
-    } else {
-      setPasswordStrength("medium")
-    }
-  }, [password])
+  const calculateStrength = (pass: string) => {
+    if (pass.length === 0) return "weak"
+    if (pass.length < 6) return "weak"
+    if (pass.length >= 8 && /[A-Z]/.test(pass) && /[0-9]/.test(pass)) return "strong"
+    return "medium"
+  }
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value
+    setPassword(val)
+    setPasswordStrength(calculateStrength(val))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
 
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters long")
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long")
       return
     }
 
@@ -95,29 +98,24 @@ export default function ResetPasswordPage() {
       return
     }
 
-    if (passwordStrength === "weak") {
-      setError("Password is too weak. Use a mix of letters, numbers, and special characters")
-      return
-    }
-
     setIsLoading(true)
 
     try {
       const supabase = createClient()
-
-      const { error } = await supabase.auth.updateUser({
-        password: password,
+      const { error: updateError } = await supabase.auth.updateUser({
+        password,
       })
 
-      if (error) throw error
+      if (updateError) throw updateError
 
-      await supabase.auth.signOut()
+      // Fetch the updated user to determine their role and proper landing page
+      const { data: { user } } = await supabase.auth.getUser()
 
-      alert("Password updated successfully! Please sign in with your new password.")
-      router.push("/auth/signin")
-    } catch (error: any) {
-      console.error("[v0] Password update error:", error)
-      setError(error.message || "Failed to reset password. Please try again.")
+      // Redirect to signin with success message
+      router.push("/auth/signin?reset=success")
+    } catch (err: any) {
+      console.error("Password update error:", err)
+      setError(err?.message || "Failed to update password. Your link may have expired.")
     } finally {
       setIsLoading(false)
     }
@@ -137,13 +135,11 @@ export default function ResetPasswordPage() {
 
   if (isCheckingSession) {
     return (
-      <div className="flex min-h-screen w-full items-center justify-center p-4 sm:p-6 bg-zinc-50 dark:bg-zinc-950 font-sans">
-        <Card className="w-full max-w-[420px] border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 shadow-xl rounded-3xl p-8">
-          <CardContent className="flex flex-col items-center justify-center py-10 space-y-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-            <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Verifying reset token link...</p>
-          </CardContent>
-        </Card>
+      <div className="flex min-h-screen w-full items-center justify-center p-4 bg-zinc-50 dark:bg-zinc-950">
+        <div className="flex flex-col items-center space-y-4 text-center">
+          <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm font-medium text-muted-foreground">Verifying security token...</p>
+        </div>
       </div>
     )
   }
@@ -151,26 +147,20 @@ export default function ResetPasswordPage() {
   if (!hasValidSession) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center p-4 sm:p-6 bg-zinc-50 dark:bg-zinc-950 font-sans">
-        <div className="w-full max-w-[420px]">
-          <Card className="border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 shadow-xl rounded-3xl overflow-hidden p-6 sm:p-8 space-y-6">
+        <div className="w-full max-w-[420px] space-y-6">
+          <Card className="border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/40 shadow-xl rounded-3xl overflow-hidden p-6 sm:p-8 space-y-4 text-center">
+            <div className="h-12 w-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
+              <AlertCircle className="h-6 w-6" />
+            </div>
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2 text-red-650 dark:text-red-500">
-                <AlertCircle className="h-5 w-5 shrink-0" />
-                <CardTitle className="text-lg font-black uppercase tracking-wider">Invalid Reset Link</CardTitle>
-              </div>
+              <CardTitle className="text-lg font-black uppercase">Invalid or Expired Link</CardTitle>
               <CardDescription className="text-xs text-muted-foreground">
-                This password reset link is invalid or has expired.
+                This password reset link is invalid or has already been used. Please request a new link to reset your password.
               </CardDescription>
             </div>
-            <div className="space-y-4">
-              <p className="text-xs font-medium text-muted-foreground leading-relaxed">
-                For security reasons, password recovery access links are only valid for 1 hour. Please request a new link to proceed.
-              </p>
-              <Button
-                onClick={() => router.push("/auth/forgot-password")}
-                className="w-full h-10 text-xs font-bold uppercase tracking-wider rounded-xl bg-zinc-900 text-zinc-50 hover:bg-zinc-850 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 transition-colors"
-              >
-                Request New Reset Link
+            <div className="pt-2">
+              <Button asChild className="w-full rounded-xl font-bold uppercase text-xs">
+                <a href="/auth/forgot-password">Request New Link</a>
               </Button>
             </div>
           </Card>
@@ -184,8 +174,15 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-[420px] space-y-6">
         {/* Branding & Logo Header */}
         <div className="flex flex-col items-center text-center space-y-3">
-          <div className="h-12 w-12 rounded-2xl bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-zinc-50 dark:text-zinc-950 shadow-md">
-            <Lock className="h-6 w-6 stroke-[1.5]" />
+          <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-md p-1.5 flex items-center justify-center overflow-hidden">
+            <Image
+              src="/school-logo.png"
+              alt="Ammar Bin Yasir Institute Logo"
+              width={80}
+              height={80}
+              className="h-full w-full object-contain"
+              priority
+            />
           </div>
           <div className="space-y-1">
             <h1 className="text-xl font-black tracking-tight uppercase text-foreground">

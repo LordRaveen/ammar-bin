@@ -4,13 +4,14 @@ import type React from "react"
 
 import { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { createClient } from "@/lib/supabase/client"
-import { ArrowLeft, Mail, AlertCircle, CheckCircle2 } from "lucide-react"
+import { ArrowLeft, AlertCircle, CheckCircle2 } from "lucide-react"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")
@@ -27,94 +28,76 @@ export default function ForgotPasswordPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    e.stopPropagation()
     setIsLoading(true)
     setMessage(null)
 
-    if (typeof navigator !== "undefined" && !navigator.onLine) {
-      setMessage({
-        type: "error",
-        text: "Network connection error. Please check your internet connection and try again.",
-      })
-      setIsLoading(false)
-      return
-    }
-
     try {
       const supabase = createClient()
+      const normalizedEmail = email.trim().toLowerCase()
 
-      const [{ data: guardianData }, { data: teacherData }] = await Promise.all([
-        supabase.from("guardians").select("id, email, user_id").eq("email", email).maybeSingle(),
-        supabase.from("teachers").select("id, email, user_id").eq("email", email).maybeSingle(),
+      // Comprehensive multi-table account existence check (teachers, user_profiles, guardians)
+      const [
+        { data: teacher },
+        { data: profile },
+        { data: guardian }
+      ] = await Promise.all([
+        supabase.from("teachers").select("id, email, status, auth_id").eq("email", normalizedEmail).maybeSingle(),
+        supabase.from("user_profiles").select("id, email, status, user_id").eq("email", normalizedEmail).maybeSingle(),
+        supabase.from("guardians").select("id, email, status, user_id").eq("email", normalizedEmail).maybeSingle(),
       ])
 
-      const userData = guardianData || teacherData
-      const userType = guardianData ? "guardian" : teacherData ? "teacher" : null
+      const matchedAccount = teacher || profile || guardian
 
-      if (!userData) {
+      if (!matchedAccount) {
         setMessage({
           type: "error",
-          text: "No account found with this email address. Please check your email or contact the school admin.",
+          text: "No account found associated with this email address. Please verify the email or contact the school administrator.",
         })
         setIsLoading(false)
         return
       }
 
-      if (!userData.user_id) {
+      if (matchedAccount.status && matchedAccount.status.toLowerCase() === "inactive") {
         setMessage({
-          type: "error",
-          text: "Your portal access is not activated. Please contact the school admin to activate your account first.",
+          type: "warning",
+          text: "This account has been deactivated. Please contact the administrator for assistance.",
         })
         setIsLoading(false)
         return
       }
 
-      // Build redirect URL
-      const redirectTo = process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL
-        ? `${process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL}/auth/reset-password`
-        : `${window.location.origin}/auth/reset-password`
+      // Check if user has logged in before
+      const hasAuthId = matchedAccount.auth_id || (matchedAccount as any).user_id
+      const isActivation = !hasAuthId
 
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const siteUrl = window.location.origin
+      const redirectTo = `${siteUrl}/auth/reset-password`
+
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
         redirectTo,
       })
 
-      if (error) {
-        if (error.message.includes("rate limit")) {
-          setMessage({
-            type: "warning",
-            text: "Too many password reset requests. Please wait a few minutes and try again, or contact the school admin for assistance.",
-          })
-        } else if (error.message.includes("SMTP") || error.message.includes("email provider")) {
-          setMessage({
-            type: "warning",
-            text: "Email service is temporarily unavailable. Please contact the school admin at admin@school.com to reset your password manually.",
-          })
-        } else {
-          throw error
-        }
+      if (resetError) {
+        console.error("Password reset error:", resetError)
+        setMessage({
+          type: "error",
+          text: "Unable to send the email. Please verify the email address or try again in a few moments.",
+        })
         setIsLoading(false)
         return
       }
 
       setMessage({
         type: "success",
-        text: `Password reset link has been sent to ${email}. Please check your inbox and spam/junk folder. The link expires in 1 hour. If you don't receive it within 5 minutes, contact the school admin.`,
+        text: isActivation
+          ? "Account found! We have sent an activation link to your email. Click it to set your password and complete your registration."
+          : "We've sent a password reset link to your email. Please check your inbox (and spam folder) to set a new password.",
       })
-      setEmail("")
-    } catch (error: any) {
-      const isNetworkError =
-        (typeof navigator !== "undefined" && !navigator.onLine) ||
-        error.message?.toLowerCase().includes("failed to fetch") ||
-        error.message?.toLowerCase().includes("network") ||
-        error.message?.toLowerCase().includes("timeout") ||
-        error.message?.toLowerCase().includes("connect") ||
-        error.message?.toLowerCase().includes("load failed")
-
+    } catch (err: any) {
+      console.error("Unexpected error in forgot password:", err)
       setMessage({
         type: "error",
-        text: isNetworkError
-          ? "Network connection error. Please check your internet connection and try again."
-          : error.message || "Failed to send reset link. Please contact the school admin for manual password reset.",
+        text: "An unexpected error occurred. Please try again or reach out to support.",
       })
     } finally {
       setIsLoading(false)
@@ -126,8 +109,15 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-[420px] space-y-6">
         {/* Branding & Logo Header */}
         <div className="flex flex-col items-center text-center space-y-3">
-          <div className="h-12 w-12 rounded-2xl bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-zinc-50 dark:text-zinc-950 shadow-md">
-            <Mail className="h-6 w-6 stroke-[1.5]" />
+          <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-md p-1.5 flex items-center justify-center overflow-hidden">
+            <Image
+              src="/school-logo.png"
+              alt="Ammar Bin Yasir Institute Logo"
+              width={80}
+              height={80}
+              className="h-full w-full object-contain"
+              priority
+            />
           </div>
           <div className="space-y-1">
             <h1 className="text-xl font-black tracking-tight uppercase text-foreground">
