@@ -6,8 +6,8 @@ export async function GET(request: NextRequest) {
   try {
     const user = await requireAuth()
 
-    // Only admins can access
-    if (user.role !== "admin") {
+    // Only admins and principals can access
+    if (!["admin", "super_admin", "principal"].includes(user.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 

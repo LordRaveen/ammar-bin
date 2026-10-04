@@ -5,7 +5,7 @@ import { NextResponse } from "next/server"
 export async function POST(request: Request) {
   try {
     const user = await getCurrentUser()
-    if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
+    if (!user || !["admin", "super_admin", "principal"].includes(user.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
@@ -14,8 +14,8 @@ export async function POST(request: Request) {
 
     const supabase = await createClient()
 
-    // Get teacher ID if user is admin/super_admin
-    const { data: teacherData } = await supabase.from("teachers").select("id").eq("user_id", user.id).single()
+    // Get teacher ID if user is admin/super_admin/principal
+    const { data: teacherData } = await supabase.from("teachers").select("id").eq("user_id", user.id).maybeSingle()
 
     const { data: announcement, error } = await supabase
       .from("announcements")

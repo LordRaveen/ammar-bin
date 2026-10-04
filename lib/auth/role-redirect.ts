@@ -12,6 +12,7 @@ export function getRoleDashboardUrl(role: string): string {
       return "/parent/dashboard"
     case "super_admin":
     case "admin":
+    case "principal":
       return "/dashboard"
     default:
       return "/dashboard"
@@ -23,7 +24,7 @@ export function getRoleDashboardUrl(role: string): string {
  */
 export function isAdmin(role: string): boolean {
   const r = role?.toLowerCase()
-  return r === "super_admin" || r === "admin"
+  return r === "super_admin" || r === "admin" || r === "principal"
 }
 
 /**

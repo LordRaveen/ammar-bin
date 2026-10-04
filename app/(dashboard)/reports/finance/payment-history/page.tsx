@@ -5,7 +5,7 @@ import { PaymentHistoryReportClient } from "@/components/payment-history-report-
 export const dynamic = "force-dynamic"
 
 export default async function PaymentHistoryReportPage() {
-  await requireAuth(["super_admin", "admin", "accountant", "cashier"])
+  await requireAuth(["super_admin", "admin", "principal", "accountant", "cashier"])
   const supabase = await createServerClient()
 
   // Get all cashiers/accountants for filter

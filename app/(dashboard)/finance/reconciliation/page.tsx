@@ -8,7 +8,7 @@ import Link from "next/link"
 export const dynamic = "force-dynamic"
 
 export default async function ReconciliationPage() {
-  await requireAuth(["super_admin", "admin", "accountant", "cashier"])
+  await requireAuth(["super_admin", "admin", "principal", "accountant", "cashier"])
   const supabase = await createServerClient()
 
   const today = new Date().toISOString().split("T")[0]

@@ -55,7 +55,7 @@ export default async function FinancePage() {
       <FinanceTabs
         initialInvoices={invoices || []}
         initialPayments={payments || []}
-        userRole={user.role as "admin" | "accountant" | "super_admin"}
+        userRole={user.role as "admin" | "accountant" | "super_admin" | "principal"}
       />
     </div>
   )

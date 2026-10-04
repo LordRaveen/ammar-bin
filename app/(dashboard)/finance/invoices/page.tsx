@@ -15,7 +15,7 @@ import Link from 'next/link'
 export const dynamic = 'force-dynamic'
 
 export default async function InvoicesPage() {
-  await requireAuth(['super_admin', 'admin', 'accountant'])
+  await requireAuth(['super_admin', 'admin', 'principal', 'accountant'])
   const supabase = await createServerClient()
 
   // Get all invoices with student details

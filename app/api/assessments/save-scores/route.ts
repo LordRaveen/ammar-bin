@@ -2,27 +2,17 @@ import { createServerClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { devLog } from '@/lib/logger'
 
+import { getCurrentUser } from '@/lib/auth/get-user'
+
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createServerClient()
-    const formData = await request.formData()
-
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Get user role
-    const { data: userRole } = await supabase
-      .from('user_roles')
-      .select('*')
-      .eq('firebase_uid', user.id)
-      .single()
-
-    if (!userRole || !['super_admin', 'admin', 'teacher'].includes(userRole.role)) {
+    const user = await getCurrentUser()
+    if (!user || !['super_admin', 'admin', 'teacher', 'principal'].includes(user.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
+
+    const supabase = await createServerClient()
+    const formData = await request.formData()
 
     const scores: any[] = []
 

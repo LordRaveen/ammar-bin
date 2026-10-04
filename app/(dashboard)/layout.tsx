@@ -17,17 +17,7 @@ export default async function AuthenticatedLayout({
 
   let userName: string | undefined
 
-  if (authUser.role === "teacher" || authUser.role === "admin" || authUser.role === "super_admin") {
-    const { data: teacher } = await supabase
-      .from("teachers")
-      .select("first_name, last_name")
-      .eq("user_id", authUser.id)
-      .maybeSingle()
-
-    if (teacher) {
-      userName = `${teacher.first_name} ${teacher.last_name}`
-    }
-  } else if (authUser.role === "parent") {
+  if (authUser.role === "parent") {
     const { data: guardian } = await supabase
       .from("guardians")
       .select("first_name, last_name")
@@ -36,6 +26,27 @@ export default async function AuthenticatedLayout({
 
     if (guardian) {
       userName = `${guardian.first_name} ${guardian.last_name}`
+    }
+  } else {
+    // Check canonical user_profiles for staff/principal/admin first
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("first_name, last_name")
+      .eq("user_id", authUser.id)
+      .maybeSingle()
+
+    if (profile?.first_name || profile?.last_name) {
+      userName = `${profile.first_name || ""} ${profile.last_name || ""}`.trim()
+    } else {
+      const { data: teacher } = await supabase
+        .from("teachers")
+        .select("first_name, last_name")
+        .eq("user_id", authUser.id)
+        .maybeSingle()
+
+      if (teacher) {
+        userName = `${teacher.first_name} ${teacher.last_name}`
+      }
     }
   }
 

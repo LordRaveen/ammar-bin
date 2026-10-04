@@ -9,7 +9,7 @@ import { DiscountApplicationClient } from "@/components/discount-application-cli
 export const dynamic = "force-dynamic"
 
 export default async function ApplyDiscountPage() {
-  await requireAuth(["super_admin", "admin", "accountant"])
+  await requireAuth(["super_admin", "admin", "principal", "accountant"])
   const supabase = await createServerClient()
 
   // Get active session and term

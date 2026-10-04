@@ -115,7 +115,7 @@ export async function getUser(): Promise<AuthUser | null> {
  */
 export async function isAdmin(): Promise<boolean> {
   const user = await getUser()
-  return user ? ["super_admin", "admin"].includes(user.role) : false
+  return user ? ["super_admin", "admin", "principal"].includes(user.role) : false
 }
 
 /**
@@ -131,7 +131,7 @@ export async function isTeacher(): Promise<boolean> {
  */
 export async function isAccountant(): Promise<boolean> {
   const user = await getUser()
-  return user ? ["super_admin", "admin", "accountant"].includes(user.role) : false
+  return user ? ["super_admin", "admin", "principal", "accountant"].includes(user.role) : false
 }
 
 /**
@@ -154,7 +154,7 @@ export async function requireAuth(allowedRoles?: UserRole[] | string[]): Promise
  */
 export async function requireAdmin(): Promise<AuthUser> {
   const user = await requireAuth()
-  if (!["super_admin", "admin"].includes(user.role)) {
+  if (!["super_admin", "admin", "principal"].includes(user.role)) {
     redirect("/dashboard")
   }
   return user

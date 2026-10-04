@@ -180,6 +180,7 @@ const getNavigationByRole = (role: UserRole) => {
   switch (role) {
     case "super_admin":
     case "admin":
+    case "principal":
       return adminNav
     case "teacher":
       return teacherNav

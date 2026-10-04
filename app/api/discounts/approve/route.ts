@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     // Get user's teacher profile and check admin role
     const { data: teacher } = await supabase.from("teachers").select("id, role").eq("user_id", user.id).single()
 
-    if (!teacher || (teacher.role !== "super_admin" && teacher.role !== "admin")) {
+    if (!teacher || !["super_admin", "admin", "principal"].includes(teacher.role)) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 })
     }
 

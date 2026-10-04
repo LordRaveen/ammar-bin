@@ -25,7 +25,7 @@ import { createGuardian } from './actions'
 export const dynamic = 'force-dynamic'
 
 export default async function AddGuardianPage() {
-  await requireAuth(['super_admin', 'admin'])
+  await requireAuth(['super_admin', 'admin', 'principal'])
 
   return (
     <div className="space-y-6">

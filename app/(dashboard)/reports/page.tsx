@@ -7,7 +7,7 @@ import Link from "next/link"
 export const dynamic = "force-dynamic"
 
 export default async function ReportsPage() {
-  await requireAuth(["super_admin", "admin", "accountant", "teacher"])
+  await requireAuth(["super_admin", "admin", "principal", "accountant", "teacher"])
 
   return (
     <div className="space-y-6">

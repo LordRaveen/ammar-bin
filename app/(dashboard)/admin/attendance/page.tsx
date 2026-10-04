@@ -8,8 +8,8 @@ export const dynamic = "force-dynamic"
 export default async function AdminAttendancePage() {
   const user = await requireAuth()
 
-  // Only admins can access
-  if (user.role !== "admin") {
+  // Only admins/principals can access
+  if (!["admin", "super_admin", "principal"].includes(user.role)) {
     return <div className="p-6">Access Denied</div>
   }
 

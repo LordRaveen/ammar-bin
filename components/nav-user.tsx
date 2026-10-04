@@ -46,10 +46,14 @@ function formatRole(role: UserRole): string {
       return 'Super Admin'
     case 'admin':
       return 'Admin'
+    case 'principal':
+      return 'Principal'
     case 'teacher':
       return 'Teacher'
     case 'accountant':
       return 'Accountant'
+    case 'cashier':
+      return 'Cashier'
     case 'parent':
       return 'Parent'
     default:

@@ -5,7 +5,7 @@ import { NextResponse } from "next/server"
 export async function PUT(request: Request) {
   try {
     const user = await getCurrentUser()
-    if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
+    if (!user || !["admin", "super_admin", "principal"].includes(user.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 

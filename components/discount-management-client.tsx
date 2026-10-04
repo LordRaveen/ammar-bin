@@ -11,7 +11,7 @@ export function DiscountManagementClient({ discounts, userRole }: any) {
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
-  const isAdmin = userRole === "super_admin" || userRole === "admin"
+  const isAdmin = userRole === "super_admin" || userRole === "admin" || userRole === "principal"
 
   const approveDiscount = async (discountId: string) => {
     setIsLoading(true)

@@ -13,8 +13,8 @@ export async function POST(request: Request) {
     const supabase = await createServerClient()
     const { data: teacher } = await supabase.from("teachers").select("role").eq("user_id", user.id).single()
 
-    if (!teacher || !["super_admin", "admin"].includes(teacher.role)) {
-      return NextResponse.json({ error: "Only admins can approve reversals" }, { status: 403 })
+    if (!teacher || !["super_admin", "admin", "principal"].includes(teacher.role)) {
+      return NextResponse.json({ error: "Only admins and principals can approve reversals" }, { status: 403 })
     }
 
     const { reversalId } = await request.json()

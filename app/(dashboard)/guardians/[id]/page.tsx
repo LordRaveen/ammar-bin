@@ -15,7 +15,7 @@ export default async function GuardianProfilePage({
 }: {
   params: Promise<{ id: string }> // Updated to Promise for Next.js 16
 }) {
-  await requireAuth(["super_admin", "admin", "teacher", "accountant"])
+  await requireAuth(["super_admin", "admin", "principal", "teacher", "accountant"])
 
   const { id } = await params
   const supabase = await createServerClient()

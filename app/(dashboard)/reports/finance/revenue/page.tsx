@@ -5,7 +5,7 @@ import { RevenueReportClient } from "@/components/revenue-report-client"
 export const dynamic = "force-dynamic"
 
 export default async function RevenueReportPage() {
-  await requireAuth(["super_admin", "admin", "accountant"])
+  await requireAuth(["super_admin", "admin", "principal", "accountant"])
   const supabase = await createServerClient()
 
   // Get all sessions

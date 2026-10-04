@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/auth/get-user"
 export async function PUT(request: NextRequest) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role !== "admin") {
+    if (!user || !["admin", "super_admin", "principal"].includes(user.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 

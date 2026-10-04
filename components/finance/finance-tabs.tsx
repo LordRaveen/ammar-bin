@@ -52,7 +52,7 @@ import { createBrowserClient } from "@/lib/supabase/client"
 interface FinanceTabsProps {
     initialInvoices: any[]
     initialPayments: any[]
-    userRole?: "admin" | "accountant" | "super_admin"
+    userRole?: "admin" | "accountant" | "super_admin" | "principal"
 }
 
 export function FinanceTabs({

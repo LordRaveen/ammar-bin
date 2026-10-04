@@ -43,7 +43,7 @@ export function AnnouncementsClientPage({ initialAnnouncements, userRole }: Anno
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
-  const canManage = userRole === "admin" || userRole === "super_admin"
+  const canManage = userRole === "admin" || userRole === "super_admin" || userRole === "principal"
 
   const filteredAnnouncements = announcements.filter((announcement) => {
     const matchesSearch =

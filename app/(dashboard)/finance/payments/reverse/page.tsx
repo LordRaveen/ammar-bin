@@ -9,7 +9,7 @@ import PaymentReversalClient from "@/components/payment-reversal-client"
 export const dynamic = "force-dynamic"
 
 export default async function PaymentReversalPage() {
-  await requireAuth(["super_admin", "admin", "accountant"])
+  await requireAuth(["super_admin", "admin", "principal", "accountant"])
   const supabase = await createServerClient()
 
   // Get all payments with student and invoice details

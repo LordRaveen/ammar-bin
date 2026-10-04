@@ -105,7 +105,7 @@ export function AdminDashboardClient({
 						<h1 className="text-2xl font-bold tracking-tight font-mono">Command Center</h1>
 					</div>
 					<p className="text-muted-foreground text-xs sm:text-sm font-mono mt-1">
-						Welcome back, <span className="text-foreground font-semibold">{user.role === "super_admin" ? "Super Admin" : "Principal Admin"}</span>
+						Welcome back, <span className="text-foreground font-semibold">{user.role === "super_admin" ? "Super Admin" : user.role === "principal" ? "Principal" : "Principal Admin"}</span>
 						<span className="hidden sm:inline-block h-1.5 w-1.5 rounded-full bg-slate-300 mx-2 align-middle" />
 						<span className="block sm:inline mt-0.5 sm:mt-0 text-muted-foreground/85">{new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
 					</p>

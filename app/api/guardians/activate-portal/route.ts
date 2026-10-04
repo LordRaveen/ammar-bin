@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     const supabase = await createClient()
     const user = await getCurrentUser()
 
-    if (!user || (user.role !== "admin" && user.role !== "super_admin")) {
+    if (!user || !["admin", "super_admin", "principal"].includes(user.role)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 

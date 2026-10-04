@@ -5,7 +5,7 @@ import { DailyCashReportClient } from "@/components/daily-cash-report-client"
 export const dynamic = "force-dynamic"
 
 export default async function DailyCashReportPage() {
-  await requireAuth(["super_admin", "admin", "accountant", "cashier"])
+  await requireAuth(["super_admin", "admin", "principal", "accountant", "cashier"])
   const supabase = await createServerClient()
 
   // Get all cashiers/accountants for filter

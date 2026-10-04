@@ -9,7 +9,7 @@ import { DiscountManagementClient } from "@/components/discount-management-clien
 export const dynamic = "force-dynamic"
 
 export default async function ManageDiscountsPage() {
-  const user = await requireAuth(["super_admin", "admin", "accountant"])
+  const user = await requireAuth(["super_admin", "admin", "principal", "accountant"])
   const supabase = await createServerClient()
 
   // Get all discounts with related data

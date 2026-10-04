@@ -5,7 +5,7 @@ import { OutstandingFeesReportClient } from "@/components/outstanding-fees-repor
 export const dynamic = "force-dynamic"
 
 export default async function OutstandingFeesReportPage() {
-  await requireAuth(["super_admin", "admin", "accountant"])
+  await requireAuth(["super_admin", "admin", "principal", "accountant"])
   const supabase = await createServerClient()
 
   // Get active session and term

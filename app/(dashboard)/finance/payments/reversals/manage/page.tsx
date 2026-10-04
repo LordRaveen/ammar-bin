@@ -9,7 +9,7 @@ import ReversalManagementClient from "@/components/reversal-management-client"
 export const dynamic = "force-dynamic"
 
 export default async function ReversalManagementPage() {
-  await requireAuth(["super_admin", "admin"])
+  await requireAuth(["super_admin", "admin", "principal"])
   const supabase = await createServerClient()
 
   // Get all reversal requests with full details

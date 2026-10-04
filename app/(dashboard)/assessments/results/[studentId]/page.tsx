@@ -12,7 +12,7 @@ export default async function ReportCardPage({
   params: Promise<{ studentId: string }>
   searchParams: Promise<{ session?: string; term?: string }>
 }) {
-  await requireAuth(['super_admin', 'admin', 'teacher'])
+  await requireAuth(['super_admin', 'admin', 'principal', 'teacher'])
   const supabase = await createServerClient()
 
   const { studentId } = await params

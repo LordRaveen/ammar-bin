@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
     const { data: teacher } = await supabase.from("teachers").select("role").eq("user_id", user.id).single()
 
-    if (!teacher || (teacher.role !== "admin" && teacher.role !== "super_admin")) {
+    if (!teacher || !["admin", "super_admin", "principal"].includes(teacher.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 

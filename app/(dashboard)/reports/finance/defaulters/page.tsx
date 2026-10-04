@@ -5,7 +5,7 @@ import { DefaultersReportClient } from "@/components/defaulters-report-client"
 export const dynamic = "force-dynamic"
 
 export default async function DefaultersReportPage() {
-  await requireAuth(["super_admin", "admin", "accountant", "cashier"])
+  await requireAuth(["super_admin", "admin", "principal", "accountant", "cashier"])
   const supabase = await createServerClient()
 
   // Get active session and term
